@@ -1,14 +1,17 @@
 {
-  "$schema": "https://turbo.build/schema.json",
-  "tasks": {
+  "$schema": "https://turborepo.com/schema.json",
+  "pipeline": {
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      // ... other settings
     },
-    "lint": {},
-    "dev": {
-      "cache": false,
-      "persistent": true
-    }
+    "transparent-talent-frontend#build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**"],
+      "env": [
+        "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+        "CLERK_SECRET_KEY"
+      ]
+    },
+    // ... other settings
   }
 }
