@@ -218,7 +218,7 @@ export default function UserDashboard() {
                 </div>
               ))
             ) : ( 
-                <p className="text-gray-500">You are not tracking any jobs yet. Click 'Track' on a job match to begin.</p> 
+                <p className="text-gray-500">You are not tracking any jobs yet. Click <span className="font-semibold text-blue-600">Track</span> on a job match to begin.</p>
             )}
           </div>
         </div>
