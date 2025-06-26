@@ -1,6 +1,6 @@
 {
   "$schema": "https://turborepo.com/schema.json",
-  "pipeline": {
+  "tasks": {
     "build": {},
     "transparent-talent-frontend#build": {
       "dependsOn": ["^build"],
