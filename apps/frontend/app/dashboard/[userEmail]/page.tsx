@@ -79,9 +79,13 @@ export default function UserDashboard() {
       setJobs(jobsData);
       setTrackedJobs(trackedJobsData);
 
-    } catch (error: any) {
+    } catch (error: unknown) { // CORRECTED THIS LINE
       console.error("A critical error occurred during data fetching:", error);
-      setDebugError(error.message || "An unknown error occurred.");
+      if (error instanceof Error) { // Type-safe error handling
+        setDebugError(error.message);
+      } else {
+        setDebugError("An unknown error occurred.");
+      }
     } finally {
       setIsLoading(false);
     }
