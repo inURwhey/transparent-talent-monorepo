@@ -1,5 +1,5 @@
 Attached are markdown files about my project. Let's get started on the first backlog topic.
-Consider these style notes: 
+Consider these style notes. You do not need to respond to them.
 1) I am not an engineer, but I am technically savvy and copy/paste well.
 2) You do not need to apologize for coding errors.
 3) You do not need to complement my competence. 
