@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 
 // --- TYPE DEFINITIONS ---
-// Defined interfaces to replace 'any' for strong type safety.
 interface Profile {
   full_name: string;
   short_term_career_goal: string;
@@ -31,12 +30,7 @@ type UpdatePayload = {
 };
 
 export default function UserDashboard() {
-  console.log("Attempting to use API Base URL:", process.env.NEXT_PUBLIC_API_BASE_URL);
-
-  // --- STATE HOOKS ---
-  // Applied the strong types to all state variables.
   const [profile, setProfile] = useState<Profile | null>(null);
-  // Removed unused 'watchlist' state.
   const [jobs, setJobs] = useState<Job[]>([]);
   const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,18 +41,16 @@ export default function UserDashboard() {
   const pathname = usePathname();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  const getEmailFromPath = () => {
-    const pathParts = pathname.split('/');
-    return pathParts[pathParts.length - 1];
-  };
-
-  // --- DATA FETCHING ---
-  // Wrapped in useCallback to fix the exhaustive-deps warning.
   const fetchDataForPage = useCallback(async () => {
+    // FIX 1: Moved this function inside useCallback to resolve the dependency warning.
+    const getEmailFromPath = () => {
+      const pathParts = pathname.split('/');
+      return pathParts[pathParts.length - 1];
+    };
+
     const userEmail = getEmailFromPath();
     if (userEmail && apiBaseUrl) {
       setIsLoading(true);
-      // Removed watchlist from Promise.all as it was unused.
       const [profileRes, jobsRes, trackedJobsRes] = await Promise.all([
         fetch(`${apiBaseUrl}/users/${userEmail}/profile`),
         fetch(`${apiBaseUrl}/users/${userEmail}/jobs`),
@@ -74,17 +66,17 @@ export default function UserDashboard() {
       setTrackedJobs(trackedJobsData);
       setIsLoading(false);
     }
-  }, [pathname, apiBaseUrl]); // Dependencies for useCallback.
+  }, [pathname, apiBaseUrl]); // The hook correctly depends on these props.
 
-  // --- EFFECTS ---
-  // useEffect now correctly depends on the memoized fetchDataForPage function.
   useEffect(() => {
     fetchDataForPage();
   }, [fetchDataForPage]);
 
-
-  // --- EVENT HANDLERS ---
   const handleTrackJob = async (jobId: number) => {
+    const getEmailFromPath = () => {
+      const pathParts = pathname.split('/');
+      return pathParts[pathParts.length - 1];
+    };
     const userEmail = getEmailFromPath();
     try {
       const response = await fetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs`, {
@@ -104,9 +96,12 @@ export default function UserDashboard() {
     if (!window.confirm("Are you sure you want to remove this job from your tracker?")) {
         return;
     }
+    const getEmailFromPath = () => {
+      const pathParts = pathname.split('/');
+      return pathParts[pathParts.length - 1];
+    };
     const userEmail = getEmailFromPath();
     try {
-        // Corrected a hidden bug here: changed apiBase.url to apiBaseUrl
         const response = await fetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs/${trackedJobId}`, {
             method: 'DELETE',
         });
@@ -119,6 +114,10 @@ export default function UserDashboard() {
   };
 
   const handleUpdate = async (trackedJobId: number, payload: UpdatePayload) => {
+    const getEmailFromPath = () => {
+      const pathParts = pathname.split('/');
+      return pathParts[pathParts.length - 1];
+    };
     const userEmail = getEmailFromPath();
     try {
       const response = await fetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs/${trackedJobId}`, {
@@ -135,7 +134,6 @@ export default function UserDashboard() {
     }
   };
 
-  // Applied the strong TrackedJob type to the parameter.
   const handleStartEdit = (job: TrackedJob) => {
     setEditingJobId(job.tracked_job_id);
     setEditNotes(job.notes || '');
@@ -167,7 +165,6 @@ export default function UserDashboard() {
     return <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>;
   }
 
-  // --- JSX ---
   return (
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
       <div className="max-w-4xl mx-auto">
@@ -182,7 +179,6 @@ export default function UserDashboard() {
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">My Job Tracker</h2>
           <div className="space-y-6">
             {trackedJobs && trackedJobs.length > 0 ? (
-              // Applied the strong TrackedJob type in the map function.
               trackedJobs.map((trackedJob: TrackedJob) => (
                 <div key={trackedJob.tracked_job_id} className="border-b pb-4">
                   <div className="flex justify-between items-start">
@@ -212,7 +208,7 @@ export default function UserDashboard() {
                       </div>
                       <div>
                         <label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label>
-                        <textarea id="notes" rows={3} value={editNotes} onChange={(e) => setEditNotes(e.targe.value)}
+                        <textarea id="notes" rows={3} value={editNotes} onChange={(e) => setEditNotes(e.target.value)}
                           placeholder="e.g., Followed up with hiring manager..."
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2" ></textarea>
                       </div>
@@ -237,7 +233,8 @@ export default function UserDashboard() {
                   )}
                 </div>
               ))
-            ) : ( // Fixed unescaped apostrophe here.
+            ) : ( 
+                // FIX 2: Corrected unescaped apostrophe
                 <p className="text-gray-500">You are not tracking any jobs yet. Click 'Track' on a job match to begin.</p> 
             )}
           </div>
@@ -247,7 +244,6 @@ export default function UserDashboard() {
           <div className="md:col-span-1">
             <div className="bg-white p-6 rounded-lg shadow-md">
                 <h2 className="text-2xl font-semibold text-gray-800 mb-4">Watchlist</h2>
-                {/* Watchlist content was removed since the state was unused. */}
                 <p className="text-gray-500">Watchlist feature coming soon.</p>
             </div>
           </div>
@@ -256,7 +252,6 @@ export default function UserDashboard() {
               <h2 className="text-2xl font-semibold text-gray-800 mb-4">Job Matches</h2>
               <ul className="space-y-4">
                 {jobs && jobs.length > 0 ? (
-                  // Applied the strong Job type in the map function.
                   jobs.map((job: Job) => (
                     <li key={job.id} className="border-b pb-4 flex justify-between items-center">
                       <div>
