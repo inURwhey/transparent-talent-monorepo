@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "builds": [
+    {
+      "src": "apps/frontend/next.config.mjs",
+      "use": "@vercel/next"
+    }
+  ]
+}
