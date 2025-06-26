@@ -7,7 +7,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import google.generativeai as genai
 from dotenv import load_dotenv
-from datetime import date # IMPORT THIS
+from datetime import date
+
+# Import the new security decorator
+from auth import token_required
 
 # --- Initialization ---
 load_dotenv()
@@ -39,6 +42,7 @@ def get_user_id(cursor, user_email):
 
 # --- Existing API Endpoints ---
 @app.route('/users/<user_email>/profile', methods=['GET'])
+@token_required
 def get_user_profile(user_email):
     print(f"\nReceived request to get profile for user: {user_email}")
     conn = get_db_connection()
@@ -54,6 +58,7 @@ def get_user_profile(user_email):
         if conn: conn.close()
 
 @app.route('/users/<user_email>/jobs', methods=['GET'])
+@token_required
 def get_user_jobs(user_email):
     print(f"\nReceived request to get saved jobs...")
     conn = get_db_connection()
@@ -70,6 +75,7 @@ def get_user_jobs(user_email):
         if conn: conn.close()
 
 @app.route('/users/<user_email>/watchlist', methods=['GET'])
+@token_required
 def get_user_watchlist(user_email):
     print(f"\nReceived request to get watchlist for user: {user_email}")
     conn = get_db_connection()
@@ -86,6 +92,7 @@ def get_user_watchlist(user_email):
         if conn: conn.close()
 
 @app.route('/users/<user_email>/suggest-companies', methods=['POST'])
+@token_required
 def suggest_companies_for_user(user_email):
     print(f"\nReceived request to suggest companies for user: {user_email}")
     if model is None: return jsonify({"error": "Model is not available"}), 503
@@ -94,6 +101,7 @@ def suggest_companies_for_user(user_email):
 # --- Job Tracker API Endpoints ---
 
 @app.route('/users/<user_email>/tracked-jobs', methods=['GET'])
+@token_required
 def get_tracked_jobs(user_email):
     print(f"\nReceived request to GET tracked jobs for {user_email}")
     conn = get_db_connection()
@@ -116,6 +124,7 @@ def get_tracked_jobs(user_email):
         if conn: conn.close()
 
 @app.route('/users/<user_email>/tracked-jobs', methods=['POST'])
+@token_required
 def add_tracked_job(user_email):
     print(f"\nReceived request to POST new tracked job for {user_email}")
     data = request.get_json()
@@ -138,6 +147,7 @@ def add_tracked_job(user_email):
         if conn: conn.close()
 
 @app.route('/users/<user_email>/tracked-jobs/<int:tracked_job_id>', methods=['PUT'])
+@token_required
 def update_tracked_job(user_email, tracked_job_id):
     print(f"\nReceived request to PUT update for tracked job id {tracked_job_id}")
     data = request.get_json()
@@ -150,7 +160,6 @@ def update_tracked_job(user_email, tracked_job_id):
             update_fields = []
             update_values = []
             
-            # MODIFIED: Auto-set applied_at date if status is 'Applied'
             if data.get('status') == 'Applied' and 'applied_at' not in data and not data.get('applied_at'):
                 update_fields.append("applied_at = %s")
                 update_values.append(date.today())
@@ -185,8 +194,8 @@ def update_tracked_job(user_email, tracked_job_id):
     finally:
         if conn: conn.close()
 
-# NEW ENDPOINT
 @app.route('/users/<user_email>/tracked-jobs/<int:tracked_job_id>', methods=['DELETE'])
+@token_required
 def remove_tracked_job(user_email, tracked_job_id):
     """Removes a job from a user's tracker entirely."""
     print(f"\nReceived request to DELETE tracked job id {tracked_job_id}")

@@ -3,6 +3,7 @@
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
 * Point transparenttalent.ai to this app.
+* add links from homepage to all extent pages, to be replaced with a robust logged-in and -out user experience when we get closer to launching on transparenttalent.ai
 
 ---
 
