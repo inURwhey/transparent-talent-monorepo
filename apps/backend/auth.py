@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from functools import wraps
-from clerk_backend import Clerk
+from clerk-backend-api import Clerk
 import os
 
 # Initialize the Clerk client using the secret key from the environment
