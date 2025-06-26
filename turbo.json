@@ -1,9 +1,7 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "pipeline": {
-    "build": {
-      // ... other settings
-    },
+    "build": {},
     "transparent-talent-frontend#build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**"],
@@ -11,7 +9,6 @@
         "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
         "CLERK_SECRET_KEY"
       ]
-    },
-    // ... other settings
+    }
   }
 }
