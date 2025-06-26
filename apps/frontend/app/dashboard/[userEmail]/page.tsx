@@ -41,13 +41,12 @@ export default function UserDashboard() {
   const pathname = usePathname();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  const fetchDataForPage = useCallback(async () => {
-    // FIX 1: Moved this function inside useCallback to resolve the dependency warning.
-    const getEmailFromPath = () => {
-      const pathParts = pathname.split('/');
-      return pathParts[pathParts.length - 1];
-    };
+  const getEmailFromPath = useCallback(() => {
+    const pathParts = pathname.split('/');
+    return pathParts[pathParts.length - 1];
+  }, [pathname]);
 
+  const fetchDataForPage = useCallback(async () => {
     const userEmail = getEmailFromPath();
     if (userEmail && apiBaseUrl) {
       setIsLoading(true);
@@ -66,58 +65,13 @@ export default function UserDashboard() {
       setTrackedJobs(trackedJobsData);
       setIsLoading(false);
     }
-  }, [pathname, apiBaseUrl]); // The hook correctly depends on these props.
+  }, [apiBaseUrl, getEmailFromPath]);
 
   useEffect(() => {
     fetchDataForPage();
   }, [fetchDataForPage]);
 
-  const handleTrackJob = async (jobId: number) => {
-    const getEmailFromPath = () => {
-      const pathParts = pathname.split('/');
-      return pathParts[pathParts.length - 1];
-    };
-    const userEmail = getEmailFromPath();
-    try {
-      const response = await fetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: jobId }),
-      });
-      if (!response.ok) throw new Error('Failed to track job.');
-      alert("Job tracked successfully!");
-      fetchDataForPage();
-    } catch (error) {
-      console.error("Tracking Error:", error);
-      alert("Could not track the job. It might already be on your list.");
-    }
-  };
-  
-  const handleRemoveJob = async (trackedJobId: number) => {
-    if (!window.confirm("Are you sure you want to remove this job from your tracker?")) {
-        return;
-    }
-    const getEmailFromPath = () => {
-      const pathParts = pathname.split('/');
-      return pathParts[pathParts.length - 1];
-    };
-    const userEmail = getEmailFromPath();
-    try {
-        const response = await fetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs/${trackedJobId}`, {
-            method: 'DELETE',
-        });
-        if (!response.ok) throw new Error('Failed to remove job.');
-        setTrackedJobs(currentJobs => currentJobs.filter(job => job.tracked_job_id !== trackedJobId));
-    } catch (error) {
-        console.error("Remove Job Error:", error);
-        alert("Could not remove the job.");
-    }
-  };
-
-  const handleUpdate = async (trackedJobId: number, payload: UpdatePayload) => {
-    const getEmailFromPath = () => {
-      const pathParts = pathname.split('/');
-      return pathParts[pathParts.length - 1];
-    };
+  const handleUpdate = useCallback(async (trackedJobId: number, payload: UpdatePayload) => {
     const userEmail = getEmailFromPath();
     try {
       const response = await fetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs/${trackedJobId}`, {
@@ -132,27 +86,60 @@ export default function UserDashboard() {
       alert("Could not update job.");
       return false;
     }
-  };
+  }, [apiBaseUrl, getEmailFromPath, fetchDataForPage]);
 
-  const handleStartEdit = (job: TrackedJob) => {
+  const handleTrackJob = useCallback(async (jobId: number) => {
+    const userEmail = getEmailFromPath();
+    try {
+      const response = await fetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_id: jobId }),
+      });
+      if (!response.ok) throw new Error('Failed to track job.');
+      alert("Job tracked successfully!");
+      fetchDataForPage();
+    } catch (error) {
+      console.error("Tracking Error:", error);
+      alert("Could not track the job. It might already be on your list.");
+    }
+  }, [apiBaseUrl, getEmailFromPath, fetchDataForPage]);
+  
+  const handleRemoveJob = useCallback(async (trackedJobId: number) => {
+    if (!window.confirm("Are you sure you want to remove this job from your tracker?")) {
+        return;
+    }
+    const userEmail = getEmailFromPath();
+    try {
+        const response = await fetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs/${trackedJobId}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to remove job.');
+        setTrackedJobs(currentJobs => currentJobs.filter(job => job.tracked_job_id !== trackedJobId));
+    } catch (error) {
+        console.error("Remove Job Error:", error);
+        alert("Could not remove the job.");
+    }
+  }, [apiBaseUrl, getEmailFromPath]);
+
+  const handleStartEdit = useCallback((job: TrackedJob) => {
     setEditingJobId(job.tracked_job_id);
     setEditNotes(job.notes || '');
     setEditDate(job.applied_at ? new Date(job.applied_at).toISOString().split('T')[0] : '');
-  };
+  }, []);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingJobId(null); setEditNotes(''); setEditDate('');
-  };
+  }, []);
 
-  const handleSaveChanges = async (trackedJobId: number) => {
+  const handleSaveChanges = useCallback(async (trackedJobId: number) => {
     const payload = { notes: editNotes, applied_at: editDate || null };
     const success = await handleUpdate(trackedJobId, payload);
     if (success) handleCancelEdit();
-  };
+  }, [editDate, editNotes, handleUpdate, handleCancelEdit]);
 
-  const handleStatusChange = async (trackedJobId: number, newStatus: string) => {
+  const handleStatusChange = useCallback(async (trackedJobId: number, newStatus: string) => {
     await handleUpdate(trackedJobId, { status: newStatus });
-  };
+  }, [handleUpdate]);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Not set';
@@ -168,18 +155,16 @@ export default function UserDashboard() {
   return (
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
       <div className="max-w-4xl mx-auto">
-        
         <div className="bg-white p-6 rounded-lg shadow-md mb-8">
             <h1 className="text-3xl font-bold text-gray-800">{profile ? profile.full_name : 'User Profile'}</h1>
             <p className="text-lg text-gray-600 mt-2">Short Term Goal:</p>
             <p className="text-gray-700 italic">{profile?.short_term_career_goal || "No goal set."}</p>
         </div>
-
         <div className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">My Job Tracker</h2>
           <div className="space-y-6">
-            {trackedJobs && trackedJobs.length > 0 ? (
-              trackedJobs.map((trackedJob: TrackedJob) => (
+            {trackedJobs.length > 0 ? (
+              trackedJobs.map((trackedJob) => (
                 <div key={trackedJob.tracked_job_id} className="border-b pb-4">
                   <div className="flex justify-between items-start">
                     <div>
@@ -189,7 +174,7 @@ export default function UserDashboard() {
                         View Original Post
                       </a>
                     </div>
-                    <select value={trackedJob.status} onChange={(e) => handleStatusChange(trackedJob.tracked_job_id, e.target.value)}
+                    <select value={trackedJob.status} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleStatusChange(trackedJob.tracked_job_id, e.target.value)}
                       className="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 h-fit">
                       <option value="Saved">Saved</option>
                       <option value="Applied">Applied</option>
@@ -198,17 +183,16 @@ export default function UserDashboard() {
                       <option value="Rejected">Rejected</option>
                     </select>
                   </div>
-                  
                   {editingJobId === trackedJob.tracked_job_id ? (
                     <div className="mt-4 space-y-3">
                       <div>
                         <label htmlFor="applied_at" className="block text-sm font-medium text-gray-700">Applied Date</label>
-                        <input type="date" id="applied_at" value={editDate} onChange={(e) => setEditDate(e.target.value)}
+                        <input type="date" id="applied_at" value={editDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditDate(e.target.value)}
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2" />
                       </div>
                       <div>
                         <label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label>
-                        <textarea id="notes" rows={3} value={editNotes} onChange={(e) => setEditNotes(e.target.value)}
+                        <textarea id="notes" rows={3} value={editNotes} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditNotes(e.target.value)}
                           placeholder="e.g., Followed up with hiring manager..."
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2" ></textarea>
                       </div>
@@ -234,12 +218,10 @@ export default function UserDashboard() {
                 </div>
               ))
             ) : ( 
-                // FIX 2: Corrected unescaped apostrophe
                 <p className="text-gray-500">You are not tracking any jobs yet. Click 'Track' on a job match to begin.</p> 
             )}
           </div>
         </div>
-        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="md:col-span-1">
             <div className="bg-white p-6 rounded-lg shadow-md">
@@ -251,8 +233,8 @@ export default function UserDashboard() {
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-2xl font-semibold text-gray-800 mb-4">Job Matches</h2>
               <ul className="space-y-4">
-                {jobs && jobs.length > 0 ? (
-                  jobs.map((job: Job) => (
+                {jobs.length > 0 ? (
+                  jobs.map((job) => (
                     <li key={job.id} className="border-b pb-4 flex justify-between items-center">
                       <div>
                         <h3 className="font-bold text-lg text-blue-600">{job.job_title}</h3>
