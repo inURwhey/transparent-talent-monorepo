@@ -7,30 +7,22 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 from datetime import date
 
-# Import the new security decorator
 from auth import token_required
 
 # --- Initialization ---
 load_dotenv()
 app = Flask(__name__)
-# Add 'Authorization' to the list of allowed headers for CORS
 CORS(app, supports_credentials=True, expose_headers=["Authorization"])
 
-# --- Database Connection Function (no longer needed here, handled in auth.py) ---
 def get_db_connection():
     db_url = os.getenv('DATABASE_URL')
     if not db_url: raise ValueError("DATABASE_URL not set")
     return psycopg2.connect(db_url)
 
-# --- REMOVED get_user_id helper, no longer needed ---
-
 # --- REFACTORED API Endpoints ---
-# All routes are now prefixed with /api for clarity
-
 @app.route('/api/profile', methods=['GET'])
 @token_required
 def get_user_profile():
-    # The decorator has already fetched the user and put it in 'g'
     user_id = g.current_user['id']
     conn = get_db_connection()
     try:
@@ -72,7 +64,6 @@ def get_user_watchlist():
     finally: conn.close()
 
 # --- Job Tracker API Endpoints ---
-
 @app.route('/api/tracked-jobs', methods=['GET'])
 @token_required
 def get_tracked_jobs():
@@ -110,10 +101,11 @@ def add_tracked_job():
         return jsonify({"error": str(e)}), 500
     finally: conn.close()
 
+# *** THE FIX IS HERE ***
 @app.route('/api/tracked-jobs/<int:tracked_job_id>', methods=['PUT'])
 @token_required
 def update_tracked_job(tracked_job_id):
-    user_id = g.current__user['id']
+    user_id = g.current_user['id'] # Was g.current__user['id']
     data = request.get_json()
     conn = get_db_connection()
     try:
@@ -163,7 +155,6 @@ def remove_tracked_job(tracked_job_id):
         if conn: conn.rollback()
         return jsonify({"error": str(e)}), 500
     finally: conn.close()
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))

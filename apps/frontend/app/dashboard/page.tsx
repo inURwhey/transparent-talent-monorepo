@@ -52,9 +52,8 @@ export default function UserDashboard() {
     return fetch(url, { ...options, headers });
   }, [getToken]);
 
-  // --- CORRECTED DATA FETCHING LOGIC ---
+  // --- CORRECTED DATA FETCHING LOGIC (Unchanged from previous attempt) ---
   const fetchDataForPage = useCallback(async () => {
-    // *** FIX: We must wait for the user object to be available, not just isLoaded. ***
     if (!isUserLoaded || !user) {
         return;
     }
@@ -85,15 +84,14 @@ export default function UserDashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, isUserLoaded, user, authedFetch]); // *** FIX: Added 'user' to the dependency array ***
+  }, [apiBaseUrl, isUserLoaded, user, authedFetch]);
 
   useEffect(() => {
-    // This will now run correctly when isUserLoaded is true AND when user object populates.
     fetchDataForPage();
   }, [fetchDataForPage]);
 
 
-  // --- HANDLERS (Unchanged logic, will now work correctly) ---
+  // --- HANDLERS (Unchanged logic) ---
   const handleUpdate = useCallback(async (trackedJobId: number, payload: UpdatePayload) => {
     try {
       const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, {
@@ -136,7 +134,7 @@ export default function UserDashboard() {
     }
   }, [apiBaseUrl, authedFetch]);
 
-  // --- EDIT HANDLERS & FORMATTERS (Unchanged) ---
+  // --- EDIT HANDLERS & FORMATTERS ---
   const handleStartEdit = useCallback((job: TrackedJob) => {
     setEditingJobId(job.tracked_job_id);
     setEditNotes(job.notes || '');
@@ -156,20 +154,19 @@ export default function UserDashboard() {
     await handleUpdate(trackedJobId, { status: newStatus });
   }, [handleUpdate]);
 
+  // *** THE FIX IS HERE ***
   const formatDate = (dateString: string | null) => {
-    if (!date_string) return 'Not set';
-    return new Date(date_string).toLocaleDateString(undefined, {
+    if (!dateString) return 'Not set'; // Was date_string
+    return new Date(dateString).toLocaleDateString(undefined, { // Was date_string
       year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'
     });
   }
 
   // --- RENDER LOGIC ---
-  // Show a loading screen until the user object is fully available.
   if (!isUserLoaded) {
      return <div className="min-h-screen flex items-center justify-center">Initializing session...</div>
   }
   
-  // After session is initialized, show a more specific loading state.
   if (isLoading && isUserLoaded) {
      return <div className="min-h-screen flex items-center justify-center">Loading Dashboard Data...</div>
   }
@@ -183,9 +180,9 @@ export default function UserDashboard() {
         {debugError && <p><strong>Caught Error:</strong> <span className="font-bold text-red-600">{debugError}</span></p>}
       </div>
       
-      {!debugError && profile ? ( // Also check if profile exists before rendering main content
+      {!debugError && profile ? (
         <div className="max-w-4xl mx-auto">
-          {/* ... The rest of your JSX for rendering the page is identical ... */}
+          {/* ... The rest of your JSX ... */}
           <div className="bg-white p-6 rounded-lg shadow-md mb-8">
               <h1 className="text-3xl font-bold text-gray-800">{profile.full_name}</h1>
               <p className="text-lg text-gray-600 mt-2">Short Term Goal:</p>
@@ -205,7 +202,7 @@ export default function UserDashboard() {
                           View Original Post
                         </a>
                       </div>
-                      <select value={trackedJob.status} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleStatusChange(trackedJob.tracked_job_id, e.target.value)}
+                      <select value={trackedJob.status} onChange={(e) => handleStatusChange(trackedJob.tracked_job_id, e.target.value)}
                         className="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 h-fit">
                         <option value="Saved">Saved</option>
                         <option value="Applied">Applied</option>
