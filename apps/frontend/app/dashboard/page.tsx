@@ -1,28 +1,25 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { usePathname } from 'next/navigation';
+import { useAuth, useUser } from '@clerk/nextjs';
 
-// --- TYPE DEFINITIONS ---
+// --- TYPE DEFINITIONS (Unchanged) ---
 interface Profile {
   full_name: string;
   short_term_career_goal: string;
 }
-
 interface Job {
   id: number;
   job_title: string;
   company_name: string;
   job_url: string;
 }
-
 interface TrackedJob extends Job {
   tracked_job_id: number;
   status: string;
   notes: string | null;
   applied_at: string | null;
 }
-
 type UpdatePayload = {
   notes?: string;
   applied_at?: string | null;
@@ -30,6 +27,7 @@ type UpdatePayload = {
 };
 
 export default function UserDashboard() {
+  // --- STATE MANAGEMENT (Unchanged) ---
   const [profile, setProfile] = useState<Profile | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
@@ -37,105 +35,109 @@ export default function UserDashboard() {
   const [editingJobId, setEditingJobId] = useState<number | null>(null);
   const [editNotes, setEditNotes] = useState('');
   const [editDate, setEditDate] = useState('');
-  // State for storing and displaying errors
   const [debugError, setDebugError] = useState<string | null>(null);
+  
+  // --- CLERK HOOKS for Authentication and User Data ---
+  const { getToken } = useAuth(); // Hook to get the authentication token
+  const { user, isLoaded: isUserLoaded } = useUser(); // Hook to get user details
 
-  const pathname = usePathname();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  const getEmailFromPath = useCallback(() => {
-    const pathParts = pathname.split('/');
-    return pathParts[pathParts.length - 1];
-  }, [pathname]);
+  // --- SECURE, AUTHENTICATED FETCH HELPER ---
+  // This helper function automatically adds the auth token to every API call.
+  const authedFetch = useCallback(async (url: string, options: RequestInit = {}) => {
+    const token = await getToken();
+    const headers = new Headers(options.headers);
+    headers.set('Authorization', `Bearer ${token}`);
+    headers.set('Content-Type', 'application/json');
 
+    return fetch(url, { ...options, headers });
+  }, [getToken]);
+
+
+  // --- REFACTORED DATA FETCHING LOGIC ---
   const fetchDataForPage = useCallback(async () => {
+    // We can only fetch data if the user object is loaded and an email exists
+    const userEmail = user?.primaryEmailAddress?.emailAddress;
+    if (!isUserLoaded || !userEmail) {
+      // Don't fetch if user isn't loaded yet. The useEffect will re-run when it is.
+      return;
+    }
+    
     try {
-      setDebugError(null); // Clear previous errors
-      const userEmail = getEmailFromPath();
-      
-      if (!apiBaseUrl) {
-        throw new Error("Environment variable NEXT_PUBLIC_API_BASE_URL is not set.");
-      }
-      if (!userEmail) {
-        throw new Error("Could not extract user email from path.");
-      }
-
+      setDebugError(null);
       setIsLoading(true);
+
+      if (!apiBaseUrl) {
+        throw new Error("NEXT_PUBLIC_API_BASE_URL is not set.");
+      }
+      
       const [profileRes, jobsRes, trackedJobsRes] = await Promise.all([
-        fetch(`${apiBaseUrl}/users/${userEmail}/profile`),
-        fetch(`${apiBaseUrl}/users/${userEmail}/jobs`),
-        fetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs`)
+        authedFetch(`${apiBaseUrl}/users/${userEmail}/profile`),
+        authedFetch(`${apiBaseUrl}/users/${userEmail}/jobs`),
+        authedFetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs`)
       ]);
 
-      if (!profileRes.ok) console.error("Profile fetch failed:", profileRes.statusText);
-      if (!jobsRes.ok) console.error("Jobs fetch failed:", jobsRes.statusText);
-      if (!trackedJobsRes.ok) console.error("Tracked jobs fetch failed:", trackedJobsRes.statusText);
+      if (!profileRes.ok) throw new Error(`Profile fetch failed: ${profileRes.statusText}`);
+      if (!jobsRes.ok) throw new Error(`Jobs fetch failed: ${jobsRes.statusText}`);
+      if (!trackedJobsRes.ok) throw new Error(`Tracked jobs fetch failed: ${trackedJobsRes.statusText}`);
 
-      const profileData = profileRes.ok ? await profileRes.json() : null;
-      const jobsData = jobsRes.ok ? await jobsRes.json() : [];
-      const trackedJobsData = trackedJobsRes.ok ? await trackedJobsRes.json() : [];
+      setProfile(await profileRes.json());
+      setJobs(await jobsRes.json());
+      setTrackedJobs(await trackedJobsRes.json());
 
-      setProfile(profileData);
-      setJobs(jobsData);
-      setTrackedJobs(trackedJobsData);
-
-    } catch (error: unknown) { // CORRECTED THIS LINE
+    } catch (error: unknown) {
       console.error("A critical error occurred during data fetching:", error);
-      if (error instanceof Error) { // Type-safe error handling
-        setDebugError(error.message);
-      } else {
-        setDebugError("An unknown error occurred.");
-      }
+      setDebugError(error instanceof Error ? error.message : "An unknown error occurred.");
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, getEmailFromPath]);
+  }, [apiBaseUrl, user, isUserLoaded, authedFetch]);
 
+  // Initial data fetch effect
   useEffect(() => {
     fetchDataForPage();
   }, [fetchDataForPage]);
 
-  // All other handlers remain the same...
+
+  // --- REFACTORED HANDLERS to use authedFetch ---
   const handleUpdate = useCallback(async (trackedJobId: number, payload: UpdatePayload) => {
-    const userEmail = getEmailFromPath();
+    const userEmail = user?.primaryEmailAddress?.emailAddress;
+    if (!userEmail) return false;
     try {
-      const response = await fetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs/${trackedJobId}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      const response = await authedFetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs/${trackedJobId}`, {
+        method: 'PUT', body: JSON.stringify(payload)
       });
       if (!response.ok) throw new Error('Failed to update.');
       fetchDataForPage(); 
       return true;
     } catch (error) {
       console.error("Update Error:", error);
-      alert("Could not update job.");
       return false;
     }
-  }, [apiBaseUrl, getEmailFromPath, fetchDataForPage]);
+  }, [apiBaseUrl, user, authedFetch, fetchDataForPage]);
 
   const handleTrackJob = useCallback(async (jobId: number) => {
-    const userEmail = getEmailFromPath();
+    const userEmail = user?.primaryEmailAddress?.emailAddress;
+    if (!userEmail) return;
     try {
-      const response = await fetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: jobId }),
+      const response = await authedFetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs`, {
+        method: 'POST', body: JSON.stringify({ job_id: jobId }),
       });
       if (!response.ok) throw new Error('Failed to track job.');
       alert("Job tracked successfully!");
       fetchDataForPage();
     } catch (error) {
       console.error("Tracking Error:", error);
-      alert("Could not track the job. It might already be on your list.");
+      alert("Could not track the job.");
     }
-  }, [apiBaseUrl, getEmailFromPath, fetchDataForPage]);
+  }, [apiBaseUrl, user, authedFetch, fetchDataForPage]);
   
   const handleRemoveJob = useCallback(async (trackedJobId: number) => {
-    if (!window.confirm("Are you sure you want to remove this job from your tracker?")) {
-        return;
-    }
-    const userEmail = getEmailFromPath();
+    const userEmail = user?.primaryEmailAddress?.emailAddress;
+    if (!userEmail || !window.confirm("Are you sure?")) return;
     try {
-        const response = await fetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs/${trackedJobId}`, {
+        const response = await authedFetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs/${trackedJobId}`, {
             method: 'DELETE',
         });
         if (!response.ok) throw new Error('Failed to remove job.');
@@ -144,8 +146,9 @@ export default function UserDashboard() {
         console.error("Remove Job Error:", error);
         alert("Could not remove the job.");
     }
-  }, [apiBaseUrl, getEmailFromPath]);
+  }, [apiBaseUrl, user, authedFetch]);
 
+  // --- EDIT HANDLERS (Unchanged logic, but now rely on stable callbacks) ---
   const handleStartEdit = useCallback((job: TrackedJob) => {
     setEditingJobId(job.tracked_job_id);
     setEditNotes(job.notes || '');
@@ -157,8 +160,7 @@ export default function UserDashboard() {
   }, []);
 
   const handleSaveChanges = useCallback(async (trackedJobId: number) => {
-    const payload = { notes: editNotes, applied_at: editDate || null };
-    const success = await handleUpdate(trackedJobId, payload);
+    const success = await handleUpdate(trackedJobId, { notes: editNotes, applied_at: editDate || null });
     if (success) handleCancelEdit();
   }, [editDate, editNotes, handleUpdate, handleCancelEdit]);
 
@@ -174,20 +176,23 @@ export default function UserDashboard() {
   }
 
 
+  // --- RENDER LOGIC ---
+  if (!isUserLoaded || isLoading) {
+     return <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>
+  }
+  
   return (
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
-      {/* --- DEBUG INFO --- */}
-      <div className="max-w-4xl mx-auto p-4 mb-4 border-2 border-dashed border-red-500 bg-red-50">
-        <h2 className="font-bold text-red-700">Debug Information</h2>
-        <p><strong>API Base URL (from env):</strong> {apiBaseUrl || <span className="font-bold text-red-600">NOT SET</span>}</p>
+       <div className="max-w-4xl mx-auto p-4 mb-4 border-2 border-dashed border-blue-500 bg-blue-50">
+        <h2 className="font-bold text-blue-700">Debug Information</h2>
+        <p><strong>User Status:</strong> {isUserLoaded ? `Loaded (${user?.primaryEmailAddress?.emailAddress})` : 'Loading...'}</p>
+        <p><strong>API Base URL:</strong> {apiBaseUrl || <span className="font-bold text-red-600">NOT SET</span>}</p>
         {debugError && <p><strong>Caught Error:</strong> <span className="font-bold text-red-600">{debugError}</span></p>}
-        {!debugError && <p><strong>Caught Error:</strong> None</p>}
       </div>
       
-      {isLoading ? (
-        <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>
-      ) : !debugError && (
+      {!debugError && (
         <div className="max-w-4xl mx-auto">
+          {/* ... The rest of your JSX for rendering the page is identical ... */}
           <div className="bg-white p-6 rounded-lg shadow-md mb-8">
               <h1 className="text-3xl font-bold text-gray-800">{profile ? profile.full_name : 'User Profile'}</h1>
               <p className="text-lg text-gray-600 mt-2">Short Term Goal:</p>
