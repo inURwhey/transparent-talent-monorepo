@@ -3,8 +3,6 @@ from functools import wraps
 from psycopg2.extras import DictCursor
 import os
 import psycopg2
-
-# --- CORRECT LIBRARY AND IMPORT ---
 from clerk_backend_api import Clerk
 
 # Initialization
@@ -29,8 +27,8 @@ def token_required(f):
             return jsonify({"message": "Authentication token is missing"}), 401
 
         try:
-            # --- THE ORIGINAL, CORRECT METHOD ---
-            # 1. Verify the token using the method from your original file.
+            # --- THE ORIGINAL AND CORRECT METHOD ---
+            # 1. Verify the JWT using the method from your original file.
             # This was the correct method all along.
             claims = clerk.tokens.verify_token(session_token)
             clerk_user_id = claims.get('sub')
@@ -64,7 +62,7 @@ def token_required(f):
             conn.close()
 
         except Exception as e:
-            # Use a generic exception handler.
+            # Generic handler for any verification or DB errors.
             return jsonify({"message": "Authentication failed", "error": str(e)}), 401
 
         return f(*args, **kwargs)
