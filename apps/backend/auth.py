@@ -4,6 +4,8 @@ from psycopg2.extras import DictCursor
 import os
 import psycopg2
 from clerk_backend_api import Clerk
+# We need to import the specific exception class for this to work
+from clerk_backend_api.errors import ClerkAPIException
 
 # Initialization
 clerk = Clerk()
@@ -18,10 +20,8 @@ def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            # --- THE FINAL, CORRECT METHOD CALL BASED ON THE LOGS ---
-            # 1. Call the method with the two arguments the error message demanded.
-            # We pass the Flask `request` object and an empty dictionary for `options`.
-            claims = clerk.authenticate_request(request, {})
+            # 1. Use the high-level authentication method.
+            claims = clerk.authenticate_request(request)
             clerk_user_id = claims.get('sub')
             
             if not clerk_user_id:
@@ -33,7 +33,7 @@ def token_required(f):
                 cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
                 user = cursor.fetchone()
 
-                if not user:
+                if not user: # This logic is correct
                     clerk_user_info = clerk.users.get_user(user_id=clerk_user_id)
                     user_email = clerk_user_info.email_addresses[0].email_address
                     cursor.execute("SELECT * FROM users WHERE email = %s", (user_email,))
@@ -46,12 +46,15 @@ def token_required(f):
                         cursor.execute("INSERT INTO users (clerk_user_id, email) VALUES (%s, %s) RETURNING *;", (clerk_user_id, user_email))
                         user = cursor.fetchone()
                         conn.commit()
-
+                
                 g.current_user = user
             conn.close()
 
-        except Exception as e:
-            return jsonify({"message": "Authentication failed", "error": str(e)}), 401
-
+        except ClerkAPIException as e:
+            # --- THIS IS THE FIX ---
+            # Now, we ONLY catch specific Clerk authentication errors.
+            return jsonify({"message": "Authentication error from Clerk", "error": str(e)}), 401
+        
+        # Any other error (like a DB error in the endpoint) will now correctly cause a 500, not a 401.
         return f(*args, **kwargs)
     return decorated_function
