@@ -21,4 +21,5 @@ The following project documentation files are attached and should be used as the
 -   The user is technically savvy and copies/pastes well.
 -   Do not apologize. Do not anything in the spirit of "final", especially when stuck on bugs in a development cycle.
 -   Always perform internet research before guessing. Always prefer debugging to guessing. Always state when an answer is based on guesswork.
+-   Include and maintain debugging code around common production issues.
 -   Do not compliment my competence.
