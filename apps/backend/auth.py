@@ -3,6 +3,8 @@ from functools import wraps
 from psycopg2.extras import DictCursor
 import os
 import psycopg2
+
+# --- CORRECT LIBRARY AND IMPORT ---
 from clerk_backend_api import Clerk
 
 # Initialization
@@ -27,17 +29,16 @@ def token_required(f):
             return jsonify({"message": "Authentication token is missing"}), 401
 
         try:
-            # --- THE FINAL FIX BASED ON THE LOGS ---
-            # 1. Verify the token using the method we know exists,
-            #    and passing the argument the error log demanded.
-            #    The token contains the session_id.
-            claims = clerk.sessions.verify(session_id=session_token)
+            # --- THE ORIGINAL, CORRECT METHOD ---
+            # 1. Verify the token using the method from your original file.
+            # This was the correct method all along.
+            claims = clerk.tokens.verify_token(session_token)
             clerk_user_id = claims.get('sub')
             
             if not clerk_user_id:
                 return jsonify({"message": "Invalid token: missing user ID"}), 401
             
-            # 2. Perform the database lookup logic.
+            # 2. Perform the database lookup and user linking logic.
             conn = get_db_connection()
             with conn.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
@@ -63,9 +64,7 @@ def token_required(f):
             conn.close()
 
         except Exception as e:
-            print(f"--- AUTHENTICATION FAILED ---")
-            print(f"ERROR TYPE: {type(e).__name__}")
-            print(f"ERROR DETAILS: {e}")
+            # Use a generic exception handler.
             return jsonify({"message": "Authentication failed", "error": str(e)}), 401
 
         return f(*args, **kwargs)
