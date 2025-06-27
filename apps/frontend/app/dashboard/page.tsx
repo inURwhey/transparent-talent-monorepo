@@ -52,9 +52,12 @@ export default function UserDashboard() {
     return fetch(url, { ...options, headers });
   }, [getToken]);
 
-  // --- REFACTORED DATA FETCHING LOGIC with NEW ROUTES ---
+  // --- CORRECTED DATA FETCHING LOGIC ---
   const fetchDataForPage = useCallback(async () => {
-    if (!isUserLoaded) return; // Wait until user is loaded
+    // *** FIX: We must wait for the user object to be available, not just isLoaded. ***
+    if (!isUserLoaded || !user) {
+        return;
+    }
     
     try {
       setDebugError(null);
@@ -68,9 +71,9 @@ export default function UserDashboard() {
         authedFetch(`${apiBaseUrl}/api/tracked-jobs`)
       ]);
 
-      if (!profileRes.ok) throw new Error(`Profile fetch failed: ${profileRes.statusText}`);
-      if (!jobsRes.ok) throw new Error(`Jobs fetch failed: ${jobsRes.statusText}`);
-      if (!trackedJobsRes.ok) throw new Error(`Tracked jobs fetch failed: ${trackedJobsRes.statusText}`);
+      if (!profileRes.ok) throw new Error(`Profile fetch failed: ${profileRes.statusText || 'No response from server'}`);
+      if (!jobsRes.ok) throw new Error(`Jobs fetch failed: ${jobsRes.statusText || 'No response from server'}`);
+      if (!trackedJobsRes.ok) throw new Error(`Tracked jobs fetch failed: ${trackedJobsRes.statusText || 'No response from server'}`);
 
       setProfile(await profileRes.json());
       setJobs(await jobsRes.json());
@@ -82,14 +85,15 @@ export default function UserDashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, isUserLoaded, authedFetch]);
+  }, [apiBaseUrl, isUserLoaded, user, authedFetch]); // *** FIX: Added 'user' to the dependency array ***
 
   useEffect(() => {
+    // This will now run correctly when isUserLoaded is true AND when user object populates.
     fetchDataForPage();
   }, [fetchDataForPage]);
 
 
-  // --- REFACTORED HANDLERS with NEW ROUTES ---
+  // --- HANDLERS (Unchanged logic, will now work correctly) ---
   const handleUpdate = useCallback(async (trackedJobId: number, payload: UpdatePayload) => {
     try {
       const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, {
@@ -153,33 +157,39 @@ export default function UserDashboard() {
   }, [handleUpdate]);
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Not set';
-    return new Date(dateString).toLocaleDateString(undefined, {
+    if (!date_string) return 'Not set';
+    return new Date(date_string).toLocaleDateString(undefined, {
       year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'
     });
   }
 
-  // --- RENDER LOGIC (Unchanged) ---
-  if (!isUserLoaded || isLoading) {
-     return <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>
+  // --- RENDER LOGIC ---
+  // Show a loading screen until the user object is fully available.
+  if (!isUserLoaded) {
+     return <div className="min-h-screen flex items-center justify-center">Initializing session...</div>
   }
   
+  // After session is initialized, show a more specific loading state.
+  if (isLoading && isUserLoaded) {
+     return <div className="min-h-screen flex items-center justify-center">Loading Dashboard Data...</div>
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
        <div className="max-w-4xl mx-auto p-4 mb-4 border-2 border-dashed border-blue-500 bg-blue-50">
         <h2 className="font-bold text-blue-700">Debug Information</h2>
-        <p><strong>User Status:</strong> {isUserLoaded ? `Loaded (${user?.primaryEmailAddress?.emailAddress})` : 'Loading...'}</p>
+        <p><strong>User Status:</strong> {isUserLoaded && user ? `Loaded (${user.primaryEmailAddress?.emailAddress})` : 'Loading...'}</p>
         <p><strong>API Base URL:</strong> {apiBaseUrl || <span className="font-bold text-red-600">NOT SET</span>}</p>
         {debugError && <p><strong>Caught Error:</strong> <span className="font-bold text-red-600">{debugError}</span></p>}
       </div>
       
-      {!debugError && (
+      {!debugError && profile ? ( // Also check if profile exists before rendering main content
         <div className="max-w-4xl mx-auto">
           {/* ... The rest of your JSX for rendering the page is identical ... */}
           <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-              <h1 className="text-3xl font-bold text-gray-800">{profile ? profile.full_name : 'User Profile'}</h1>
+              <h1 className="text-3xl font-bold text-gray-800">{profile.full_name}</h1>
               <p className="text-lg text-gray-600 mt-2">Short Term Goal:</p>
-              <p className="text-gray-700 italic">{profile?.short_term_career_goal || "No goal set."}</p>
+              <p className="text-gray-700 italic">{profile.short_term_career_goal || "No goal set."}</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md mb-8">
             <h2 className="text-2xl font-semibold text-gray-800 mb-4">My Job Tracker</h2>
@@ -208,12 +218,12 @@ export default function UserDashboard() {
                       <div className="mt-4 space-y-3">
                         <div>
                           <label htmlFor="applied_at" className="block text-sm font-medium text-gray-700">Applied Date</label>
-                          <input type="date" id="applied_at" value={editDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditDate(e.target.value)}
+                          <input type="date" id="applied_at" value={editDate} onChange={(e) => setEditDate(e.target.value)}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2" />
                         </div>
                         <div>
                           <label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label>
-                          <textarea id="notes" rows={3} value={editNotes} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditNotes(e.target.value)}
+                          <textarea id="notes" rows={3} value={editNotes} onChange={(e) => setEditNotes(e.target.value)}
                             placeholder="e.g., Followed up with hiring manager..."
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2" ></textarea>
                         </div>
@@ -272,6 +282,11 @@ export default function UserDashboard() {
               </div>
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="text-center">
+          <h2 className="text-xl font-semibold">Data not available</h2>
+          <p className="text-gray-600">There was an issue loading your dashboard data. Please try refreshing the page.</p>
         </div>
       )}
     </main>
