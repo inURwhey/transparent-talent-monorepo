@@ -1,10 +1,11 @@
 from flask import request, jsonify
 from functools import wraps
-from clerk_backend_api import Clerk  # <-- THIS LINE IS CORRECTED
+from clerk_backend_api import Clerk
 import os
 
-# Initialize the Clerk client using the secret key from the environment
-clerk = Clerk(secret_key=os.environ.get("CLERK_SECRET_KEY"))
+# The new library reads the secret key from the environment automatically.
+# The constructor is now called with no arguments.
+clerk = Clerk()
 
 def token_required(f):
     """
@@ -23,8 +24,8 @@ def token_required(f):
             return jsonify({"message": "Authentication token is missing"}), 401
 
         try:
-            # Verify the token with Clerk. If invalid, it will raise an exception.
-            clerk.verify_token(session_token)
+            # The verify_token method now exists on the 'tokens' interface.
+            claims = clerk.tokens.verify_token(session_token)
         except Exception as e:
             return jsonify({"message": "Authentication token is invalid", "error": str(e)}), 401
 
