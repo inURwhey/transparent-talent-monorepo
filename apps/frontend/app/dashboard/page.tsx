@@ -37,45 +37,35 @@ export default function UserDashboard() {
   const [editDate, setEditDate] = useState('');
   const [debugError, setDebugError] = useState<string | null>(null);
   
-  // --- CLERK HOOKS for Authentication and User Data ---
-  const { getToken } = useAuth(); // Hook to get the authentication token
-  const { user, isLoaded: isUserLoaded } = useUser(); // Hook to get user details
+  // --- CLERK HOOKS (Unchanged) ---
+  const { getToken } = useAuth();
+  const { user, isLoaded: isUserLoaded } = useUser();
 
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  // --- SECURE, AUTHENTICATED FETCH HELPER ---
-  // This helper function automatically adds the auth token to every API call.
+  // --- SECURE, AUTHENTICATED FETCH HELPER (Unchanged) ---
   const authedFetch = useCallback(async (url: string, options: RequestInit = {}) => {
     const token = await getToken();
     const headers = new Headers(options.headers);
     headers.set('Authorization', `Bearer ${token}`);
     headers.set('Content-Type', 'application/json');
-
     return fetch(url, { ...options, headers });
   }, [getToken]);
 
-
-  // --- REFACTORED DATA FETCHING LOGIC ---
+  // --- REFACTORED DATA FETCHING LOGIC with NEW ROUTES ---
   const fetchDataForPage = useCallback(async () => {
-    // We can only fetch data if the user object is loaded and an email exists
-    const userEmail = user?.primaryEmailAddress?.emailAddress;
-    if (!isUserLoaded || !userEmail) {
-      // Don't fetch if user isn't loaded yet. The useEffect will re-run when it is.
-      return;
-    }
+    if (!isUserLoaded) return; // Wait until user is loaded
     
     try {
       setDebugError(null);
       setIsLoading(true);
 
-      if (!apiBaseUrl) {
-        throw new Error("NEXT_PUBLIC_API_BASE_URL is not set.");
-      }
+      if (!apiBaseUrl) throw new Error("NEXT_PUBLIC_API_BASE_URL is not set.");
       
       const [profileRes, jobsRes, trackedJobsRes] = await Promise.all([
-        authedFetch(`${apiBaseUrl}/users/${userEmail}/profile`),
-        authedFetch(`${apiBaseUrl}/users/${userEmail}/jobs`),
-        authedFetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs`)
+        authedFetch(`${apiBaseUrl}/api/profile`),
+        authedFetch(`${apiBaseUrl}/api/jobs`),
+        authedFetch(`${apiBaseUrl}/api/tracked-jobs`)
       ]);
 
       if (!profileRes.ok) throw new Error(`Profile fetch failed: ${profileRes.statusText}`);
@@ -92,20 +82,17 @@ export default function UserDashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, user, isUserLoaded, authedFetch]);
+  }, [apiBaseUrl, isUserLoaded, authedFetch]);
 
-  // Initial data fetch effect
   useEffect(() => {
     fetchDataForPage();
   }, [fetchDataForPage]);
 
 
-  // --- REFACTORED HANDLERS to use authedFetch ---
+  // --- REFACTORED HANDLERS with NEW ROUTES ---
   const handleUpdate = useCallback(async (trackedJobId: number, payload: UpdatePayload) => {
-    const userEmail = user?.primaryEmailAddress?.emailAddress;
-    if (!userEmail) return false;
     try {
-      const response = await authedFetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs/${trackedJobId}`, {
+      const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, {
         method: 'PUT', body: JSON.stringify(payload)
       });
       if (!response.ok) throw new Error('Failed to update.');
@@ -115,13 +102,11 @@ export default function UserDashboard() {
       console.error("Update Error:", error);
       return false;
     }
-  }, [apiBaseUrl, user, authedFetch, fetchDataForPage]);
+  }, [apiBaseUrl, authedFetch, fetchDataForPage]);
 
   const handleTrackJob = useCallback(async (jobId: number) => {
-    const userEmail = user?.primaryEmailAddress?.emailAddress;
-    if (!userEmail) return;
     try {
-      const response = await authedFetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs`, {
+      const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs`, {
         method: 'POST', body: JSON.stringify({ job_id: jobId }),
       });
       if (!response.ok) throw new Error('Failed to track job.');
@@ -131,13 +116,12 @@ export default function UserDashboard() {
       console.error("Tracking Error:", error);
       alert("Could not track the job.");
     }
-  }, [apiBaseUrl, user, authedFetch, fetchDataForPage]);
+  }, [apiBaseUrl, authedFetch, fetchDataForPage]);
   
   const handleRemoveJob = useCallback(async (trackedJobId: number) => {
-    const userEmail = user?.primaryEmailAddress?.emailAddress;
-    if (!userEmail || !window.confirm("Are you sure?")) return;
+    if (!window.confirm("Are you sure?")) return;
     try {
-        const response = await authedFetch(`${apiBaseUrl}/users/${userEmail}/tracked-jobs/${trackedJobId}`, {
+        const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, {
             method: 'DELETE',
         });
         if (!response.ok) throw new Error('Failed to remove job.');
@@ -146,9 +130,9 @@ export default function UserDashboard() {
         console.error("Remove Job Error:", error);
         alert("Could not remove the job.");
     }
-  }, [apiBaseUrl, user, authedFetch]);
+  }, [apiBaseUrl, authedFetch]);
 
-  // --- EDIT HANDLERS (Unchanged logic, but now rely on stable callbacks) ---
+  // --- EDIT HANDLERS & FORMATTERS (Unchanged) ---
   const handleStartEdit = useCallback((job: TrackedJob) => {
     setEditingJobId(job.tracked_job_id);
     setEditNotes(job.notes || '');
@@ -175,8 +159,7 @@ export default function UserDashboard() {
     });
   }
 
-
-  // --- RENDER LOGIC ---
+  // --- RENDER LOGIC (Unchanged) ---
   if (!isUserLoaded || isLoading) {
      return <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>
   }
