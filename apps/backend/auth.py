@@ -17,17 +17,27 @@ def get_db_connection():
 def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        session_token = None
+        auth_header = request.headers.get('Authorization')
+
+        if auth_header and auth_header.startswith('Bearer '):
+            session_token = auth_header.split(' ')[1]
+
+        if not session_token:
+            return jsonify({"message": "Authentication token is missing"}), 401
+
         try:
-            # --- THE FINAL, CORRECT METHOD ---
-            # 1. Use the library's intended, high-level request authentication method.
-            # This handles getting the token from the header and all verification steps.
-            claims = clerk.authenticate_request()
+            # --- THE FINAL FIX BASED ON THE LOGS ---
+            # 1. Verify the token using the method we know exists,
+            #    and passing the argument the error log demanded.
+            #    The token contains the session_id.
+            claims = clerk.sessions.verify(session_id=session_token)
             clerk_user_id = claims.get('sub')
             
             if not clerk_user_id:
                 return jsonify({"message": "Invalid token: missing user ID"}), 401
             
-            # 2. Perform the database lookup and user linking logic.
+            # 2. Perform the database lookup logic.
             conn = get_db_connection()
             with conn.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
@@ -53,8 +63,6 @@ def token_required(f):
             conn.close()
 
         except Exception as e:
-            # 3. Use a generic exception handler to prevent crashing on import
-            # and to log the actual authentication error.
             print(f"--- AUTHENTICATION FAILED ---")
             print(f"ERROR TYPE: {type(e).__name__}")
             print(f"ERROR DETAILS: {e}")
