@@ -1,4 +1,4 @@
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, UserButton, SignInButton } from "@clerk/nextjs";
 import Link from "next/link";
 
 export default function Home() {
@@ -12,7 +12,6 @@ export default function Home() {
           The frontend is deployed successfully. This is the application's public-facing root page.
         </p>
 
-        {/* --- QA Navigation Links --- */}
         <div className="mt-10 flex items-center justify-center gap-x-6">
           <SignedIn>
             <Link
@@ -28,12 +27,10 @@ export default function Home() {
           </SignedIn>
 
           <SignedOut>
-            <Link
-              href="/dashboard" // This will redirect to sign-in via middleware
-              className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-              Sign In
-            </Link>
+            {/* --- THIS IS THE FIX --- */}
+            <div className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                <SignInButton mode="modal" afterSignInUrl="/dashboard" />
+            </div>
             <Link
               href="/sign-up"
               className="text-sm font-semibold leading-6 text-gray-900"

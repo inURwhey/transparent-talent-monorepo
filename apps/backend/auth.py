@@ -18,47 +18,44 @@ def get_db_connection():
 def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # --- EXTENSIVE DEBUGGING LOGS ---
-        print("\n" + "="*50)
-        print("INCOMING REQUEST TO PROTECTED ENDPOINT")
-        print("="*50)
-        
-        # Log all incoming headers
-        headers = dict(request.headers)
-        print(f"REQUEST HEADERS:\n{json.dumps(headers, indent=2)}")
-
-        # Load authorized parties from environment
-        authorized_parties_json = os.getenv('AUTHORIZED_PARTIES_JSON')
-        authorized_parties = json.loads(authorized_parties_json) if authorized_parties_json else []
-        print(f"CONFIGURED AUTHORIZED PARTIES: {authorized_parties}")
-        
         try:
-            # We will now see exactly why this call is failing.
-            claims = clerk.authenticate_request(request, {"authorized_parties": authorized_parties})
+            # --- THE FINAL, CORRECTED IMPLEMENTATION ---
+            # 1. Load the list of authorized frontend URLs from the environment.
+            authorized_parties_json = os.getenv('AUTHORIZED_PARTIES_JSON')
+            authorized_parties = json.loads(authorized_parties_json) if authorized_parties_json else []
+
+            # 2. Call the authenticate_request method. It implicitly uses the Flask request context.
+            # We provide the authorized_parties for security.
+            claims = clerk.authenticate_request(authorized_parties=authorized_parties)
             clerk_user_id = claims.get('sub')
             
             if not clerk_user_id:
-                print("--- AUTHENTICATION FAILED: User ID ('sub') not in claims. ---")
                 return jsonify({"message": "Invalid token: missing user ID"}), 401
             
-            print("--- AUTHENTICATION SUCCEEDED (SHOULD NOT HAPPEN YET) ---")
-            
-            # Database logic (will only run if auth succeeds)
+            # 3. Perform the database lookup and user linking logic.
             conn = get_db_connection()
             with conn.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
                 user = cursor.fetchone()
-                # ... (rest of DB logic) ...
+
+                if not user:
+                    clerk_user_info = clerk.users.get_user(user_id=clerk_user_id)
+                    user_email = clerk_user_info.email_addresses[0].email_address
+                    cursor.execute("SELECT * FROM users WHERE email = %s", (user_email,))
+                    user = cursor.fetchone()
+                    if user:
+                        cursor.execute("UPDATE users SET clerk_user_id = %s WHERE id = %s RETURNING *;", (clerk_user_id, user['id']))
+                        user = cursor.fetchone()
+                        conn.commit()
+                    else:
+                        cursor.execute("INSERT INTO users (clerk_user_id, email) VALUES (%s, %s) RETURNING *;", (clerk_user_id, user_email))
+                        user = cursor.fetchone()
+                        conn.commit()
+
                 g.current_user = user
             conn.close()
 
         except Exception as e:
-            # --- THE MOST IMPORTANT LOG ---
-            # This will print the exact, detailed error from the Clerk library.
-            print("\n--- CLERK AUTHENTICATION EXCEPTION ---")
-            print(f"ERROR TYPE: {type(e).__name__}")
-            print(f"ERROR DETAILS: {e}")
-            print("="*50 + "\n")
             return jsonify({"message": "Authentication failed", "error": str(e)}), 401
 
         return f(*args, **kwargs)
