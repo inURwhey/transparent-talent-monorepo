@@ -4,6 +4,7 @@ from psycopg2.extras import DictCursor
 import os
 import psycopg2
 from clerk_backend_api import Clerk
+import jwt # <-- Import the new library
 
 # Initialization
 clerk = Clerk()
@@ -17,17 +18,33 @@ def get_db_connection():
 def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        session_token = None
+        auth_header = request.headers.get('Authorization')
+
+        if auth_header and auth_header.startswith('Bearer '):
+            session_token = auth_header.split(' ')[1]
+
+        if not session_token:
+            return jsonify({"message": "Authentication token is missing"}), 401
+
         try:
             # --- THE FINAL, LOG-DRIVEN SOLUTION ---
-            # 1. Call the method with the two arguments the TypeError demanded.
-            # We pass the Flask `request` object and an empty dictionary for `options`.
-            claims = clerk.authenticate_request(request, {})
+            # 1. Decode the JWT to extract the session ID ('sid') claim.
+            # We do not verify the signature here because Clerk's API will do it in the next step.
+            decoded_token = jwt.decode(session_token, options={"verify_signature": False})
+            session_id = decoded_token.get('sid')
+            
+            if not session_id:
+                return jsonify({"message": "Invalid token: session ID ('sid') missing."}), 401
+            
+            # 2. Verify the session using the session_id, as the error message demanded.
+            claims = clerk.sessions.verify(session_id=session_id)
             clerk_user_id = claims.get('sub')
             
             if not clerk_user_id:
-                return jsonify({"message": "Invalid token: missing user ID"}), 401
+                return jsonify({"message": "Token verification successful, but user ID ('sub') missing."}), 401
             
-            # 2. Perform the database lookup and user linking logic.
+            # 3. Perform the database lookup and user linking logic.
             conn = get_db_connection()
             with conn.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
