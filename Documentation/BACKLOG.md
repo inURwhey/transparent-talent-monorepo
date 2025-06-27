@@ -2,15 +2,13 @@
 
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
-* Point transparenttalent.ai to this app.
-* add links from homepage to all extent pages, to be replaced with a robust logged-in and -out user experience when we get closer to launching on transparenttalent.ai
 
 ---
 
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Security: Implement User Authentication** | 1000 | 3 | 100% | 0.5 | **6000** | **To Do** |
+| **Security: Implement User Authentication** | 1000 | 3 | 100% | 0.5 | **6000** | **Done** |
 | **Architecture: Monorepo Setup** | 1 | 3 | 100% | 0.25 | **12.0** | **Done** |
 | **Deployment: Deploy Frontend** | 1000 | 3 | 100% | 0.25 | **12000** | **Done** |
 
@@ -22,6 +20,7 @@
 | **UI: Tabular Job Tracker** | 1000 | 2 | 100% | 0.5 | **4000** | **To Do** |
 | **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | **To Do** |
 | **Feature: Logged Out Experience** | 1000 | 2 | 100% | 0.25 | **8000** | **To Do** |
+| **Deployment: Production Domain** | 1000 | 1 | 100% | 0.25 | **4000** | **To Do** |
 | **Backend: Automated App Expiration** | 1000 | 1 | 100% | 0.25 | **4000** | **To Do** |
 
 ## Tier 3: AI & System Intelligence (Mid-Term)
