@@ -27,16 +27,14 @@ def token_required(f):
             return jsonify({"message": "Authentication token is missing"}), 401
 
         try:
-            # --- THE ORIGINAL AND CORRECT METHOD ---
-            # 1. Verify the JWT using the method from your original file.
-            # This was the correct method all along.
+            # We believe this is the correct method. If it fails,
+            # the 'except' block below will now give us the exact reason.
             claims = clerk.tokens.verify_token(session_token)
             clerk_user_id = claims.get('sub')
             
             if not clerk_user_id:
                 return jsonify({"message": "Invalid token: missing user ID"}), 401
             
-            # 2. Perform the database lookup and user linking logic.
             conn = get_db_connection()
             with conn.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
@@ -45,10 +43,8 @@ def token_required(f):
                 if not user:
                     clerk_user_info = clerk.users.get_user(user_id=clerk_user_id)
                     user_email = clerk_user_info.email_addresses[0].email_address
-
                     cursor.execute("SELECT * FROM users WHERE email = %s", (user_email,))
                     user = cursor.fetchone()
-
                     if user:
                         cursor.execute("UPDATE users SET clerk_user_id = %s WHERE id = %s RETURNING *;", (clerk_user_id, user['id']))
                         user = cursor.fetchone()
@@ -62,7 +58,12 @@ def token_required(f):
             conn.close()
 
         except Exception as e:
-            # Generic handler for any verification or DB errors.
+            # --- THIS IS THE CRITICAL LOGGING ---
+            # This will print the exact reason for the 401 error to the Render logs.
+            print(f"\n--- AUTHENTICATION FAILED ---")
+            print(f"ERROR TYPE: {type(e).__name__}")
+            print(f"ERROR DETAILS: {e}")
+            print(f"---------------------------\n")
             return jsonify({"message": "Authentication failed", "error": str(e)}), 401
 
         return f(*args, **kwargs)
