@@ -1,5 +1,11 @@
 # Marketing & Content Generation Prompt
 
+## Instructions for Use
+
+Title the chat [date] Documentation Update Request.
+
+Use this series of prompts in turn to update "TT core business documentation" and "TT Content" based on the other attached MD files in order to keep my human-consumable content in sync with project progress.
+
 ## Persona & Tone
 -   **Author:** Founder & CEO of Transparent Talent.
 -   **Audience:** Job seekers, HR professionals, tech recruiters, and potential investors on platforms like LinkedIn.
