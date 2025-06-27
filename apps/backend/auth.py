@@ -3,8 +3,9 @@ from functools import wraps
 from psycopg2.extras import DictCursor
 import os
 import psycopg2
+
+# --- CORRECT AND FINAL IMPORT ---
 from clerk_backend_api import Clerk
-from clerk_backend_api.errors import ClerkAPIException
 
 # Initialization
 clerk = Clerk()
@@ -18,17 +19,24 @@ def get_db_connection():
 def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        session_token = None
+        auth_header = request.headers.get('Authorization')
+
+        if auth_header and auth_header.startswith('Bearer '):
+            session_token = auth_header.split(' ')[1]
+
+        if not session_token:
+            return jsonify({"message": "Authentication token is missing"}), 401
+
         try:
-            # --- THE FINAL, CORRECT METHOD ---
-            # 1. Use the library's high-level request authentication method.
-            # This handles getting the token from the header and verifying it.
-            claims = clerk.authenticate_request()
+            # 1. Verify the token using the method we know exists.
+            claims = clerk.sessions.verify(token=session_token)
             clerk_user_id = claims.get('sub')
             
             if not clerk_user_id:
                 return jsonify({"message": "Invalid token: missing user ID"}), 401
             
-            # 2. Perform the database lookup and user linking logic.
+            # 2. Perform the database lookup logic.
             conn = get_db_connection()
             with conn.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
@@ -53,12 +61,13 @@ def token_required(f):
                 g.current_user = user
             conn.close()
 
-        except ClerkAPIException as e:
-            # This will catch specific Clerk errors (e.g., invalid token)
-            return jsonify({"message": f"Clerk Error: {e.errors[0].message}", "code": e.errors[0].code}), 401
         except Exception as e:
-            # This will catch other errors (e.g., database connection)
-            return jsonify({"message": "Authentication failed", "error": str(e)}), 500
+            # 3. Use a generic exception handler to prevent crashing on import
+            # and to log the actual error if verification fails.
+            print(f"--- AUTHENTICATION FAILED ---")
+            print(f"ERROR TYPE: {type(e).__name__}")
+            print(f"ERROR DETAILS: {e}")
+            return jsonify({"message": "Authentication failed", "error": str(e)}), 401
 
         return f(*args, **kwargs)
     return decorated_function
