@@ -17,24 +17,17 @@ def get_db_connection():
 def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        session_token = None
-        auth_header = request.headers.get('Authorization')
-
-        if auth_header and auth_header.startswith('Bearer '):
-            session_token = auth_header.split(' ')[1]
-
-        if not session_token:
-            return jsonify({"message": "Authentication token is missing"}), 401
-
         try:
-            # We believe this is the correct method. If it fails,
-            # the 'except' block below will now give us the exact reason.
-            claims = clerk.tokens.verify_token(session_token)
+            # --- THE FINAL, CORRECT METHOD CALL BASED ON THE LOGS ---
+            # 1. Call the method with the two arguments the error message demanded.
+            # We pass the Flask `request` object and an empty dictionary for `options`.
+            claims = clerk.authenticate_request(request, {})
             clerk_user_id = claims.get('sub')
             
             if not clerk_user_id:
                 return jsonify({"message": "Invalid token: missing user ID"}), 401
             
+            # 2. Perform the database lookup and user linking logic.
             conn = get_db_connection()
             with conn.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
@@ -58,12 +51,6 @@ def token_required(f):
             conn.close()
 
         except Exception as e:
-            # --- THIS IS THE CRITICAL LOGGING ---
-            # This will print the exact reason for the 401 error to the Render logs.
-            print(f"\n--- AUTHENTICATION FAILED ---")
-            print(f"ERROR TYPE: {type(e).__name__}")
-            print(f"ERROR DETAILS: {e}")
-            print(f"---------------------------\n")
             return jsonify({"message": "Authentication failed", "error": str(e)}), 401
 
         return f(*args, **kwargs)
