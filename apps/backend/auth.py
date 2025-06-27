@@ -18,8 +18,8 @@ def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            # --- THE FINAL, CORRECT METHOD CALL BASED ON THE LOGS ---
-            # 1. Call the method with the two arguments the error message demanded.
+            # --- THE FINAL, LOG-DRIVEN SOLUTION ---
+            # 1. Call the method with the two arguments the TypeError demanded.
             # We pass the Flask `request` object and an empty dictionary for `options`.
             claims = clerk.authenticate_request(request, {})
             clerk_user_id = claims.get('sub')
@@ -51,7 +51,6 @@ def token_required(f):
             conn.close()
 
         except Exception as e:
-            # Generic error handler to catch any failure during auth.
             return jsonify({"message": "Authentication failed", "error": str(e)}), 401
 
         return f(*args, **kwargs)
