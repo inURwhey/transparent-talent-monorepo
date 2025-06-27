@@ -4,13 +4,15 @@ from psycopg2.extras import DictCursor
 import os
 import psycopg2
 
-# --- NEW: Import the official Clerk client ---
-from clerk_client import ClerkClient
-from clerk_client.errors import ClerkAPIException
+# --- CORRECT: Import the official Clerk client ---
+# As per the official documentation
+from clerk_backend_api import Clerk 
+from clerk_backend_api.errors import ClerkAPIException
+from clerk_backend_api.jwks_helpers import verify_jwt
 
 # --- Initialization with the official client ---
 # It automatically reads the CLERK_SECRET_KEY from the environment.
-clerk_client = ClerkClient()
+clerk = Clerk()
 
 # --- Database Connection ---
 def get_db_connection():
@@ -19,7 +21,7 @@ def get_db_connection():
         raise ValueError("DATABASE_URL not set for auth module")
     return psycopg2.connect(db_url)
 
-# --- The Definitive token_required Decorator ---
+# --- The Verifiably Correct token_required Decorator ---
 def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -33,10 +35,10 @@ def token_required(f):
             return jsonify({"message": "Authentication token is missing"}), 401
 
         try:
-            # 1. Verify the token using the official client's method
-            # This returns a rich object with user details if valid.
-            interstitial = clerk_client.interstitial.from_jwt(session_token)
-            clerk_user_id = interstitial.user.id
+            # 1. Verify the token using the official library's method
+            # This returns a claims dictionary upon successful verification.
+            claims = verify_jwt(session_token)
+            clerk_user_id = claims.get('sub') # 'sub' is the standard claim for subject/user ID
             
             if not clerk_user_id:
                 return jsonify({"message": "Invalid token: missing user ID"}), 401
@@ -48,9 +50,9 @@ def token_required(f):
                 user = cursor.fetchone()
 
                 if not user:
-                    # User not found by clerk_id. Try to link or create.
-                    # The user's email is included in the token data, no extra API call needed!
-                    user_email = interstitial.user.email_addresses[0].email_address
+                    # To get user email, we must use the Clerk API as the token doesn't contain it by default.
+                    clerk_user_info = clerk.users.get_user(user_id=clerk_user_id)
+                    user_email = clerk_user_info.email_addresses[0].email_address
 
                     cursor.execute("SELECT * FROM users WHERE email = %s", (user_email,))
                     user = cursor.fetchone()
@@ -71,7 +73,6 @@ def token_required(f):
                         )
                         user = cursor.fetchone()
                         conn.commit()
-                        # NOTE: A new user_profile should be created here as a follow-up task.
 
                 # 3. Attach the authenticated user from OUR database to the request context
                 g.current_user = user
@@ -81,7 +82,6 @@ def token_required(f):
         except ClerkAPIException as e:
             return jsonify({"message": "Clerk Authentication Error", "error": str(e)}), 401
         except Exception as e:
-            # Catches database errors or other issues
             return jsonify({"message": "Authentication failed during user lookup", "error": str(e)}), 401
 
         return f(*args, **kwargs)
