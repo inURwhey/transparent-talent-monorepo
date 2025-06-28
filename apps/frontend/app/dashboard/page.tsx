@@ -1,15 +1,32 @@
+// Path: apps/frontend/app/dashboard/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback, FormEvent } from 'react';
+import { useState, useEffect, useCallback, FormEvent, useMemo } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
 
-// --- UPDATED TYPE DEFINITIONS ---
+// --- TANSTACK TABLE & UI IMPORTS ---
+import { ColumnDef } from "@tanstack/react-table"
+import { ArrowUpDown, MoreHorizontal } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { DataTable } from './data-table';
+
+
+// --- TYPE DEFINITIONS ---
 interface Profile {
   full_name: string;
   short_term_career_goal: string;
 }
 interface Job {
-  id: number; // For job matches from /api/jobs
+  id: number;
   job_title: string;
   company_name: string;
   job_url: string;
@@ -30,9 +47,9 @@ interface TrackedJob {
   job_url: string;
   tracked_job_id: number;
   status: string;
-  user_notes: string | null; // Renamed from 'notes'
+  user_notes: string | null;
   applied_at: string | null;
-  ai_analysis: AIAnalysis | null; // Added for structured analysis
+  ai_analysis: AIAnalysis | null;
 }
 type UpdatePayload = {
   notes?: string;
@@ -51,18 +68,15 @@ export default function UserDashboard() {
   const [editDate, setEditDate] = useState('');
   const [debugError, setDebugError] = useState<string | null>(null);
   
-  // --- NEW STATE FOR JOB SUBMISSION ---
   const [jobUrl, setJobUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
-  // --- CLERK HOOKS (Unchanged) ---
   const { getToken } = useAuth();
   const { user, isLoaded: isUserLoaded } = useUser();
 
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  // --- SECURE, AUTHENTICATED FETCH HELPER (Unchanged) ---
   const authedFetch = useCallback(async (url: string, options: RequestInit = {}) => {
     const token = await getToken();
     const headers = new Headers(options.headers);
@@ -71,17 +85,14 @@ export default function UserDashboard() {
     return fetch(url, { ...options, headers });
   }, [getToken]);
 
-  // --- DATA FETCHING LOGIC (CORRECTED) ---
   const fetchDataForPage = useCallback(async () => {
     if (!isUserLoaded || !user) {
         return;
     }
-    
     try {
       setDebugError(null);
       setIsLoading(true);
-
-      if (!apiBaseUrl) throw new Error("NEXT_PUBLIC_API_BASE_URL is not set."); // *** THE FIX IS HERE ***
+      if (!apiBaseUrl) throw new Error("NEXT_PUBLIC_API_BASE_URL is not set.");
       
       const [profileRes, jobsRes, trackedJobsRes] = await Promise.all([
         authedFetch(`${apiBaseUrl}/api/profile`),
@@ -96,7 +107,6 @@ export default function UserDashboard() {
       setProfile(await profileRes.json());
       setJobs(await jobsRes.json());
       setTrackedJobs(await trackedJobsRes.json());
-
     } catch (error: unknown) {
       console.error("A critical error occurred during data fetching:", error);
       setDebugError(error instanceof Error ? error.message : "An unknown error occurred.");
@@ -110,7 +120,6 @@ export default function UserDashboard() {
   }, [fetchDataForPage]);
 
 
-  // --- NEW HANDLER FOR JOB SUBMISSION ---
   const handleJobSubmit = useCallback(async (event: FormEvent) => {
     event.preventDefault();
     if (!jobUrl.trim() || isSubmitting) return;
@@ -123,16 +132,12 @@ export default function UserDashboard() {
         method: 'POST',
         body: JSON.stringify({ job_url: jobUrl }),
       });
-
       const result = await response.json();
-
       if (!response.ok) {
         throw new Error(result.error || 'Failed to submit job for analysis.');
       }
-      
-      // Add the new job to the top of the list for immediate feedback
       setTrackedJobs(prevJobs => [result, ...prevJobs]);
-      setJobUrl(''); // Clear the input on success
+      setJobUrl('');
     } catch (error: unknown) {
       console.error("Job Submission Error:", error);
       setSubmissionError(error instanceof Error ? error.message : 'An unknown error occurred.');
@@ -141,7 +146,6 @@ export default function UserDashboard() {
     }
   }, [apiBaseUrl, authedFetch, jobUrl, isSubmitting]);
 
-  // --- EXISTING HANDLERS (Unchanged logic, but updated for new types) ---
   const handleUpdate = useCallback(async (trackedJobId: number, payload: UpdatePayload) => {
     try {
       const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, {
@@ -184,32 +188,145 @@ export default function UserDashboard() {
     }
   }, [apiBaseUrl, authedFetch]);
 
-  // --- EDIT HANDLERS & FORMATTERS (Updated for new types) ---
-  const handleStartEdit = useCallback((job: TrackedJob) => {
-    setEditingJobId(job.tracked_job_id);
-    setEditNotes(job.user_notes || ''); // <-- Updated from job.notes
-    setEditDate(job.applied_at ? new Date(job.applied_at).toISOString().split('T')[0] : '');
-  }, []);
-
-  const handleCancelEdit = useCallback(() => {
-    setEditingJobId(null); setEditNotes(''); setEditDate('');
-  }, []);
-
-  const handleSaveChanges = useCallback(async (trackedJobId: number) => {
-    const success = await handleUpdate(trackedJobId, { notes: editNotes, applied_at: editDate || null });
-    if (success) handleCancelEdit();
-  }, [editDate, editNotes, handleUpdate, handleCancelEdit]);
-
   const handleStatusChange = useCallback(async (trackedJobId: number, newStatus: string) => {
     await handleUpdate(trackedJobId, { status: newStatus });
   }, [handleUpdate]);
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Not set';
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString(undefined, {
-      year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'
+      year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC'
     });
   }
+
+  // --- COLUMN DEFINITIONS FOR THE DATA TABLE ---
+  const columns: ColumnDef<TrackedJob>[] = useMemo(() => [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllPageRowsSelected()}
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "job_title",
+      header: "Job",
+      cell: ({ row }) => {
+        const job = row.original;
+        return (
+          <div className="font-medium">
+            {job.job_title}
+            <div className="text-sm text-muted-foreground">{job.company_name}</div>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const job = row.original;
+        return (
+          <select 
+            value={job.status} 
+            onChange={(e) => handleStatusChange(job.tracked_job_id, e.target.value)}
+            onClick={(e) => e.stopPropagation()} // prevent row selection on click
+            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2 h-fit focus:ring-blue-500 focus:border-blue-500">
+            <option value="Saved">Saved</option>
+            <option value="Applied">Applied</option>
+            <option value="Interviewing">Interviewing</option>
+            <option value="Offer">Offer</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        );
+      }
+    },
+    {
+        accessorKey: "relevance_score",
+        header: ({ column }) => {
+            return (
+              <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+              >
+                Relevance
+                <ArrowUpDown className="ml-2 h-4 w-4" />
+              </Button>
+            )
+        },
+        cell: ({row}) => {
+            const analysis = row.original.ai_analysis;
+            if (!analysis) return <div className="text-center text-muted-foreground">-</div>;
+            const score = analysis.position_relevance_score + analysis.environment_fit_score;
+            return <div className="text-center font-medium">{score}</div>
+        },
+        sortingFn: (rowA, rowB, columnId) => {
+            const analysisA = rowA.original.ai_analysis;
+            const analysisB = rowB.original.ai_analysis;
+            const scoreA = analysisA ? analysisA.position_relevance_score + analysisA.environment_fit_score : -1;
+            const scoreB = analysisB ? analysisB.position_relevance_score + analysisB.environment_fit_score : -1;
+            return scoreA - scoreB;
+        }
+    },
+    {
+      accessorKey: "applied_at",
+      header: ({ column }) => (
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+          Applied Date
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => formatDate(row.original.applied_at),
+    },
+    {
+      id: "actions",
+      enableHiding: false,
+      cell: ({ row }) => {
+        const job = row.original
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(job.job_title)}>
+                Copy Title
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => window.open(job.job_url, '_blank')}
+              >
+                View Original Post
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                onClick={() => handleRemoveJob(job.tracked_job_id)}
+              >
+                Remove Job
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      },
+    },
+  ], [handleStatusChange, handleRemoveJob]);
+
 
   // --- RENDER LOGIC ---
   if (!isUserLoaded) {
@@ -222,7 +339,7 @@ export default function UserDashboard() {
 
   return (
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
-       <div className="max-w-4xl mx-auto p-4 mb-4 border-2 border-dashed border-blue-500 bg-blue-50">
+       <div className="max-w-7xl mx-auto p-4 mb-4 border-2 border-dashed border-blue-500 bg-blue-50">
         <h2 className="font-bold text-blue-700">Debug Information</h2>
         <p><strong>User Status:</strong> {isUserLoaded && user ? `Loaded (${user.primaryEmailAddress?.emailAddress})` : 'Loading...'}</p>
         <p><strong>API Base URL:</strong> {apiBaseUrl || <span className="font-bold text-red-600">NOT SET</span>}</p>
@@ -230,7 +347,7 @@ export default function UserDashboard() {
       </div>
       
       {!debugError && profile ? (
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           {/* ... Profile Section ... */}
           <div className="bg-white p-6 rounded-lg shadow-md mb-8">
               <h1 className="text-3xl font-bold text-gray-800">{profile.full_name}</h1>
@@ -268,71 +385,12 @@ export default function UserDashboard() {
             </form>
           </div>
 
-          {/* --- EXISTING JOB TRACKER (Updated to use new data structure) --- */}
+          {/* --- NEW TABULAR JOB TRACKER --- */}
           <div className="bg-white p-6 rounded-lg shadow-md mb-8">
             <h2 className="text-2xl font-semibold text-gray-800 mb-4">My Job Tracker</h2>
-            <div className="space-y-6">
-              {trackedJobs.length > 0 ? (
-                trackedJobs.map((trackedJob) => (
-                  <div key={trackedJob.tracked_job_id} className="border-b pb-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-bold text-lg text-indigo-600">{trackedJob.job_title}</h3>
-                        <p className="text-gray-700">{trackedJob.company_name}</p>
-                        <a href={trackedJob.job_url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">
-                          View Original Post
-                        </a>
-                      </div>
-                      <select value={trackedJob.status} onChange={(e) => handleStatusChange(trackedJob.tracked_job_id, e.target.value)}
-                        className="bg-gray-200 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 h-fit">
-                        <option value="Saved">Saved</option>
-                        <option value="Applied">Applied</option>
-                        <option value="Interviewing">Interviewing</option>
-                        <option value="Offer">Offer</option>
-                        <option value="Rejected">Rejected</option>
-                      </select>
-                    </div>
-                    {/* --- Note: AI Analysis data is available here (trackedJob.ai_analysis) but not yet rendered. --- */}
-                    {editingJobId === trackedJob.tracked_job_id ? (
-                      <div className="mt-4 space-y-3">
-                        <div>
-                          <label htmlFor="applied_at" className="block text-sm font-medium text-gray-700">Applied Date</label>
-                          <input type="date" id="applied_at" value={editDate} onChange={(e) => setEditDate(e.target.value)}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2" />
-                        </div>
-                        <div>
-                          <label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label>
-                          <textarea id="notes" rows={3} value={editNotes} onChange={(e) => setEditNotes(e.target.value)}
-                            placeholder="e.g., Followed up with hiring manager..."
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2" ></textarea>
-                        </div>
-                        <div className="flex items-center space-x-2 mt-2">
-                          <button onClick={() => handleSaveChanges(trackedJob.tracked_job_id)} className="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-3 rounded text-sm">Save</button>
-                          <button onClick={handleCancelEdit} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded text-sm">Cancel</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-3 text-sm text-gray-600">
-                        <p><strong>Applied on:</strong> {formatDate(trackedJob.applied_at)}</p>
-                        {/* Updated to use 'user_notes' */}
-                        <p className="mt-1"><strong>Notes:</strong> {trackedJob.user_notes || <span className="italic text-gray-400">No notes added.</span>}</p>
-                        <div className="flex items-center">
-                            <button onClick={() => handleStartEdit(trackedJob)} className="mt-2 text-blue-600 hover:underline text-xs font-semibold">
-                                Edit Details
-                            </button>
-                            <button onClick={() => handleRemoveJob(trackedJob.tracked_job_id)} className="mt-2 ml-4 text-red-600 hover:underline text-xs font-semibold">
-                                Remove
-                            </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))
-              ) : ( 
-                  <p className="text-gray-500">You are not tracking any jobs yet. Submit a job URL above to begin.</p>
-              )}
-            </div>
+            <DataTable columns={columns} data={trackedJobs} />
           </div>
+
           {/* ... Existing Watchlist & Job Matches sections ... */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-1">
