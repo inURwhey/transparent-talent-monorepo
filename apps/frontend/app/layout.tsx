@@ -14,7 +14,10 @@ export const metadata: Metadata = {
 function Header() {
   return (
     <header style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', borderBottom: '1px solid #ccc' }}>
-      <h1>Transparent Talent</h1>
+      {/* Wrapped the h1 in a Link component */}
+      <Link href="/" passHref>
+        <h1>Transparent Talent</h1>
+      </Link>
       <div>
         <SignedIn>
           {/* Mount the UserButton component */}
