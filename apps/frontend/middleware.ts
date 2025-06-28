@@ -2,19 +2,21 @@
 
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
-// This function defines which routes are protected.
-// All routes are protected by default, except for the public-facing pages.
-const isProtectedRoute = createRouteMatcher([
-  '/dashboard(.*)', // Protect the main dashboard
-  '/user-profile(.*)', // Protect the user profile pages if they exist
-  '/settings(.*)', // Protect settings pages
-  // Add any other routes here that need to be behind authentication
+// Define the routes that should be publicly accessible.
+// All other routes will be protected.
+const isPublicRoute = createRouteMatcher([
+  '/', // The landing page
+  '/sign-in(.*)', // The sign-in pages
+  '/sign-up(.*)', // The sign-up pages
 ]);
 
-export default clerkMiddleware((auth, req) => {
-  // If the requested route is a protected route, then enforce authentication.
-  if (isProtectedRoute(req)) {
-    auth().protect();
+export default clerkMiddleware((auth, request) => {
+  // If the requested route is not in our list of public routes,
+  // then it is a protected route and we need to enforce authentication.
+  if (!isPublicRoute(request)) {
+    // The 'auth' object passed to the middleware has the .protect() method.
+    // This is the correct syntax.
+    auth.protect();
   }
 });
 
