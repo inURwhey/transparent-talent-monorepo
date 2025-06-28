@@ -274,27 +274,24 @@ def mark_unreachable_jobs_as_expired():
         conn = get_db_connection()
         conn.autocommit = False
         with conn.cursor() as cursor:
-            # Update tracked_jobs that:
-            # 1. Still need an analysis (no v2.0 analysis exists for this user/job pair)
-            # 2. Are linked to a job with a NULL, empty string, or 'None' string URL
-            # 3. Specifically target Job ID 11 which previously returned a 404
+            # Corrected SQL query for UPDATE FROM syntax
             update_query = """
-                UPDATE tracked_jobs tj
+                UPDATE tracked_jobs
                 SET
                     status = 'Expired - Unreachable',
                     applied_at = NULL, 
                     updated_at = CURRENT_TIMESTAMP
                 FROM jobs j
-                LEFT JOIN job_analyses ja ON tj.user_id = ja.user_id AND tj.job_id = ja.job_id
-                WHERE tj.job_id = j.id
+                LEFT JOIN job_analyses ja ON tracked_jobs.user_id = ja.user_id AND tracked_jobs.job_id = ja.job_id
+                WHERE tracked_jobs.job_id = j.id -- This links tracked_jobs with jobs
                 AND (ja.job_id IS NULL OR ja.analysis_protocol_version != '2.0') 
                 AND (
                     j.job_url IS NULL OR
                     j.job_url = '' OR
                     j.job_url = 'None' OR 
-                    j.job_id = %s 
+                    j.job_id = %s -- Specifically target Job ID 11 which previously returned a 404
                 )
-                RETURNING tj.id;
+                RETURNING tracked_jobs.id;
             """
             cursor.execute(update_query, (11,)) # Pass Job ID 11 as a parameter
             marked_jobs_ids = cursor.fetchall()
