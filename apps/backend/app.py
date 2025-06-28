@@ -212,10 +212,22 @@ def get_user_profile():
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
-            sql = "SELECT full_name, short_term_career_goal FROM user_profiles WHERE user_id = %s"
+            # Attempt to fetch the user profile
+            sql = "SELECT * FROM user_profiles WHERE user_id = %s"
             cursor.execute(sql, (user_id,))
             profile = cursor.fetchone()
-            if not profile: return jsonify({"error": "Profile not found"}), 404
+            
+            # If no profile exists, create a new default one
+            if not profile:
+                print(f"No profile found for user_id {user_id}. Creating default profile.")
+                insert_sql = """
+                    INSERT INTO user_profiles (user_id) VALUES (%s)
+                    RETURNING *;
+                """
+                cursor.execute(insert_sql, (user_id,))
+                profile = cursor.fetchone() # Fetch the newly created profile
+                conn.commit() # Commit the insert operation
+            
             return jsonify(dict(profile))
     except Exception as e:
         print(f"ERROR in get_user_profile: {str(e)}")
