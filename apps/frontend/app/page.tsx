@@ -20,17 +20,9 @@ export default function LandingPage() {
                 Transparent Talent is a systematic, AI-powered framework to help you stop guessing and start making data-driven career decisions.
               </p>
               <div className="mt-10 flex items-center justify-center gap-x-6"> 
-<<<<<<< HEAD
                 {/* This dynamic button handles navigation for both signed-in and signed-out states */}
                 <AuthAwareGetStartedButton />
                 {/* Removed the redundant "Go to Dashboard →" link */}
-=======
-                {/* Conditional rendering based on authentication status */}
-                <AuthAwareGetStartedButton />
-                <Link href="/dashboard" className="text-sm font-semibold leading-6 text-gray-900"> 
-                  Go to Dashboard <span aria-hidden="true">→</span>
-                </Link>
->>>>>>> 249c3d4ab5de55efc72b9c86b5a26cdc598eeb7e
               </div>
             </div>
           </div>
