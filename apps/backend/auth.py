@@ -19,20 +19,23 @@ def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            # Manually construct the 'options' dictionary to satisfy the TypeError.
-            # This is the direct fix for the error seen in the logs.
+            # Manually construct the 'options' dictionary.
             auth_header = request.headers.get('Authorization')
             if not auth_header:
                 return jsonify({"message": "Authorization header is missing"}), 401
             
-            # The token is passed as "Bearer <token>", so we split it.
-            # Clerk's SDK expects only the token part.
             parts = auth_header.split()
             if len(parts) != 2 or parts[0].lower() != 'bearer':
                  return jsonify({"message": "Invalid Authorization header format"}), 401
             token = parts[1]
 
-            options = { "header_token": token }
+            # *** THE FIX IS HERE ***
+            # The new AttributeError indicates the library is looking for the
+            # secret key on the options object itself. We will add it.
+            options = { 
+                "header_token": token,
+                "secret_key": clerk.secret_key 
+            }
             claims = clerk.authenticate_request(request, options=options)
             
             clerk_user_id = claims.get('sub')
