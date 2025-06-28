@@ -40,8 +40,9 @@ interface TrackedJob {
   created_at: string; // NEW: The date the job was saved
   ai_analysis: AIAnalysis | null;
 }
+// Corrected UpdatePayload to allow null for notes
 type UpdatePayload = {
-  notes?: string;
+  notes?: string | null; // Allow notes to be null for clearing, or string for updating
   applied_at?: string | null;
   status?: string;
 };
@@ -104,36 +105,45 @@ export default function UserDashboard() {
 
   const handleUpdate = useCallback(async (trackedJobId: number, payload: UpdatePayload) => {
     try {
+      // Create a specific payload for optimistic UI update, mapping to TrackedJob fields
+      // and only including properties that are explicitly defined (not 'undefined') in the payload
+      const optimisticUpdate: Partial<TrackedJob> = {};
+      if (payload.status !== undefined) optimisticUpdate.status = payload.status;
+      // Map 'notes' from payload to 'user_notes' in TrackedJob.
+      // If payload.notes is undefined, it means the 'notes' field was not provided in the payload,
+      // so we don't attempt to update user_notes optimistically.
+      // If payload.notes is null, it means the user explicitly wants to clear notes.
+      if (payload.notes !== undefined) optimisticUpdate.user_notes = payload.notes;
+      if (payload.applied_at !== undefined) optimisticUpdate.applied_at = payload.applied_at;
+
+
       // Optimistically update the UI
       setTrackedJobs(prev => prev.map(job => 
         job.tracked_job_id === trackedJobId 
-          ? { 
-              ...job, 
-              ...payload, 
-              // Ensure notes update correctly if it's explicitly in payload
-              user_notes: 'notes' in payload ? payload.notes : job.user_notes,
-              // Ensure applied_at updates correctly if it's explicitly in payload
-              applied_at: 'applied_at' in payload ? payload.applied_at : job.applied_at
-            } 
+          ? { ...job, ...optimisticUpdate }
           : job
       ));
 
-      // Send the update to the backend
+      // Send the original payload to the backend
       const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, {
         method: 'PUT', body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
-        // If update fails, revert the UI
-        setTrackedJobs(prev => prev.map(job => 
-          job.tracked_job_id === trackedJobId ? { ...job, ...job } : job // Revert to original state
-        ));
+        // If update fails, revert the UI by refetching the specific job or the entire list
+        const currentJobsRes = await authedFetch(`${apiBaseUrl}/api/tracked-jobs`);
+        if (currentJobsRes.ok) {
+            setTrackedJobs(await currentJobsRes.json());
+        } else {
+            console.error("Failed to re-fetch jobs after update error.");
+            setDebugError("Failed to re-fetch jobs after update error.");
+        }
         throw new Error(`Failed to update job: ${response.statusText}`);
       }
 
     } catch (error) { 
       console.error("Update Error:", error); 
-      // Optionally show a user-facing error message here
+      setDebugError(error instanceof Error ? error.message : "An unknown error occurred during update.");
     }
   }, [apiBaseUrl, authedFetch]);
 
@@ -159,13 +169,12 @@ export default function UserDashboard() {
     if (newStatus === "Applied" && !currentJob.applied_at) {
       payload.applied_at = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
     } else if (newStatus !== "Applied" && currentJob.applied_at) {
-      // Optional: If status changes from "Applied" to something else, clear applied_at
-      // The prompt did not specify this, so I will omit for now to stick to minimal change.
-      // payload.applied_at = null;
+      // Optional: If status changes from "Applied" to something else and applied_at is set, clear applied_at
+      payload.applied_at = null; 
     }
 
     await handleUpdate(trackedJobId, payload);
-  }, [handleUpdate, trackedJobs]); // Add trackedJobs to dependencies
+  }, [handleUpdate, trackedJobs]);
 
   const handleJobSubmit = useCallback(async (event: FormEvent) => {
     event.preventDefault();
