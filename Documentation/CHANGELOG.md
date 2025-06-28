@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.9.0] - 2025-06-28 - Production Domain Deployment
+
+This release establishes the Transparent Talent application on its official production domain, significantly enhancing its public accessibility and formalizing its presence. Critical authentication configurations were updated to ensure seamless operation under the new domain.
+
+### Added
+-   **Deployment:** Configured and deployed the frontend application to the production domain `transparenttalent.ai` (redirecting to `www.transparenttalent.ai`) on Vercel.
+
+### Changed
+-   **Authentication:** Updated Vercel frontend environment variables and Render backend `CLERK_AUTHORIZED_PARTY` to correctly recognize and validate JWTs from the new `www.transparenttalent.ai` domain.
+
+### Fixed
+-   **Authentication Error:** Resolved "Profile fetch failed" and `401 Unauthorized` errors on the dashboard caused by invalid authorized party configurations for the new production domain.
+
 ## [v0.8.0] - 2025-06-28 - Data Contract Standardization & UI Refactor
 
 This release completes a key architectural task by standardizing the data contract with the AI service to use `snake_case`, improving system-wide consistency. It also includes a significant frontend refactor for maintainability and several bug fixes that improve the user experience.

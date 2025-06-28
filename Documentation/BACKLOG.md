@@ -2,12 +2,7 @@
 
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
-* add something like "reactively codify industry standards that have impacted this session in existing or protocols, and proactively add other related standards related to this project."
-* user dashboard: pagination for "my job tracker"
-* user dashboard: did we lose the "jobs for you" module, or did it get pushed off the page? a product expectation is that the user would always have a "jobs for you" sorted by relevancy in order to take immediate action on the next job application.
-* do a one-time pass to ensure all data meets app expectations.
-* user dashboard: changing the status from "saved" to "applied" should set the "date applied"
-* user dashboard: update "Analyze a New Job" to access comma-separated values and/or a CSV or spreadsheet
+* 
 
 ---
 
@@ -19,6 +14,8 @@
 | **Bugfix: Resolve Production Authentication** | 1000 | 3 | 100% | 0.25 | **12000** | **Done** |
 | **Architecture: Monorepo Setup** | 1 | 3 | 100% | 0.25 | **12.0** | **Done** |
 | **Deployment: Deploy Frontend** | 1000 | 3 | 100% | 0.25 | **12000** | **Done** |
+| **Maintenance: Data Integrity Pass** | 1 | 2 | 100% | 0.25 | **8.0** | **To Do** |
+
 
 ## Tier 2: Core User Experience & Differentiation
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | Status |
@@ -26,9 +23,13 @@
 | **Feature: Logged Out Experience** | 1000 | 2 | 100% | 0.25 | **8000** | **Done** |
 | **Feature: User Job Submission** | 1000 | 3 | 100% | 0.5 | **6000** | **Done** |
 | **UI: Tabular Job Tracker** | 1000 | 2 | 100% | 0.5 | **4000** | **Done** |
-| **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | **To Do** |
-| **Deployment: Production Domain** | 1000 | 1 | 100% | 0.25 | **4000** | **To Do** |
+| **Deployment: Production Domain** | 1000 | 1 | 100% | 0.25 | **4000** | **Done** |
+| **UI/UX: Auto-set 'Date Applied' on Status Change** | 1000 | 2 | 100% | 0.25 | **8000** | **To Do** |
+| **UI/UX: Job Tracker Pagination** | 1000 | 2 | 100% | 0.5 | **4000** | **To Do** |
 | **Backend: Automated App Expiration** | 1000 | 1 | 100% | 0.25 | **4000** | **To Do** |
+| **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | **To Do** |
+| **UI/UX: 'Jobs for You' Module Restoration** | 1000 | 3 | 90% | 0.75 | **3600** | **To Do** |
+| **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | **To Do** |
 | **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | **To Do** |
 
 
@@ -38,6 +39,7 @@
 | **Feature: Instant Analysis for Known Jobs**| 1000 | 2 | 100% | 0.5 | **4000** | **To Do** |
 | **Automation: Full API Job Analysis**| 1000 | 3 | 90% | 2.0 | **1350** | **To Do** |
 | **Feature: Proactive Anomaly Detection**| 1000 | 3 | 90% | 2.5 | **1080** | **To Do** |
+| **Documentation: Codify Industry Standards in Protocols** | 1 | 3 | 90% | 0.25 | **10.8** | **To Do** |
 | **Feature: "User News" Sourcing** | 1000 | 2 | 90% | 2.0 | **900** | **To Do** |
 | **AI: Multi-Model Verification**| 1000 | 2 | 90% | 2.0 | **900** | **To Do** |
 | **Feature: Verifiable Outcomes**| 1000 | 3 | 80% | 3.0 | **800** | **To Do** |
