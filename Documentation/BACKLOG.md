@@ -1,4 +1,4 @@
-# Transparent Talent: Product Backlog & Roadmap v1.9
+# Transparent Talent: Product Backlog & Roadmap v1.10
 
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
@@ -8,32 +8,19 @@
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Architecture: Data Contract Standardization** | 2 | 3 | 100% | 0.25 | **24.0** | **Done** |
-| **Security: Implement User Authentication** | 1000 | 3 | 100% | 0.5 | **6000** | **Done** |
-| **Bugfix: Resolve Production Authentication** | 1000 | 3 | 100% | 0.25 | **12000** | **Done** |
-| **Architecture: Monorepo Setup** | 1 | 3 | 100% | 0.25 | **12.0** | **Done** |
-| **Deployment: Deploy Frontend** | 1000 | 3 | 100% | 0.25 | **12000** | **Done** |
 | **Maintenance: Data Integrity Pass** | 1 | 2 | 100% | 0.25 | **8.0** | **To Do** |
 
 
 ## Tier 2: Core User Experience & Differentiation
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Feature: Logged Out Experience** | 1000 | 2 | 100% | 0.25 | **8000** | **Done** |
-| **Feature: User Job Submission** | 1000 | 3 | 100% | 0.5 | **6000** | **Done** |
-| **UI: Tabular Job Tracker** | 1000 | 2 | 100% | 0.5 | **4000** | **Done** |
-| **Deployment: Production Domain** | 1000 | 1 | 100% | 0.25 | **4000** | **Done** |
-| **UI/UX: Auto-set 'Date Applied' on Status Change** | 1000 | 2 | 100% | 0.25 | **8000** | **Done** |
-| **UI/UX: Job Tracker Pagination** | 1000 | 2 | 100% | 0.5 | **4000** | **Done** |
-| **Bugfix: New Account Dashboard Error** | 1000 | 3 | 100% | 0.25 | **12000** | **Done** |
+| **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | **To Do** |
+| **Feature: User Profile Onboarding & Data Input** | 1000 | 3 | 100% | 0.75 | **4000** | **To Do** |
 | **Backend: Automated App Expiration** | 1000 | 1 | 100% | 0.25 | **4000** | **To Do** |
-| **UI/UX: Context-Aware "Get Started" Button** | 1000 | 1 | 100% | 0.25 | **4000** | **Done** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | **To Do** |
 | **UI/UX: 'Jobs for You' Module Restoration** | 1000 | 3 | 90% | 0.75 | **3600** | **To Do** |
 | **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | **To Do** |
 | **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | **To Do** |
-| **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | **To Do** |
-| **Feature: User Profile Onboarding & Data Input** | 1000 | 3 | 100% | 0.75 | **4000** | **To Do** |
 
 
 ## Tier 3: AI & System Intelligence (Mid-Term)
@@ -64,3 +51,76 @@
 | **Revenue: "Bring Your Own Key" (BYOK) Model** | 200 | 1 | 70% | 0.5 | **280** | **To Do** |
 | **Platform: Data Access for Biz** | 1000 | 3 | 50% | 6.0 | **250** | **To Do** |
 | **BI: ML User/Company Clustering** | 10 | 3 | 80% | 4.0 | **6.0** | **To Do** |
+
+---
+
+## Completed Features & Bugfixes
+*This section lists all completed features and bugfixes, categorized by the release version they were delivered in, in reverse chronological order.*
+
+### [v0.12.0] - 2025-06-29
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Bugfix: New Account Dashboard Error** | T2 | 12000 |
+| **UI/UX: Context-Aware "Get Started" Button** | T2 | 4000 |
+| **UI/UX: Header "Transparent Talent" Link to Homepage** | UI/UX Polish | N/A |
+
+### [v0.11.0] - 2025-06-28
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **UI/UX: Job Tracker Pagination** | T2 | 4000 |
+
+### [v0.10.0] - 2025-06-28
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **UI/UX: Auto-set 'Date Applied' on Status Change** | T2 | 8000 |
+
+### [v0.9.0] - 2025-06-28
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Deployment: Production Domain** | T2 | 4000 |
+
+### [v0.8.0] - 2025-06-28
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Architecture: Data Contract Standardization** | T1 | 24.0 |
+
+### [v0.7.0] - 2025-06-28
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **UI: Tabular Job Tracker** | T2 | 4000 |
+
+### [v0.6.0] - 2025-06-28
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Feature: User Job Submission** | T2 | 6000 |
+
+### [v0.5.0] - 2025-06-28
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Feature: Logged Out Experience** | T2 | 8000 |
+
+### [v0.4.0] - 2025-06-28
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Bugfix: Resolve Production Authentication** | T1 | 12000 |
+
+### [v0.3.0] - 2025-06-27
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Security: Implement User Authentication** | T1 | 6000 |
+
+### [v0.2.0] - 2025-06-26
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Architecture: Monorepo Setup** | T1 | 12.0 |
+| **Deployment: Deploy Frontend** | T1 | 12000 |
+
+### [v0.1.0] - 2025-06-26
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Initial Backend API (v1)** | T1 | N/A |
+| **Job Tracker Functionality** | T1 | N/A |
+| **Initial Frontend Dashboard (v1)** | T1 | N/A |
+| **Comprehensive Data Migration** | T1 | N/A |
+| **Upgraded Database** | T1 | N/A |
+| **Enhanced Business Logic** | T1 | N/A |
