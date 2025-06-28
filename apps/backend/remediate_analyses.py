@@ -290,7 +290,7 @@ def mark_unreachable_jobs_as_expired():
                         j.job_url IS NULL OR
                         j.job_url = '' OR
                         j.job_url = 'None' OR 
-                        j.job_id = %s -- Specifically target Job ID 11 which previously returned a 404
+                        j.id = %s -- Corrected: reference j.id, not j.job_id
                     )
                     -- AND condition to check for missing/legacy analysis for the specific user/job pair
                     AND NOT EXISTS (
