@@ -2,7 +2,7 @@
 
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
-
+* Perform a one-time pass of the db structure and schemas to make sure it aligns with industry standards and expectations.
 ---
 
 ## Tier 1: Foundational Infrastructure (Highest Priority)
