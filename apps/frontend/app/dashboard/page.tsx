@@ -266,17 +266,25 @@ export default function UserDashboard() {
               </Button>
             )
         },
+        // --- UPDATED (DEFENSIVE) CELL LOGIC ---
         cell: ({row}) => {
             const analysis = row.original.ai_analysis;
-            if (!analysis) return <div className="text-center text-muted-foreground">-</div>;
+            if (!analysis || analysis.position_relevance_score == null || analysis.environment_fit_score == null) {
+                return <div className="text-center text-muted-foreground">-</div>;
+            }
             const score = analysis.position_relevance_score + analysis.environment_fit_score;
             return <div className="text-center font-medium">{score}</div>
         },
-        sortingFn: (rowA, rowB, columnId) => {
+        // --- UPDATED (DEFENSIVE) SORTING LOGIC ---
+        sortingFn: (rowA, rowB) => {
             const analysisA = rowA.original.ai_analysis;
             const analysisB = rowB.original.ai_analysis;
-            const scoreA = analysisA ? analysisA.position_relevance_score + analysisA.environment_fit_score : -1;
-            const scoreB = analysisB ? analysisB.position_relevance_score + analysisB.environment_fit_score : -1;
+            const scoreA = (analysisA && analysisA.position_relevance_score != null && analysisA.environment_fit_score != null) 
+                         ? analysisA.position_relevance_score + analysisA.environment_fit_score 
+                         : -1;
+            const scoreB = (analysisB && analysisB.position_relevance_score != null && analysisB.environment_fit_score != null)
+                         ? analysisB.position_relevance_score + analysisB.environment_fit_score
+                         : -1;
             return scoreA - scoreB;
         }
     },
@@ -325,7 +333,7 @@ export default function UserDashboard() {
         )
       },
     },
-  ], [handleStatusChange, handleRemoveJob]);
+  ], [handleStatusChange, handleRemoveJob, handleUpdate, fetchDataForPage]);
 
 
   // --- RENDER LOGIC ---
@@ -341,7 +349,7 @@ export default function UserDashboard() {
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
        <div className="max-w-7xl mx-auto p-4 mb-4 border-2 border-dashed border-blue-500 bg-blue-50">
         <h2 className="font-bold text-blue-700">Debug Information</h2>
-        <p><strong>User Status:</strong> {isUserLoaded && user ? `Loaded (${user.primaryEmailAddress?.emailAddress})` : 'Loading...'}</p>
+        <p><strong>User Status:</strong> {isUserLoaded && user ? `Loaded (${user.primaryEmailAddress?.emailAddress})` : `Loading...`}</p>
         <p><strong>API Base URL:</strong> {apiBaseUrl || <span className="font-bold text-red-600">NOT SET</span>}</p>
         {debugError && <p><strong>Caught Error:</strong> <span className="font-bold text-red-600">{debugError}</span></p>}
       </div>
