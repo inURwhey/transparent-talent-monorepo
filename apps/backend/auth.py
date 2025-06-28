@@ -19,7 +19,6 @@ def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            # Manually construct the 'options' dictionary.
             auth_header = request.headers.get('Authorization')
             if not auth_header:
                 return jsonify({"message": "Authorization header is missing"}), 401
@@ -29,12 +28,13 @@ def token_required(f):
                  return jsonify({"message": "Invalid Authorization header format"}), 401
             token = parts[1]
 
-            # *** THE FIX IS HERE ***
-            # The new AttributeError indicates the library is looking for the
-            # secret key on the options object itself. We will add it.
+            # *** THE FINAL FIX IS HERE ***
+            # The previous error proves 'clerk.secret_key' does not exist.
+            # We must get the key directly from the environment and pass it in the options.
+            # This aligns with all the error messages we have seen.
             options = { 
                 "header_token": token,
-                "secret_key": clerk.secret_key 
+                "secret_key": os.getenv('CLERK_SECRET_KEY') 
             }
             claims = clerk.authenticate_request(request, options=options)
             

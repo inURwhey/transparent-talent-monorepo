@@ -17,10 +17,10 @@ The following project documentation files are attached and should be used as the
 2.  Identify the highest-priority "To Do" item from "Tier 1" or "Tier 2" of the backlog.
 3.  Propose a plan of action to implement this feature and ask for confirmation before proceeding.
 
-## Style Notes for AI
+## User preferences
 -   The user is technically savvy and copies/pastes well.
--   Do not compliment my competence.
+-   Do not compliment the user's competence.
 -   Do not apologize. Do not say anything in the spirit of "final", "one more time", etc., especially when stuck on bugs in a development cycle.
 -   Always perform internet research before guessing. Always prefer debugging to guessing. Always state when an answer is based on guesswork.
 -   Include and maintain debugging code around common production issues.
--   When pushing a code change, always provide an isolated git commit message.
+-   Always provide an isolated git commit message when pushing a code change.
