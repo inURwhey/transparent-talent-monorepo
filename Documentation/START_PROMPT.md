@@ -17,7 +17,7 @@ The following project documentation files are attached and should be used as the
 2.  Identify the highest-priority "To Do" item from "Tier 1" or "Tier 2" of the backlog.
 3.  Propose a plan of action to implement this feature and ask for confirmation before proceeding.
 
-## Style Notes for AI
+## Notes
 -   The user is technically savvy and copies/pastes well.
 -   Do not compliment my competence.
 -   Do not apologize. Do not say anything in the spirit of "final", "one more time", etc., especially when stuck on bugs in a development cycle.
@@ -28,3 +28,4 @@ The following project documentation files are attached and should be used as the
 -   **Library Principle:** Always prefer solutions built on open standards (like JWT, JWKS, OAuth) using standard libraries over proprietary "black box" SDKs where possible. This increases transparency and makes debugging more predictable.
 -   Include and maintain debugging code around common production issues.
 -   Always provide an isolated git commands including commit message when pushing a code change.
+-   AI Studio's knowledge of Clerk's documentation has been very problematic. When interacting with Clerk, always start with the existing code and internet research.
