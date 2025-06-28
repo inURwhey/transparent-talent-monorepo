@@ -4,7 +4,7 @@ from psycopg2.extras import DictCursor
 import os
 import psycopg2
 from clerk_backend_api import Clerk
-from clerk_backend_api.errors import ClerkError
+# We remove the faulty import of ClerkError
 import json
 
 # Initialization
@@ -20,23 +20,16 @@ def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            # --- DYNAMIC PREVIEW URL SOLUTION ---
-            # 1. Get the origin of the request and the static authorized list
+            # The dynamic URL logic from before remains correct.
             origin = request.headers.get('Origin')
             authorized_parties_json = os.getenv('AUTHORIZED_PARTIES_JSON')
             authorized_parties = json.loads(authorized_parties_json) if authorized_parties_json else []
 
-            # 2. Define the unique pattern for your Vercel preview deployments
-            #    This ensures we only relax the rule for your specific preview apps.
             preview_pattern = "-greg-freeds-projects.vercel.app"
 
-            # 3. Conditionally authenticate based on the origin
             if origin and preview_pattern in origin:
-                # For Vercel previews, authenticate the token but SKIP the authorized party check.
-                # This allows dynamic URLs to work securely.
                 claims = clerk.authenticate_request()
             else:
-                # For your production URL and all other requests, enforce the STRICT check.
                 claims = clerk.authenticate_request(authorized_parties=authorized_parties)
             
             clerk_user_id = claims.get('sub')
@@ -44,12 +37,12 @@ def token_required(f):
             if not clerk_user_id:
                 return jsonify({"message": "Invalid token: missing user ID"}), 401
             
-            # --- DATABASE & USER LINKING LOGIC (No changes needed here) ---
+            # Database logic is unchanged.
             conn = get_db_connection()
             with conn.cursor(cursor_factory=DictCursor) as cursor:
+                # User lookup/creation logic is unchanged
                 cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
                 user = cursor.fetchone()
-
                 if not user:
                     clerk_user_info = clerk.users.get_user(user_id=clerk_user_id)
                     user_email = clerk_user_info.email_addresses[0].email_address
@@ -63,20 +56,24 @@ def token_required(f):
                         cursor.execute("INSERT INTO users (clerk_user_id, email) VALUES (%s, %s) RETURNING *;", (clerk_user_id, user_email))
                         user = cursor.fetchone()
                         conn.commit()
-
                 g.current_user = user
             conn.close()
 
-        # --- ENHANCED DEBUGGING (As discussed previously) ---
-        except ClerkError as e:
-            error_details = {
-                "message": "Clerk authentication failed.", "clerk_error": True,
-                "code": e.code, "long_message": e.long_message, "meta": e.meta,
-            }
-            print(f"CLERK AUTHENTICATION ERROR: {json.dumps(error_details)}")
-            return jsonify(error_details), 401
+        # --- NEW ROBUST EXCEPTION HANDLING ---
+        # This generic 'except' will not crash. It will instead help us diagnose.
         except Exception as e:
-            return jsonify({"message": "An unexpected error occurred during authentication.", "error": str(e)}), 500
+            # We will construct a detailed error message for our logs.
+            error_details = {
+                "message": "A critical error occurred during authentication.",
+                # This line is the key: it tells us the real name of the exception class.
+                "error_class_name": type(e).__name__, 
+                "error_details": str(e),
+            }
+            # Print the detailed JSON to the Render logs.
+            print(f"AUTHENTICATION EXCEPTION CAUGHT: {json.dumps(error_details)}")
+            
+            # Return a 401 so the frontend knows authentication failed.
+            return jsonify(error_details), 401
 
         return f(*args, **kwargs)
     return decorated_function
