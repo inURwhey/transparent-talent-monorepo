@@ -10,16 +10,11 @@ def get_db_connection():
     if not db_url: raise ValueError("DATABASE_URL not set")
     return psycopg2.connect(db_url)
 
-@click.group('db')
-def db_cli():
-    """Database management commands."""
-    pass
-
-@db_cli.command('check-integrity')
-@with_appcontext
-def check_integrity():
-    """Runs a series of non-destructive data integrity checks."""
-    click.echo("--- Starting Data Integrity Pass ---")
+def run_integrity_checks_internal():
+    """
+    Runs a series of non-destructive data integrity checks and returns a dictionary of results.
+    """
+    results = {}
     conn = None
     try:
         conn = get_db_connection()
@@ -32,47 +27,77 @@ def check_integrity():
                 WHERE ja.job_id IS NULL;
             """)
             missing_analyses_count = cursor.fetchone()[0]
-            if missing_analyses_count > 0:
-                click.secho(f"[WARNING] Found {missing_analyses_count} tracked jobs missing a user-specific analysis.", fg='yellow')
-            else:
-                click.secho("[OK] All tracked jobs have a corresponding analysis entry placeholder (or actual analysis).", fg='green')
+            results['missing_user_job_analyses'] = {
+                'count': missing_analyses_count,
+                'status': 'WARNING' if missing_analyses_count > 0 else 'OK',
+                'message': f"Found {missing_analyses_count} tracked jobs missing a user-specific analysis."
+            }
 
             # Check 2: Analyses created with a legacy protocol version
             cursor.execute("SELECT COUNT(*) FROM job_analyses WHERE analysis_protocol_version = '1.0';")
             legacy_analyses_count = cursor.fetchone()[0]
-            if legacy_analyses_count > 0:
-                click.secho(f"[INFO] Found {legacy_analyses_count} legacy (v1.0) analyses that could be re-run.", fg='cyan')
-            else:
-                click.secho("[OK] No legacy analyses found.", fg='green')
+            results['legacy_analyses_v1_0'] = {
+                'count': legacy_analyses_count,
+                'status': 'INFO' if legacy_analyses_count > 0 else 'OK',
+                'message': f"Found {legacy_analyses_count} legacy (v1.0) analyses that could be re-run."
+            }
             
             # Check 3: Orphaned user_profiles (profile exists but user does not)
             cursor.execute("SELECT COUNT(*) FROM user_profiles up LEFT JOIN users u ON up.user_id = u.id WHERE u.id IS NULL;")
             orphaned_profiles_count = cursor.fetchone()[0]
-            if orphaned_profiles_count > 0:
-                click.secho(f"[ERROR] Found {orphaned_profiles_count} orphaned user profiles.", fg='red')
-            else:
-                click.secho("[OK] No orphaned user profiles found.", fg='green')
+            results['orphaned_user_profiles'] = {
+                'count': orphaned_profiles_count,
+                'status': 'ERROR' if orphaned_profiles_count > 0 else 'OK',
+                'message': f"Found {orphaned_profiles_count} orphaned user profiles."
+            }
             
-            # Check 4: Orphaned tracked_jobs (referencing non-existent users or jobs)
+            # Check 4a: Orphaned tracked_jobs (referencing non-existent users)
             cursor.execute("SELECT COUNT(*) FROM tracked_jobs tj LEFT JOIN users u ON tj.user_id = u.id WHERE u.id IS NULL;")
             orphaned_tracked_by_user = cursor.fetchone()[0]
-            if orphaned_tracked_by_user > 0:
-                click.secho(f"[ERROR] Found {orphaned_tracked_by_user} tracked jobs referencing non-existent users.", fg='red')
-            else:
-                click.secho("[OK] All tracked jobs are linked to existing users.", fg='green')
+            results['orphaned_tracked_jobs_by_user'] = {
+                'count': orphaned_tracked_by_user,
+                'status': 'ERROR' if orphaned_tracked_by_user > 0 else 'OK',
+                'message': f"Found {orphaned_tracked_by_user} tracked jobs referencing non-existent users."
+            }
             
+            # Check 4b: Orphaned tracked_jobs (referencing non-existent jobs)
             cursor.execute("SELECT COUNT(*) FROM tracked_jobs tj LEFT JOIN jobs j ON tj.job_id = j.id WHERE j.id IS NULL;")
             orphaned_tracked_by_job = cursor.fetchone()[0]
-            if orphaned_tracked_by_job > 0:
-                click.secho(f"[ERROR] Found {orphaned_tracked_by_job} tracked jobs referencing non-existent jobs.", fg='red')
-            else:
-                click.secho("[OK] All tracked jobs are linked to existing jobs.", fg='green')
+            results['orphaned_tracked_jobs_by_job'] = {
+                'count': orphaned_tracked_by_job,
+                'status': 'ERROR' if orphaned_tracked_by_job > 0 else 'OK',
+                'message': f"Found {orphaned_tracked_by_job} tracked jobs referencing non-existent jobs."
+            }
 
     except Exception as e:
-        click.secho(f"An error occurred: {e}", fg='red')
+        results['overall_error'] = str(e)
+        results['overall_status'] = 'FAILED'
     finally:
         if conn:
             conn.close()
+    return results
+
+# --- Flask CLI Command (for future use with paid plan/local execution) ---
+@click.group('db')
+def db_cli():
+    """Database management commands."""
+    pass
+
+@db_cli.command('check-integrity')
+@with_appcontext
+def check_integrity_cli():
+    """Runs a series of non-destructive data integrity checks (CLI version)."""
+    click.echo("--- Starting Data Integrity Pass ---")
+    results = run_integrity_checks_internal()
+    for key, value in results.items():
+        if isinstance(value, dict) and 'status' in value:
+            color = 'green'
+            if value['status'] == 'WARNING': color = 'yellow'
+            elif value['status'] == 'ERROR': color = 'red'
+            elif value['status'] == 'INFO': color = 'cyan'
+            click.secho(f"[{value['status']}] {value['message']}", fg=color)
+        elif key == 'overall_error':
+            click.secho(f"An overall error occurred: {value}", fg='red')
     click.echo("--- Data Integrity Pass Complete ---")
 
 def register_cli_commands(app):
