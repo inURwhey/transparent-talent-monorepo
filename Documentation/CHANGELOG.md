@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.1] - 2025-06-28 - Failed Authentication Bugfix Attempt
+
+This release documents a significant but unsuccessful attempt to resolve the critical production authentication bug. While the issue persists, the debugging process revealed key insights into the unexpected behavior of the `clerk-backend-api` library, which will inform the next attempt.
+
+### Changed
+-   **Iterative Debugging on `auth.py`:** Multiple versions of the `token_required` decorator were deployed to diagnose a series of cascading errors. This process invalidated several common implementation patterns.
+
+### Fixed
+-   **Clerk Dashboard Misconfiguration:** Corrected a user-facing issue where a misconfigured "Restrictions" list was improperly blocking valid user sign-in attempts.
+
+### Unresolved Issues
+-   **Critical `401 Unauthorized` Error:** The root cause of the authentication failure remains. The latest logs indicate the `clerk.authenticate_request()` method is throwing a `TypeError: Clerk.authenticate_request() missing 1 required positional argument: 'options'`, even when provided with what appear to be the correct parameters. The exact expected structure for the `options` argument remains unknown.
+
 ## [v0.3.0] - 2025-06-27 - End-to-End User Authentication
 
 This version implements a complete, secure authentication system across the entire application stack, from the frontend client to the backend API.
