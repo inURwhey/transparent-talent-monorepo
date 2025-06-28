@@ -9,7 +9,6 @@ import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 import json
-
 from integrity_checks import run_integrity_checks_internal
 
 from auth import token_required
