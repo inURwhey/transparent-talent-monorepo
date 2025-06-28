@@ -6,6 +6,7 @@ import psycopg2
 from clerk_backend_api import Clerk
 import json
 
+# The Clerk() constructor automatically finds the CLERK_SECRET_KEY from the environment.
 clerk = Clerk()
 
 def get_db_connection():
@@ -18,25 +19,17 @@ def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            # This environment variable from Render should contain your frontend URLs.
-            # e.g., ["https://transparent-talent-frontend.vercel.app", "http://localhost:3000"]
-            authorized_parties_json = os.getenv('AUTHORIZED_PARTIES_JSON')
-            authorized_parties = json.loads(authorized_parties_json) if authorized_parties_json else []
-
-            # The options dictionary should contain the authorized_parties list.
-            options = {
-                "authorized_parties": authorized_parties
-            }
-
-            # Call authenticate_request with the two required positional arguments: request and options.
-            claims = clerk.authenticate_request(request, options)
+            # This is the simplest, most direct way to use the library with Flask.
+            # It uses the Flask request object and relies on the dashboard for all other settings.
+            # It does not require the 'options' parameter that was causing the crash.
+            claims = clerk.authenticate_request(request)
             
             clerk_user_id = claims.get('sub')
             
             if not clerk_user_id:
                 return jsonify({"message": "Invalid token: missing user ID"}), 401
             
-            # Database logic remains correct and unchanged.
+            # --- Database logic is correct and unchanged ---
             conn = get_db_connection()
             with conn.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
