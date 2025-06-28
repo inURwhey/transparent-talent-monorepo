@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.0] - 2025-06-28 - User-Driven Job Analysis
+
+This release introduces the first core interactive feature of the platform: allowing users to submit a job URL for on-demand analysis. This involved significant work across the entire stack.
+
+### Added
+-   **Feature: User Job Submission:** Implemented a new form on the user dashboard for submitting job URLs.
+-   **Backend API: Job Submission Endpoint:** Created a new `POST /api/jobs/submit` endpoint that scrapes the provided URL, sends the content and user profile context to the Gemini API for analysis, and saves the results.
+-   **Database: `job_analyses` Table:** Added a new, dedicated table to the PostgreSQL schema to store the structured JSON results from the AI analysis in a scalable way, including relevance scores, summaries, and qualification gaps.
+
+### Changed
+-   **Authentication:** The backend authentication decorator now supports a comma-separated list of URLs in the `CLERK_AUTHORIZED_PARTY` environment variable, making it more robust for Vercel preview deployments.
+-   **AI Context:** The job analysis prompt is now dynamically built from multiple fields in the `user_profiles` table, providing a much richer context to the AI for more accurate analysis.
+-   **Frontend State:** The main dashboard now optimistically updates the UI, adding a newly submitted job to the top of the tracker for immediate user feedback.
+
+### Fixed
+-   **Backend Crash:** Resolved a persistent `500` server error on the `/api/profile` endpoint by correcting the SQL query to use the actual `short_term_career_goal` column name from the database schema.
+-   **Job Submission Crash:** Fixed a `500` error in the submission workflow by replacing a query for a non-existent `summary` column with queries for actual `user_profiles` columns.
+
 ## [v0.5.0] - 2025-06-28 - Public Landing Page & Middleware Hardening
 
 This release introduces a public-facing landing page to create a logged-out experience and hardens the authentication middleware after a significant debugging and refactoring effort.

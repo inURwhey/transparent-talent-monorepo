@@ -1,4 +1,4 @@
-# Transparent Talent: Operational Protocols v1.5
+# Transparent Talent: Operational Protocols v1.6
 
 ## Future State Note
 The ultimate goal for these protocols is to generate structured **JSON** output that can be directly consumed by our backend API. The current CSV/Sheet-based output is an intermediary step for the manual and semi-automated phases.
@@ -19,6 +19,15 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
 3.  **Verbal Plan:** The AI will state its plan in plain English, referencing the ground truth, and ask for user confirmation before generating any code.
 4.  **Diff-Based Changes:** Code modifications will be proposed as minimal diffs or specific line-by-line instructions rather than full file replacements to reduce the risk of re-introducing errors.
 5.  **User Authority:** The user acts as the final authority, validating the AI's proposals against the official documentation. The AI's role is to assist, not to provide definitive, untested solutions.
+
+### Database Interaction Protocol v1.1
+*Objective:* To prevent backend errors and crashes caused by incorrect assumptions about the PostgreSQL database schema.
+*Prime Directive:* The AI must **never** assume the structure of a database table. All database code must be grounded in a user-provided schema description.
+
+*Workflow:*
+1.  **Mandatory Schema Request:** Before generating any code that references, changes, or creates a database table, the AI **must** first prompt the user to provide the `\d <table_name>` description for all relevant tables.
+2.  **Explicit Acknowledgment:** The AI will confirm which columns it will use from the provided schema before generating the full code block.
+3.  **Grounded Code Generation:** The generated code will strictly adhere to the column names and types from the user-provided schema.
 
 ## Workflow Guide: How to Run Protocols
 This workflow should be executed sequentially within a single chat session to maintain context.

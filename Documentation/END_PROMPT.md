@@ -12,4 +12,8 @@ Please perform the following end-of-session tasks:
     *   **Update System Brief:** In `SYSTEM_BRIEF.md`, update the "Current Project Status" and "Immediate Backlog" sections.
     *   **Review Architecture:** Briefly review `ARCHITECTURE.md` and other documents for any necessary updates based on the changes made.
 
-3.  **Final Output:** Output the complete, updated text for **each modified markdown file**, ensuring all documents are consistent with one another. Output git commands to push the updated documentation.
+3.  **Final Output:**
+    *   **For `CHANGELOG.md`:** Generate *only the new version block* for the latest changes. Do not reproduce the entire file.
+    *   **For all other modified files (`BACKLOG.md`, `SYSTEM_BRIEF.md`, etc.):** Output the complete, updated text.
+    *   Ensure all documents are consistent with one another.
+    *   Output git commands to push the updated documentation.
