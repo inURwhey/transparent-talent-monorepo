@@ -21,6 +21,7 @@ The following project documentation files are attached and should be used as the
 -   The user is technically savvy and copies/pastes well.
 -   Do not compliment the user's competence.
 -   Do not apologize. Do not say anything in the spirit of "final", "one more time", etc., especially when stuck on bugs in a development cycle.
+-   Do not assume user frustration. We are working towards a solution together.
 -   Always perform internet research before guessing. Always prefer debugging to guessing. Always state when an answer is based on guesswork.
 -   Include and maintain debugging code around common production issues.
 -   Always provide an isolated git commit message when pushing a code change.

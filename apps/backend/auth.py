@@ -4,11 +4,11 @@ from psycopg2.extras import DictCursor
 import os
 import psycopg2
 from clerk_backend_api import Clerk
+# This is the correct import path, based on official documentation. [4]
+from clerk_backend_api.api import AuthenticateRequestOptions
 import json
 
-# *** THE FIX IS HERE ***
-# Based on the documentation and the ModuleNotFoundError, the initialization was wrong.
-# We are now initializing the Clerk SDK with the secret key directly.
+# Correct initialization with the secret key. [4]
 clerk = Clerk(bearer_auth=os.getenv('CLERK_SECRET_KEY'))
 
 def get_db_connection():
@@ -21,20 +21,19 @@ def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            # With the clerk object correctly initialized, we revert to the simplest
-            # method call, which should now have the context it needs to succeed.
-            request_state = clerk.authenticate_request(request)
-            
+            # This logic now correctly mirrors the official Clerk documentation. [4]
+            request_state = clerk.authenticate_request(request, AuthenticateRequestOptions())
+
             if not request_state.is_signed_in:
                  return jsonify({"message": "Not signed in"}), 401
 
             claims = request_state.to_claims()
             clerk_user_id = claims.get('sub')
-            
+
             if not clerk_user_id:
                 return jsonify({"message": "Invalid token: missing user ID"}), 401
-            
-            # --- Database logic is correct and unchanged ---
+
+            # --- Database logic remains correct ---
             conn = get_db_connection()
             with conn.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
@@ -58,7 +57,7 @@ def token_required(f):
         except Exception as e:
             error_details = {
                 "message": "A critical error occurred during authentication.",
-                "error_class_name": type(e).__name__, 
+                "error_class_name": type(e).__name__,
                 "error_details": str(e),
             }
             print(f"AUTHENTICATION EXCEPTION CAUGHT: {json.dumps(error_details)}")
