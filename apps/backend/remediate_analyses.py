@@ -64,6 +64,7 @@ def run_job_analysis(job_description_text, user_profile_text):
 def run_remediation_internal():
     """
     Re-analyzes jobs for users that are missing an analysis or have a legacy analysis protocol version.
+    Filters out jobs with NULL or empty URLs.
     Returns a dictionary summarizing the results.
     """
     results = {
@@ -73,6 +74,7 @@ def run_remediation_internal():
         'created_count': 0,
         'updated_count': 0,
         'failed_count': 0,
+        'skipped_invalid_url_count': 0,
         'errors': []
     }
     conn = None
@@ -83,20 +85,37 @@ def run_remediation_internal():
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             # Select all tracked_jobs that are missing an analysis for their user
             # OR have an analysis with the old protocol version.
+            # Explicitly exclude jobs where job_url is NULL or empty
             cursor.execute("""
                 SELECT
                     tj.user_id,
                     tj.job_id,
-                    j.job_url,
+                    j.job_url::text AS job_url, -- Cast to text to ensure correct type handling
                     ja.analysis_protocol_version AS existing_version
                 FROM tracked_jobs tj
                 JOIN jobs j ON tj.job_id = j.id
                 LEFT JOIN job_analyses ja ON tj.user_id = ja.user_id AND tj.job_id = ja.job_id
-                WHERE ja.job_id IS NULL OR ja.analysis_protocol_version = '1.0';
+                WHERE (ja.job_id IS NULL OR ja.analysis_protocol_version = '1.0')
+                AND j.job_url IS NOT NULL AND j.job_url != '';
             """)
             jobs_to_reanalyze = cursor.fetchall()
             
             results['total_to_process'] = len(jobs_to_reanalyze)
+            
+            # Count jobs that were implicitly skipped due to NULL/empty URL
+            cursor.execute("""
+                SELECT COUNT(*)
+                FROM tracked_jobs tj
+                JOIN jobs j ON tj.job_id = j.id
+                LEFT JOIN job_analyses ja ON tj.user_id = ja.user_id AND tj.job_id = ja.job_id
+                WHERE (ja.job_id IS NULL OR ja.analysis_protocol_version = '1.0')
+                AND (j.job_url IS NULL OR j.job_url = '');
+            """)
+            results['skipped_invalid_url_count'] = cursor.fetchone()[0]
+
+            print(f"Found {results['total_to_process']} job-user pairs to re-analyze/create with valid URLs.")
+            if results['skipped_invalid_url_count'] > 0:
+                print(f"Skipped {results['skipped_invalid_url_count']} job-user pairs due to NULL/empty job_url.")
             
             profile_columns = [
                 "short_term_career_goal", "ideal_role_description", "core_strengths",
@@ -107,7 +126,7 @@ def run_remediation_internal():
             for i, row in enumerate(jobs_to_reanalyze):
                 user_id = row['user_id']
                 job_id = row['job_id']
-                job_url = row['job_url']
+                job_url = row['job_url'] # Now guaranteed not NULL or empty string
                 existing_version = row['existing_version']
 
                 # Log progress to Render logs
