@@ -37,14 +37,17 @@ def run_job_analysis(job_description_text, user_profile_text):
     prompt = f"""
         Analyze the following job description in the context of the provided user profile.
         Your output MUST be a single, minified JSON object with no extra text or markdown.
+
         USER PROFILE:
         ---
         {user_profile_text}
         ---
+
         JOB DESCRIPTION:
         ---
         {job_description_text}
         ---
+
         Based on "Protocol User-Driven Job Analysis v1.1", provide a comprehensive analysis.
         The JSON object must have the following keys:
         - "positionRelevanceScore": A number from 0-50.
@@ -72,6 +75,7 @@ def submit_job():
     job_url = data.get('job_url')
     if not job_url:
         return jsonify({"error": "job_url is required"}), 400
+    
     conn = None
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
@@ -79,20 +83,53 @@ def submit_job():
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         job_text = soup.get_text(separator=' ', strip=True)
+        
         conn = get_db_connection()
         conn.autocommit = False
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             cursor.execute("SELECT t.id FROM tracked_jobs t JOIN jobs j ON t.job_id = j.id WHERE t.user_id = %s AND j.job_url = %s", (user_id, job_url))
             if cursor.fetchone():
                 return jsonify({"error": "You are already tracking this job."}), 409
-            cursor.execute("SELECT summary FROM user_profiles WHERE user_id = %s", (user_id,))
+
+            # *** THE FIX IS HERE ***
+            # Select multiple, real columns to build a rich profile for the AI.
+            profile_columns = [
+                "short_term_career_goal", "ideal_role_description", "core_strengths",
+                "skills_to_avoid", "preferred_industries", "industries_to_avoid",
+                "desired_title", "non_negotiable_requirements", "deal_breakers"
+            ]
+            sql = f"SELECT {', '.join(profile_columns)} FROM user_profiles WHERE user_id = %s"
+            cursor.execute(sql, (user_id,))
             user_profile_row = cursor.fetchone()
-            if not user_profile_row or not user_profile_row['summary']:
-                return jsonify({"error": "User profile summary not found or is empty. Cannot perform analysis."}), 404
-            user_profile_text = user_profile_row['summary']
+
+            if not user_profile_row:
+                return jsonify({"error": "User profile not found. Cannot perform analysis."}), 404
+
+            # Format the profile into a string for the AI, only including non-empty fields.
+            user_profile_parts = []
+            profile_labels = {
+                "short_term_career_goal": "Short-Term Career Goal", "ideal_role_description": "Ideal Role",
+                "core_strengths": "Core Strengths", "skills_to_avoid": "Skills To Avoid",
+                "preferred_industries": "Preferred Industries", "industries_to_avoid": "Industries To Avoid",
+                "desired_title": "Desired Title", "non_negotiable_requirements": "Non-Negotiables",
+                "deal_breakers": "Deal Breakers"
+            }
+            for col in profile_columns:
+                value = user_profile_row[col]
+                if value and str(value).strip():
+                    user_profile_parts.append(f"- {profile_labels[col]}: {value}")
+
+            if not user_profile_parts:
+                return jsonify({"error": "User profile is too sparse. Please fill out your profile to enable analysis."}), 400
+            
+            user_profile_text = "\n".join(user_profile_parts)
+
+            # --- End of Fix ---
+
             analysis_result = run_job_analysis(job_text, user_profile_text)
             company_name = analysis_result.get('companyName', 'Unknown Company')
             job_title = analysis_result.get('jobTitle', 'Unknown Title')
+            
             cursor.execute("SELECT id FROM companies WHERE LOWER(name) = LOWER(%s)", (company_name,))
             company_row = cursor.fetchone()
             if company_row:
@@ -100,45 +137,40 @@ def submit_job():
             else:
                 cursor.execute("INSERT INTO companies (name) VALUES (%s) RETURNING id", (company_name,))
                 company_id = cursor.fetchone()['id']
+            
             cursor.execute("""
                 INSERT INTO jobs (company_id, company_name, job_title, job_url, source)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (job_url) DO UPDATE SET
-                    company_id = EXCLUDED.company_id,
-                    company_name = EXCLUDED.company_name,
-                    job_title = EXCLUDED.job_title
+                VALUES (%s, %s, %s, %s, %s) ON CONFLICT (job_url) DO UPDATE SET
+                company_id = EXCLUDED.company_id, company_name = EXCLUDED.company_name, job_title = EXCLUDED.job_title
                 RETURNING id;
             """, (company_id, company_name, job_title, job_url, 'User Submission'))
             job_id = cursor.fetchone()['id']
+            
             cursor.execute("""
                 INSERT INTO job_analyses (job_id, position_relevance_score, environment_fit_score, hiring_manager_view, matrix_rating, summary, qualification_gaps, recommended_testimonials)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (job_id) DO NOTHING;
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (job_id) DO NOTHING;
             """, (
-                job_id,
-                analysis_result.get('positionRelevanceScore'),
-                analysis_result.get('environmentFitScore'),
-                analysis_result.get('hiringManagerView'),
-                analysis_result.get('matrixRating'),
-                analysis_result.get('summary'),
-                Json(analysis_result.get('qualificationGaps', [])),
+                job_id, analysis_result.get('positionRelevanceScore'), analysis_result.get('environmentFitScore'),
+                analysis_result.get('hiringManagerView'), analysis_result.get('matrixRating'),
+                analysis_result.get('summary'), Json(analysis_result.get('qualificationGaps', [])),
                 Json(analysis_result.get('recommendedTestimonials', []))
             ))
+            
             cursor.execute("INSERT INTO tracked_jobs (user_id, job_id, status) VALUES (%s, %s, %s) RETURNING id;", (user_id, job_id, 'Saved'))
             tracked_job_id = cursor.fetchone()['id']
+            
             conn.commit()
+            
             cursor.execute("""
-                SELECT 
-                    j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
-                    t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at,
-                    ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
-                    ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
-                FROM jobs j
-                JOIN tracked_jobs t ON j.id = t.job_id
-                LEFT JOIN job_analyses ja ON j.id = ja.job_id
+                SELECT j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
+                       t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at,
+                       ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
+                       ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
+                FROM jobs j JOIN tracked_jobs t ON j.id = t.job_id LEFT JOIN job_analyses ja ON j.id = ja.job_id
                 WHERE t.id = %s;
             """, (tracked_job_id,))
             new_job_row = cursor.fetchone()
+            
             response_data = {
                 "job_id": new_job_row["job_id"], "company_name": new_job_row["company_name"],
                 "job_title": new_job_row["job_title"], "job_url": new_job_row["job_url"],
@@ -156,14 +188,19 @@ def submit_job():
                 }
             }
             return jsonify(response_data), 201
+
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"Failed to fetch job URL: {str(e)}"}), 500
     except json.JSONDecodeError as e:
         if conn: conn.rollback()
         return jsonify({"error": f"Failed to parse AI response: {str(e)}"}), 500
+    except psycopg2.Error as e:
+        if conn: conn.rollback()
+        print(f"DATABASE ERROR in submit_job: {e}")
+        return jsonify({"error": "A database error occurred."}), 500
     except Exception as e:
         if conn: conn.rollback()
-        print(f"An unexpected error occurred: {e}") 
+        print(f"An unexpected error occurred in submit_job: {e}") 
         return jsonify({"error": "An internal server error occurred."}), 500
     finally:
         if conn: conn.close()
@@ -193,7 +230,7 @@ def get_user_jobs():
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             excluded_companies = ['various', 'various companies', 'confidential']
-            sql = "SELECT * FROM jobs WHERE LOWER(company_name) NOT IN %s ORDER BY found_at DESC LIMIT 50"
+            sql = "SELECT id, company_name, job_title, job_url, source FROM jobs WHERE LOWER(company_name) NOT IN %s ORDER BY found_at DESC LIMIT 50"
             cursor.execute(sql, (tuple(excluded_companies),))
             jobs = [dict(row) for row in cursor.fetchall()]
             return jsonify(jobs)
@@ -212,7 +249,7 @@ def get_tracked_jobs():
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             sql = """
                 SELECT 
-                    j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.notes, j.found_at,
+                    j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
                     t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at,
                     ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
                     ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
@@ -250,7 +287,6 @@ def get_tracked_jobs():
     finally:
         conn.close()
 
-
 @app.route('/api/tracked-jobs', methods=['POST'])
 @token_required
 def add_tracked_job():
@@ -277,21 +313,15 @@ def add_tracked_job():
 def update_tracked_job(tracked_job_id):
     user_id = g.current_user['id']
     data = request.get_json()
-    # Basic validation
     if not data or not any(key in data for key in ['status', 'notes', 'applied_at']):
         return jsonify({"error": "No update data provided"}), 400
-
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
-            # Verify the user owns this tracked job
             cursor.execute("SELECT id FROM tracked_jobs WHERE id = %s AND user_id = %s", (tracked_job_id, user_id))
             if not cursor.fetchone():
                 return jsonify({"error": "Tracked job not found or permission denied"}), 404
-            
-            # Build the update query dynamically
-            fields = []
-            params = []
+            fields, params = [], []
             if 'status' in data:
                 fields.append("status = %s")
                 params.append(data['status'])
@@ -301,17 +331,13 @@ def update_tracked_job(tracked_job_id):
             if 'applied_at' in data:
                 fields.append("applied_at = %s")
                 params.append(data['applied_at'])
-            
             if not fields:
                 return jsonify({"error": "No valid fields to update"}), 400
-
             sql = f"UPDATE tracked_jobs SET {', '.join(fields)} WHERE id = %s RETURNING *"
             params.append(tracked_job_id)
-            
             cursor.execute(sql, tuple(params))
             updated_job = dict(cursor.fetchone())
             conn.commit()
-            
             return jsonify(updated_job)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -325,7 +351,6 @@ def remove_tracked_job(tracked_job_id):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            # Verify ownership and delete
             cursor.execute("DELETE FROM tracked_jobs WHERE id = %s AND user_id = %s RETURNING id", (tracked_job_id, user_id))
             deleted_id = cursor.fetchone()
             conn.commit()
@@ -349,7 +374,6 @@ def debug_env():
         "gemini_key_is_set": bool(gemini_key)
     }
     return jsonify(response)
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
