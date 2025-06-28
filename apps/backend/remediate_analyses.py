@@ -274,26 +274,36 @@ def mark_unreachable_jobs_as_expired():
         conn = get_db_connection()
         conn.autocommit = False
         with conn.cursor() as cursor:
-            # Corrected SQL query for UPDATE FROM syntax
+            # Corrected SQL query using NOT EXISTS to identify jobs lacking a v2.0 analysis
+            # and having invalid/unreachable URLs, or specifically Job ID 11.
             update_query = """
                 UPDATE tracked_jobs
                 SET
                     status = 'Expired - Unreachable',
                     applied_at = NULL, 
                     updated_at = CURRENT_TIMESTAMP
-                FROM jobs j
-                LEFT JOIN job_analyses ja ON tracked_jobs.user_id = ja.user_id AND tracked_jobs.job_id = ja.job_id
-                WHERE tracked_jobs.job_id = j.id -- This links tracked_jobs with jobs
-                AND (ja.job_id IS NULL OR ja.analysis_protocol_version != '2.0') 
-                AND (
-                    j.job_url IS NULL OR
-                    j.job_url = '' OR
-                    j.job_url = 'None' OR 
-                    j.job_id = %s -- Specifically target Job ID 11 which previously returned a 404
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM jobs j
+                    WHERE tracked_jobs.job_id = j.id -- Link tracked_jobs to jobs in the subquery
+                    AND (
+                        j.job_url IS NULL OR
+                        j.job_url = '' OR
+                        j.job_url = 'None' OR 
+                        j.job_id = %s -- Specifically target Job ID 11 which previously returned a 404
+                    )
+                    -- AND condition to check for missing/legacy analysis for the specific user/job pair
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM job_analyses ja
+                        WHERE ja.job_id = tracked_jobs.job_id
+                          AND ja.user_id = tracked_jobs.user_id
+                          AND ja.analysis_protocol_version = '2.0'
+                    )
                 )
-                RETURNING tracked_jobs.id;
+                RETURNING id;
             """
-            cursor.execute(update_query, (11,)) # Pass Job ID 11 as a parameter
+            cursor.execute(update_query, (11,)) # Pass Job ID 11 as a parameter to the outer WHERE EXISTS
             marked_jobs_ids = cursor.fetchall()
             conn.commit()
             results['marked_count'] = len(marked_jobs_ids)
