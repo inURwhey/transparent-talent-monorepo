@@ -9,6 +9,7 @@ import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 import json
+from remediate_analyses import run_remediation_internal
 
 from auth import token_required
 
@@ -431,6 +432,21 @@ def debug_env():
         "gemini_key_is_set": bool(gemini_key)
     }
     return jsonify(response)
+
+@app.route('/api/debug/remediate-analyses', methods=['POST']) # Use POST for state-changing operation
+def debug_remediate_analyses():
+    # Simple API key authentication for this temporary endpoint
+    api_key_header = request.headers.get('X-API-Key')
+    expected_api_key = os.getenv('INTEGRITY_CHECK_API_KEY') # Re-using the same key
+
+    if not expected_api_key:
+        return jsonify({"error": "INTEGRITY_CHECK_API_KEY not configured on server."}), 500
+    if api_key_header != expected_api_key:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    # Run the remediation process
+    results = run_remediation_internal()
+    return jsonify(results), 200
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
