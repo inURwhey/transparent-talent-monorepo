@@ -1,26 +1,24 @@
 // apps/frontend/middleware.ts
 
-import { authMiddleware } from "@clerk/nextjs";
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
-export default authMiddleware({
-  // The publicRoutes array specifies routes that are accessible to everyone,
-  // including logged-out users.
-  publicRoutes: ["/"],
+// Define the routes that should be publicly accessible.
+// In this case, only the landing page at the root ('/') is public.
+const isPublicRoute = createRouteMatcher(['/']);
 
-  // The afterAuth function is called after authentication is complete.
-  // Here, we can specify where to redirect users after they log in.
-  afterAuth(auth, req, evt) {
-    // For this example, we'll just let the middleware handle redirects.
-    // A common use case is redirecting to a specific dashboard page:
-    // if (auth.userId && !auth.isPublicRoute) {
-    //   const dashboard = new URL('/dashboard', req.url)
-    //   return NextResponse.redirect(dashboard)
-    // }
-  },
+// The main middleware function.
+// It protects all routes by default.
+export default clerkMiddleware((auth, req) => {
+  // If the route is not public, then protect it.
+  // The `protect()` method will automatically redirect unauthenticated
+  // users to the sign-in page.
+  if (!isPublicRoute(req)) {
+    auth().protect();
+  }
 });
 
 export const config = {
   // This matcher ensures that the middleware runs on all routes
-  // except for internal Next.js routes and static assets.
-  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
+  // except for internal Next.js routes (_next) and static assets (files with extensions).
+  matcher: ['/((?!.*\\..*|_next).*)', '/', '/(api|trpc)(.*)'],
 };
