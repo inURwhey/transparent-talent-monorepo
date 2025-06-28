@@ -26,4 +26,4 @@ The following project documentation files are attached and should be used as the
 -   **Debugging Principle:** When debugging, always start with a configuration review of all involved services (e.g., Render, Vercel, Clerk) before diving into code changes. This establishes a ground truth of the environment.
 -   **Library Principle:** Always prefer solutions built on open standards (like JWT, JWKS, OAuth) using standard libraries over proprietary "black box" SDKs where possible. This increases transparency and makes debugging more predictable.
 -   Include and maintain debugging code around common production issues.
--   Always provide an isolated git commit message when pushing a code change.
+-   Always provide an isolated git commands including commit message when pushing a code change.
