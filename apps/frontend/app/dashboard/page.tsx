@@ -85,37 +85,73 @@ export default function UserDashboard() {
     return fetch(url, { ...options, headers });
   }, [getToken]);
 
+  // --- INSTRUMENTED DATA FETCHING LOGIC ---
   const fetchDataForPage = useCallback(async () => {
+    console.log("DEBUG: fetchDataForPage triggered.");
+
     if (!isUserLoaded || !user) {
+        console.log("DEBUG: Aborting fetch, user not loaded yet.");
         return;
     }
+    
     try {
+      console.log("DEBUG: Starting data fetch sequence.");
       setDebugError(null);
       setIsLoading(true);
-      if (!apiBaseUrl) throw new Error("NEXT_PUBLIC_API_BASE_URL is not set.");
+
+      if (!apiBaseUrl) {
+          throw new Error("NEXT_PUBLIC_API_BASE_URL is not set.");
+      }
+      console.log(`DEBUG: API Base URL is ${apiBaseUrl}`);
       
+      const endpoints = {
+        profile: `${apiBaseUrl}/api/profile`,
+        jobs: `${apiBaseUrl}/api/jobs`,
+        trackedJobs: `${apiBaseUrl}/api/tracked-jobs`,
+      };
+
+      console.log("DEBUG: Fetching from endpoints:", endpoints);
+
       const [profileRes, jobsRes, trackedJobsRes] = await Promise.all([
-        authedFetch(`${apiBaseUrl}/api/profile`),
-        authedFetch(`${apiBaseUrl}/api/jobs`),
-        authedFetch(`${apiBaseUrl}/api/tracked-jobs`)
+        authedFetch(endpoints.profile),
+        authedFetch(endpoints.jobs),
+        authedFetch(endpoints.trackedJobs)
       ]);
 
-      if (!profileRes.ok) throw new Error(`Profile fetch failed: ${profileRes.statusText || 'No response from server'}`);
-      if (!jobsRes.ok) throw new Error(`Jobs fetch failed: ${jobsRes.statusText || 'No response from server'}`);
-      if (!trackedJobsRes.ok) throw new Error(`Tracked jobs fetch failed: ${trackedJobsRes.statusText || 'No response from server'}`);
+      console.log("DEBUG: All fetch promises resolved. Responses:", { profileRes, jobsRes, trackedJobsRes });
 
-      setProfile(await profileRes.json());
-      setJobs(await jobsRes.json());
-      setTrackedJobs(await trackedJobsRes.json());
+      if (!profileRes.ok) throw new Error(`Profile fetch failed: ${profileRes.status} ${profileRes.statusText}`);
+      if (!jobsRes.ok) throw new Error(`Jobs fetch failed: ${jobsRes.status} ${jobsRes.statusText}`);
+      if (!trackedJobsRes.ok) throw new Error(`Tracked jobs fetch failed: ${trackedJobsRes.status} ${trackedJobsRes.statusText}`);
+      
+      console.log("DEBUG: All responses are OK. Parsing JSON...");
+
+      const profileData = await profileRes.json();
+      console.log("DEBUG: Parsed profile data:", profileData);
+
+      const jobsData = await jobsRes.json();
+      console.log("DEBUG: Parsed jobs data:", jobsData);
+
+      const trackedJobsData = await trackedJobsRes.json();
+      console.log("DEBUG: Parsed tracked jobs data:", trackedJobsData);
+
+      console.log("DEBUG: Setting state with parsed data.");
+      setProfile(profileData);
+      setJobs(jobsData);
+      setTrackedJobs(trackedJobsData);
+      console.log("DEBUG: State setting complete.");
+
     } catch (error: unknown) {
-      console.error("A critical error occurred during data fetching:", error);
+      console.error("DEBUG: A critical error was caught in fetchDataForPage:", error);
       setDebugError(error instanceof Error ? error.message : "An unknown error occurred.");
     } finally {
+      console.log("DEBUG: 'finally' block reached. Setting isLoading to false.");
       setIsLoading(false);
     }
   }, [apiBaseUrl, isUserLoaded, user, authedFetch]);
 
   useEffect(() => {
+    console.log("DEBUG: useEffect for fetchDataForPage triggered.");
     fetchDataForPage();
   }, [fetchDataForPage]);
 
@@ -266,7 +302,6 @@ export default function UserDashboard() {
               </Button>
             )
         },
-        // --- UPDATED (DEFENSIVE) CELL LOGIC ---
         cell: ({row}) => {
             const analysis = row.original.ai_analysis;
             if (!analysis || analysis.position_relevance_score == null || analysis.environment_fit_score == null) {
@@ -275,7 +310,6 @@ export default function UserDashboard() {
             const score = analysis.position_relevance_score + analysis.environment_fit_score;
             return <div className="text-center font-medium">{score}</div>
         },
-        // --- UPDATED (DEFENSIVE) SORTING LOGIC ---
         sortingFn: (rowA, rowB) => {
             const analysisA = rowA.original.ai_analysis;
             const analysisB = rowB.original.ai_analysis;
@@ -341,7 +375,7 @@ export default function UserDashboard() {
      return <div className="min-h-screen flex items-center justify-center">Initializing session...</div>
   }
   
-  if (isLoading && isUserLoaded) {
+  if (isLoading) {
      return <div className="min-h-screen flex items-center justify-center">Loading Dashboard Data...</div>
   }
 
@@ -434,6 +468,7 @@ export default function UserDashboard() {
         <div className="text-center">
           <h2 className="text-xl font-semibold">Data not available</h2>
           <p className="text-gray-600">There was an issue loading your dashboard data. Please try refreshing the page.</p>
+          {debugError && <p className="text-sm mt-2 text-red-700"><strong>Error Details:</strong> {debugError}</p>}
         </div>
       )}
     </main>
