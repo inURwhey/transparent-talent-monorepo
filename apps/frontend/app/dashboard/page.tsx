@@ -1,24 +1,38 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
 
-// --- TYPE DEFINITIONS (Unchanged) ---
+// --- UPDATED TYPE DEFINITIONS ---
 interface Profile {
   full_name: string;
   short_term_career_goal: string;
 }
 interface Job {
-  id: number;
+  id: number; // For job matches from /api/jobs
   job_title: string;
   company_name: string;
   job_url: string;
 }
-interface TrackedJob extends Job {
+interface AIAnalysis {
+  position_relevance_score: number;
+  environment_fit_score: number;
+  hiring_manager_view: string;
+  matrix_rating: string;
+  summary: string;
+  qualification_gaps: string[];
+  recommended_testimonials: string[];
+}
+interface TrackedJob {
+  job_id: number;
+  job_title: string;
+  company_name: string;
+  job_url: string;
   tracked_job_id: number;
   status: string;
-  notes: string | null;
+  user_notes: string | null; // Renamed from 'notes'
   applied_at: string | null;
+  ai_analysis: AIAnalysis | null; // Added for structured analysis
 }
 type UpdatePayload = {
   notes?: string;
@@ -27,7 +41,7 @@ type UpdatePayload = {
 };
 
 export default function UserDashboard() {
-  // --- STATE MANAGEMENT (Unchanged) ---
+  // --- STATE MANAGEMENT ---
   const [profile, setProfile] = useState<Profile | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
@@ -37,6 +51,11 @@ export default function UserDashboard() {
   const [editDate, setEditDate] = useState('');
   const [debugError, setDebugError] = useState<string | null>(null);
   
+  // --- NEW STATE FOR JOB SUBMISSION ---
+  const [jobUrl, setJobUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+
   // --- CLERK HOOKS (Unchanged) ---
   const { getToken } = useAuth();
   const { user, isLoaded: isUserLoaded } = useUser();
@@ -52,7 +71,7 @@ export default function UserDashboard() {
     return fetch(url, { ...options, headers });
   }, [getToken]);
 
-  // --- CORRECTED DATA FETCHING LOGIC (Unchanged from previous attempt) ---
+  // --- DATA FETCHING LOGIC (Unchanged) ---
   const fetchDataForPage = useCallback(async () => {
     if (!isUserLoaded || !user) {
         return;
@@ -62,7 +81,7 @@ export default function UserDashboard() {
       setDebugError(null);
       setIsLoading(true);
 
-      if (!apiBaseUrl) throw new Error("NEXT_PUBLIC_API_BASE_URL is not set.");
+      if (!apiBaseaUrl) throw new Error("NEXT_PUBLIC_API_BASE_URL is not set.");
       
       const [profileRes, jobsRes, trackedJobsRes] = await Promise.all([
         authedFetch(`${apiBaseUrl}/api/profile`),
@@ -91,7 +110,38 @@ export default function UserDashboard() {
   }, [fetchDataForPage]);
 
 
-  // --- HANDLERS (Unchanged logic) ---
+  // --- NEW HANDLER FOR JOB SUBMISSION ---
+  const handleJobSubmit = useCallback(async (event: FormEvent) => {
+    event.preventDefault();
+    if (!jobUrl.trim() || isSubmitting) return;
+
+    setSubmissionError(null);
+    setIsSubmitting(true);
+
+    try {
+      const response = await authedFetch(`${apiBaseUrl}/api/jobs/submit`, {
+        method: 'POST',
+        body: JSON.stringify({ job_url: jobUrl }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit job for analysis.');
+      }
+      
+      // Add the new job to the top of the list for immediate feedback
+      setTrackedJobs(prevJobs => [result, ...prevJobs]);
+      setJobUrl(''); // Clear the input on success
+    } catch (error: unknown) {
+      console.error("Job Submission Error:", error);
+      setSubmissionError(error instanceof Error ? error.message : 'An unknown error occurred.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [apiBaseUrl, authedFetch, jobUrl, isSubmitting]);
+
+  // --- EXISTING HANDLERS (Unchanged logic, but updated for new types) ---
   const handleUpdate = useCallback(async (trackedJobId: number, payload: UpdatePayload) => {
     try {
       const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, {
@@ -134,10 +184,10 @@ export default function UserDashboard() {
     }
   }, [apiBaseUrl, authedFetch]);
 
-  // --- EDIT HANDLERS & FORMATTERS ---
+  // --- EDIT HANDLERS & FORMATTERS (Updated for new types) ---
   const handleStartEdit = useCallback((job: TrackedJob) => {
     setEditingJobId(job.tracked_job_id);
-    setEditNotes(job.notes || '');
+    setEditNotes(job.user_notes || ''); // <-- Updated from job.notes
     setEditDate(job.applied_at ? new Date(job.applied_at).toISOString().split('T')[0] : '');
   }, []);
 
@@ -154,10 +204,9 @@ export default function UserDashboard() {
     await handleUpdate(trackedJobId, { status: newStatus });
   }, [handleUpdate]);
 
-  // *** THE FIX IS HERE ***
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Not set'; // Was date_string
-    return new Date(dateString).toLocaleDateString(undefined, { // Was date_string
+    if (!dateString) return 'Not set';
+    return new Date(dateString).toLocaleDateString(undefined, {
       year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'
     });
   }
@@ -182,12 +231,44 @@ export default function UserDashboard() {
       
       {!debugError && profile ? (
         <div className="max-w-4xl mx-auto">
-          {/* ... The rest of your JSX ... */}
+          {/* ... Profile Section ... */}
           <div className="bg-white p-6 rounded-lg shadow-md mb-8">
               <h1 className="text-3xl font-bold text-gray-800">{profile.full_name}</h1>
               <p className="text-lg text-gray-600 mt-2">Short Term Goal:</p>
               <p className="text-gray-700 italic">{profile.short_term_career_goal || "No goal set."}</p>
           </div>
+          
+          {/* --- NEW JOB SUBMISSION FORM --- */}
+          <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-4">Analyze a New Job</h2>
+            <form onSubmit={handleJobSubmit}>
+              <label htmlFor="jobUrl" className="block text-sm font-medium text-gray-700">
+                Paste Job Posting URL
+              </label>
+              <div className="mt-1 flex rounded-md shadow-sm">
+                <input
+                  type="url"
+                  name="jobUrl"
+                  id="jobUrl"
+                  className="block w-full flex-1 rounded-none rounded-l-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
+                  placeholder="https://www.linkedin.com/jobs/view/..."
+                  value={jobUrl}
+                  onChange={(e) => setJobUrl(e.target.value)}
+                  required
+                />
+                <button
+                  type="submit"
+                  className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-300 disabled:cursor-not-allowed"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Analyzing...' : 'Analyze'}
+                </button>
+              </div>
+              {submissionError && <p className="mt-2 text-sm text-red-600">{submissionError}</p>}
+            </form>
+          </div>
+
+          {/* --- EXISTING JOB TRACKER (Updated to use new data structure) --- */}
           <div className="bg-white p-6 rounded-lg shadow-md mb-8">
             <h2 className="text-2xl font-semibold text-gray-800 mb-4">My Job Tracker</h2>
             <div className="space-y-6">
@@ -211,6 +292,7 @@ export default function UserDashboard() {
                         <option value="Rejected">Rejected</option>
                       </select>
                     </div>
+                    {/* --- Note: AI Analysis data is available here (trackedJob.ai_analysis) but not yet rendered. --- */}
                     {editingJobId === trackedJob.tracked_job_id ? (
                       <div className="mt-4 space-y-3">
                         <div>
@@ -232,7 +314,8 @@ export default function UserDashboard() {
                     ) : (
                       <div className="mt-3 text-sm text-gray-600">
                         <p><strong>Applied on:</strong> {formatDate(trackedJob.applied_at)}</p>
-                        <p className="mt-1"><strong>Notes:</strong> {trackedJob.notes || <span className="italic text-gray-400">No notes added.</span>}</p>
+                        {/* Updated to use 'user_notes' */}
+                        <p className="mt-1"><strong>Notes:</strong> {trackedJob.user_notes || <span className="italic text-gray-400">No notes added.</span>}</p>
                         <div className="flex items-center">
                             <button onClick={() => handleStartEdit(trackedJob)} className="mt-2 text-blue-600 hover:underline text-xs font-semibold">
                                 Edit Details
@@ -246,10 +329,11 @@ export default function UserDashboard() {
                   </div>
                 ))
               ) : ( 
-                  <p className="text-gray-500">You are not tracking any jobs yet. Click <span className="font-semibold text-blue-600">Track</span> on a job match to begin.</p>
+                  <p className="text-gray-500">You are not tracking any jobs yet. Submit a job URL above to begin.</p>
               )}
             </div>
           </div>
+          {/* ... Existing Watchlist & Job Matches sections ... */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-1">
               <div className="bg-white p-6 rounded-lg shadow-md">
