@@ -2,13 +2,19 @@
 
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
+* add something like "reactively codify industry standards that have impacted this session in existing or protocols, and proactively add other related standards related to this project."
+* user dashboard: pagination for "my job tracker"
+* user dashboard: did we lose the "jobs for you" module, or did it get pushed off the page? a product expectation is that the user would always have a "jobs for you" sorted by relevancy in order to take immediate action on the next job application.
+* do a one-time pass to ensure all data meets app expectations.
+* user dashboard: changing the status from "saved" to "applied" should set the "date applied"
+* user dashboard: update "Analyze a New Job" to access comma-separated values and/or a CSV or spreadsheet
 
 ---
 
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Architecture: Data Contract Standardization** | 2 | 3 | 100% | 0.25 | **24.0** | **To Do** |
+| **Architecture: Data Contract Standardization** | 2 | 3 | 100% | 0.25 | **24.0** | **Done** |
 | **Security: Implement User Authentication** | 1000 | 3 | 100% | 0.5 | **6000** | **Done** |
 | **Bugfix: Resolve Production Authentication** | 1000 | 3 | 100% | 0.25 | **12000** | **Done** |
 | **Architecture: Monorepo Setup** | 1 | 3 | 100% | 0.25 | **12.0** | **Done** |

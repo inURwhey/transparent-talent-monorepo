@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.8.0] - 2025-06-28 - Data Contract Standardization & UI Refactor
+
+This release completes a key architectural task by standardizing the data contract with the AI service to use `snake_case`, improving system-wide consistency. It also includes a significant frontend refactor for maintainability and several bug fixes that improve the user experience.
+
+### Added
+-   **Architectural Improvement:** Decoupled frontend table column definitions into a dedicated `apps/frontend/app/dashboard/components/columns.tsx` component to improve code organization and maintainability.
+-   **UI Feature:** The "My Job Tracker" table now displays a "Date Saved" column, using the creation date of the tracked job for more accurate record-keeping.
+
+### Changed
+-   **Data Contract:** Standardized the AI job analysis data contract to use `snake_case` for all keys, from the initial prompt to the final API response.
+-   **Backend API:** Updated the `/api/tracked-jobs` and `/api/jobs/submit` endpoints to include the `created_at` timestamp in their responses.
+-   **Frontend Data Model:** The `TrackedJob` interface and all related components were updated to use the new `created_at` field.
+
+### Fixed
+-   **UI Bug:** Corrected a CSS issue where dropdown menus were semi-transparent and had an incorrect z-index, causing them to improperly overlap table content.
+-   **UI Bug:** Resolved an issue where newly submitted jobs would display "Invalid Date". The table now correctly shows the "Date Saved" for new entries and a placeholder for un-set "Date Applied" fields.
+
 ## [v0.7.0] - 2025-06-28 - Tabular Job Tracker & Data Contract Hardening
 
 This release replaces the simple job tracker with a full-featured, interactive data table. It also includes a critical bug fix that resolved a persistent data rendering issue on the dashboard, which was traced to a data contract mismatch between the frontend and backend API.
