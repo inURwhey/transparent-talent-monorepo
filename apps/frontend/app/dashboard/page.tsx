@@ -71,7 +71,7 @@ export default function UserDashboard() {
     return fetch(url, { ...options, headers });
   }, [getToken]);
 
-  // --- DATA FETCHING LOGIC (Unchanged) ---
+  // --- DATA FETCHING LOGIC (CORRECTED) ---
   const fetchDataForPage = useCallback(async () => {
     if (!isUserLoaded || !user) {
         return;
@@ -81,7 +81,7 @@ export default function UserDashboard() {
       setDebugError(null);
       setIsLoading(true);
 
-      if (!apiBaseaUrl) throw new Error("NEXT_PUBLIC_API_BASE_URL is not set.");
+      if (!apiBaseUrl) throw new Error("NEXT_PUBLIC_API_BASE_URL is not set."); // *** THE FIX IS HERE ***
       
       const [profileRes, jobsRes, trackedJobsRes] = await Promise.all([
         authedFetch(`${apiBaseUrl}/api/profile`),
