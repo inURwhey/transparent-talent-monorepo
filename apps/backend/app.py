@@ -9,7 +9,6 @@ import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 import json
-from integrity_checks import run_integrity_checks_internal # Corrected import
 
 from auth import token_required
 
@@ -432,21 +431,6 @@ def debug_env():
         "gemini_key_is_set": bool(gemini_key)
     }
     return jsonify(response)
-
-# CORRECTED INDENTATION for the debug endpoint
-@app.route('/api/debug/integrity-check', methods=['GET'])
-def debug_integrity_check():
-    # Simple API key authentication for this temporary endpoint
-    api_key_header = request.headers.get('X-API-Key')
-    expected_api_key = os.getenv('INTEGRITY_CHECK_API_KEY')
-
-    if not expected_api_key:
-        return jsonify({"error": "INTEGRITY_CHECK_API_KEY not configured on server."}), 500
-    if api_key_header != expected_api_key:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    results = run_integrity_checks_internal()
-    return jsonify(results), 200
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
