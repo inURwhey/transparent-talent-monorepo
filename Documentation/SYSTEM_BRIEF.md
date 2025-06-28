@@ -20,9 +20,12 @@
 *   **Core Feature Implemented:** The user dashboard now includes a sortable, filterable data table for the "My Job Tracker" section, significantly improving the user experience for managing tracked jobs.
 *   **UI Refactor & Bug Fixes:** Resolved several UI bugs and refactored the frontend by decoupling the data table's column definitions, improving code quality and future scalability.
 *   **Workflow Automation:** The user dashboard now intelligently automates the `applied_at` date for tracked jobs, setting it automatically when the status changes to 'Applied' and clearing it when changed from 'Applied', significantly streamlining user workflow. Frontend stability for data updates has also been improved.
+*   **Pagination Implemented:** The "My Job Tracker" table now supports full pagination, including server-side data fetching and robust sorting, allowing efficient browsing of large datasets.
 
 ## 4. Immediate Backlog & Next Steps
-1.  **UI/UX: Job Tracker Pagination:** Implement pagination for the "My Job Tracker" table to improve performance and user experience with large datasets. (RICE: 4000)
+1.  **Bugfix: New Account Dashboard Error:** Resolve the "An Error Occurred" issue when new users navigate to the dashboard immediately after sign-up. (RICE: 12000)
 2.  **Backend: Automated App Expiration:** Create a mechanism to automatically flag or hide job postings that are likely no longer valid after a certain period. (RICE: 4000)
-3.  **UI: Transparent Relevance Scorecard:** Design and build the collapsible UI component that displays the detailed factors behind a job's score. (RICE: 3000)
-4.  **UI/UX: 'Jobs for You' Module Restoration:** Ensure the "Jobs for You" module is present, visible, and sorted by relevancy on the user dashboard. (RICE: 3600)
+3.  **UI/UX: Context-Aware "Get Started" Button:** Refine the landing page's "Get Started" button behavior based on user login status. (RICE: 4000)
+4.  **Feature: Define & Verify New User Account Flow:** Define and implement a comprehensive and verified onboarding flow for new user accounts. (RICE: 6000)
+5.  **UI: Transparent Relevance Scorecard:** Design and build the collapsible UI component that displays the detailed factors behind a job's score. (RICE: 3000)
+6.  **UI/UX: 'Jobs for You' Module Restoration:** Ensure the "Jobs for You" module is present, visible, and sorted by relevancy on the user dashboard. (RICE: 3600)

@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.11.0] - 2025-06-28 - Job Tracker Pagination & Stable Sorting
+
+This release introduces comprehensive pagination for the "My Job Tracker" table, significantly enhancing performance and user experience when managing numerous tracked jobs. A critical bug related to unstable data sorting on paginated results has also been resolved.
+
+### Added
+-   **UI/UX:** Implemented client-side pagination controls for the "My Job Tracker" data table.
+-   **Backend:** Added `page` and `limit` query parameters to the `/api/tracked-jobs` endpoint to support server-side pagination.
+-   **Backend:** The `/api/tracked-jobs` endpoint now returns the `total_count` of tracked jobs, enabling accurate pagination display on the frontend.
+
+### Changed
+-   **Backend:** Modified the `get_tracked_jobs` SQL query to include `LIMIT` and `OFFSET` clauses.
+-   **Backend:** Enhanced the `ORDER BY` clause in `get_tracked_jobs` to include `t.id DESC` as a secondary sort key, ensuring stable and consistent pagination results even when multiple jobs share the same `created_at` timestamp.
+-   **Frontend:** Updated `apps/frontend/app/dashboard/page.tsx` to manage pagination state and pass it to the `DataTable` component.
+-   **Frontend:** Refactored `handleUpdate` and `handleRemoveJob` in `page.tsx` to re-fetch the current page of data after a successful operation, maintaining data consistency.
+-   **Frontend:** Adjusted `handleJobSubmit` in `page.tsx` to reset pagination to the first page after a new job submission, ensuring the new entry is immediately visible.
+-   **Frontend:** Configured `@tanstack/react-table` in `apps/frontend/app/dashboard/data-table.tsx` for manual pagination, integrating external state and `totalCount`.
+
+### Fixed
+-   **Data Consistency:** Resolved an issue where jobs could appear duplicated across different pagination pages or be skipped entirely due to unstable sorting of rows with identical `created_at` timestamps.
+
 ## [v0.10.0] - 2025-06-28 - Automated 'Date Applied' & Frontend Stability
 
 This release introduces a significant quality-of-life improvement by automating the 'Date Applied' field for tracked jobs, streamlining the user workflow. It also includes critical frontend stability enhancements that improve the reliability of UI updates and deployment processes.
