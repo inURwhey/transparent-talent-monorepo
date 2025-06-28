@@ -2,7 +2,7 @@
 
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
-* 
+* define and verify new user account flow
 
 ---
 
@@ -24,7 +24,7 @@
 | **Feature: User Job Submission** | 1000 | 3 | 100% | 0.5 | **6000** | **Done** |
 | **UI: Tabular Job Tracker** | 1000 | 2 | 100% | 0.5 | **4000** | **Done** |
 | **Deployment: Production Domain** | 1000 | 1 | 100% | 0.25 | **4000** | **Done** |
-| **UI/UX: Auto-set 'Date Applied' on Status Change** | 1000 | 2 | 100% | 0.25 | **8000** | **To Do** |
+| **UI/UX: Auto-set 'Date Applied' on Status Change** | 1000 | 2 | 100% | 0.25 | **8000** | **Done** |
 | **UI/UX: Job Tracker Pagination** | 1000 | 2 | 100% | 0.5 | **4000** | **To Do** |
 | **Backend: Automated App Expiration** | 1000 | 1 | 100% | 0.25 | **4000** | **To Do** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | **To Do** |

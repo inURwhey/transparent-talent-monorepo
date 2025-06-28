@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.10.0] - 2025-06-28 - Automated 'Date Applied' & Frontend Stability
+
+This release introduces a significant quality-of-life improvement by automating the 'Date Applied' field for tracked jobs, streamlining the user workflow. It also includes critical frontend stability enhancements that improve the reliability of UI updates and deployment processes.
+
+### Added
+-   **UI/UX:** Implemented automatic population of the `applied_at` date when a tracked job's status is set to "Applied".
+-   **UI/UX:** Added logic to clear the `applied_at` date when a tracked job's status is changed from "Applied" to any other status.
+
+### Changed
+-   **Frontend:** Enhanced the optimistic UI update logic within the `handleUpdate` function in `apps/frontend/app/dashboard/page.tsx` to correctly handle `null` and `undefined` values.
+-   **Frontend:** Refined the `UpdatePayload` type to explicitly allow `null` for optional fields like `notes`, aligning with data model requirements.
+
+### Fixed
+-   **Build:** Resolved a TypeScript compilation error (`Type 'undefined' is not assignable to type 'string | null'`) in `apps/frontend/app/dashboard/page.tsx` that was causing Vercel build failures.
+
 ## [v0.9.0] - 2025-06-28 - Production Domain Deployment
 
 This release establishes the Transparent Talent application on its official production domain, significantly enhancing its public accessibility and formalizing its presence. Critical authentication configurations were updated to ensure seamless operation under the new domain.
