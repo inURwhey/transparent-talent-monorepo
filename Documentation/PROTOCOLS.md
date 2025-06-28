@@ -1,7 +1,24 @@
-# Transparent Talent: Operational Protocols v1.4
+# Transparent Talent: Operational Protocols v1.5
 
 ## Future State Note
 The ultimate goal for these protocols is to generate structured **JSON** output that can be directly consumed by our backend API. The current CSV/Sheet-based output is an intermediary step for the manual and semi-automated phases.
+
+## Developer Workflow Protocols
+
+### Clerk Interaction Protocol v1.0
+*Objective:* To prevent debugging cycles and ensure correctness when modifying authentication code related to the `@clerk/nextjs` library, which has proven to be a high-risk dependency due to frequent breaking changes and unreliable AI knowledge.
+
+*Trigger:* Any development task that requires creating or modifying Clerk-related code in the frontend application.
+
+*Workflow:*
+1.  **Explicit Declaration:** The user will declare the start of a "Clerk Session."
+2.  **Ground Truth Request:** The AI will request the following from the user before proceeding:
+    *   The exact version of `@clerk/nextjs` from `pnpm-lock.yaml`.
+    *   The complete, current, and working code from the file(s) to be modified.
+    *   A link to the most relevant official Clerk documentation page for the task.
+3.  **Verbal Plan:** The AI will state its plan in plain English, referencing the ground truth, and ask for user confirmation before generating any code.
+4.  **Diff-Based Changes:** Code modifications will be proposed as minimal diffs or specific line-by-line instructions rather than full file replacements to reduce the risk of re-introducing errors.
+5.  **User Authority:** The user acts as the final authority, validating the AI's proposals against the official documentation. The AI's role is to assist, not to provide definitive, untested solutions.
 
 ## Workflow Guide: How to Run Protocols
 This workflow should be executed sequentially within a single chat session to maintain context.

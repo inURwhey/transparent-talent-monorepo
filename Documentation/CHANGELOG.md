@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.5.0] - 2025-06-28 - Public Landing Page & Middleware Hardening
+
+This release introduces a public-facing landing page to create a logged-out experience and hardens the authentication middleware after a significant debugging and refactoring effort.
+
+### Added
+-   **Public Landing Page:** Implemented a new static landing page at the root route (`/`) to explain the product's value proposition to new and logged-out users.
+-   **Developer Protocol:** Added a "Clerk Interaction Protocol" to the project's documentation to establish a stricter workflow for handling the high-risk Clerk frontend library.
+
+### Changed
+-   **Authentication Middleware:** Refactored the frontend `middleware.ts` to correctly support both public and protected routes using the Clerk v5 SDK. All routes are now protected by default, with the landing page and sign-in/sign-up pages explicitly made public.
+
+### Fixed
+-   **Clerk v5 Implementation:** Resolved a series of persistent build failures by correcting the Clerk middleware implementation. The code now uses the correct "opt-in to protection" model and the proper `auth.protect()` syntax, aligning it with official documentation.
+
 ## [v0.4.0] - 2025-06-28 - Production Authentication Fix & Refactor
 
 This release resolves the critical authentication bug and makes the application fully functional. It involved a significant refactor of the backend authentication system to improve stability, transparency, and adherence to open standards.

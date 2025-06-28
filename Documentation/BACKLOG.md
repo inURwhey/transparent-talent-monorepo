@@ -1,4 +1,4 @@
-# Transparent Talent: Product Backlog & Roadmap v1.6
+# Transparent Talent: Product Backlog & Roadmap v1.7
 
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
@@ -16,13 +16,14 @@
 ## Tier 2: Core User Experience & Differentiation
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | **To Do** |
+| **Feature: Logged Out Experience** | 1000 | 2 | 100% | 0.25 | **8000** | **Done** |
 | **Feature: User Job Submission** | 1000 | 3 | 100% | 0.5 | **6000** | **To Do** |
+| **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | **To Do** |
 | **UI: Tabular Job Tracker** | 1000 | 2 | 100% | 0.5 | **4000** | **To Do** |
-| **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | **To Do** |
-| **Feature: Logged Out Experience** | 1000 | 2 | 100% | 0.25 | **8000** | **To Do** |
 | **Deployment: Production Domain** | 1000 | 1 | 100% | 0.25 | **4000** | **To Do** |
 | **Backend: Automated App Expiration** | 1000 | 1 | 100% | 0.25 | **4000** | **To Do** |
+| **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | **To Do** |
+
 
 ## Tier 3: AI & System Intelligence (Mid-Term)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | Status |
