@@ -19,10 +19,21 @@ def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            # This is the simplest, most direct way to use the library with Flask.
-            # It uses the Flask request object and relies on the dashboard for all other settings.
-            # It does not require the 'options' parameter that was causing the crash.
-            claims = clerk.authenticate_request(request)
+            # Manually construct the 'options' dictionary to satisfy the TypeError.
+            # This is the direct fix for the error seen in the logs.
+            auth_header = request.headers.get('Authorization')
+            if not auth_header:
+                return jsonify({"message": "Authorization header is missing"}), 401
+            
+            # The token is passed as "Bearer <token>", so we split it.
+            # Clerk's SDK expects only the token part.
+            parts = auth_header.split()
+            if len(parts) != 2 or parts[0].lower() != 'bearer':
+                 return jsonify({"message": "Invalid Authorization header format"}), 401
+            token = parts[1]
+
+            options = { "header_token": token }
+            claims = clerk.authenticate_request(request, options=options)
             
             clerk_user_id = claims.get('sub')
             
