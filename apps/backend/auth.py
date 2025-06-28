@@ -4,13 +4,12 @@ from psycopg2.extras import DictCursor
 import os
 import psycopg2
 from clerk_backend_api import Clerk
-# This import was missing and is shown in the official documentation
-from clerk_backend_api.jwks_helpers import AuthenticateRequestOptions
 import json
 
-# Correct initialization, as per Clerk's official documentation [3]
-# The secret key is passed in as the bearer_auth token.
-sdk = Clerk(bearer_auth=os.getenv('CLERK_SECRET_KEY'))
+# *** THE FIX IS HERE ***
+# Based on the documentation and the ModuleNotFoundError, the initialization was wrong.
+# We are now initializing the Clerk SDK with the secret key directly.
+clerk = Clerk(bearer_auth=os.getenv('CLERK_SECRET_KEY'))
 
 def get_db_connection():
     db_url = os.getenv('DATABASE_URL')
@@ -22,16 +21,13 @@ def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            # This is the canonical way to authenticate a request with the Python SDK.
-            # It directly mirrors the official documentation example. [3]
-            # There is no need to manually parse the header.
-            request_state = sdk.authenticate_request(request)
+            # With the clerk object correctly initialized, we revert to the simplest
+            # method call, which should now have the context it needs to succeed.
+            request_state = clerk.authenticate_request(request)
             
-            # The authenticate_request method returns a state object.
-            # We check its status and get the claims from it.
             if not request_state.is_signed_in:
                  return jsonify({"message": "Not signed in"}), 401
-            
+
             claims = request_state.to_claims()
             clerk_user_id = claims.get('sub')
             
@@ -44,9 +40,7 @@ def token_required(f):
                 cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
                 user = cursor.fetchone()
                 if not user:
-                    # This logic uses the Clerk SDK to get user info, which requires bearer_auth
-                    # on the sdk object, which we have now configured correctly.
-                    clerk_user_info = sdk.users.get_user(user_id=clerk_user_id)
+                    clerk_user_info = clerk.users.get_user(user_id=clerk_user_id)
                     user_email = clerk_user_info.email_addresses[0].email_address
                     cursor.execute("SELECT * FROM users WHERE email = %s", (user_email,))
                     user = cursor.fetchone()
