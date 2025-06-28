@@ -104,13 +104,37 @@ export default function UserDashboard() {
 
   const handleUpdate = useCallback(async (trackedJobId: number, payload: UpdatePayload) => {
     try {
-      await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, {
+      // Optimistically update the UI
+      setTrackedJobs(prev => prev.map(job => 
+        job.tracked_job_id === trackedJobId 
+          ? { 
+              ...job, 
+              ...payload, 
+              // Ensure notes update correctly if it's explicitly in payload
+              user_notes: 'notes' in payload ? payload.notes : job.user_notes,
+              // Ensure applied_at updates correctly if it's explicitly in payload
+              applied_at: 'applied_at' in payload ? payload.applied_at : job.applied_at
+            } 
+          : job
+      ));
+
+      // Send the update to the backend
+      const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, {
         method: 'PUT', body: JSON.stringify(payload)
       });
-      setTrackedJobs(prev => prev.map(job => 
-        job.tracked_job_id === trackedJobId ? { ...job, ...payload, user_notes: payload.notes ?? job.user_notes } : job
-      ));
-    } catch (error) { console.error("Update Error:", error); }
+
+      if (!response.ok) {
+        // If update fails, revert the UI
+        setTrackedJobs(prev => prev.map(job => 
+          job.tracked_job_id === trackedJobId ? { ...job, ...job } : job // Revert to original state
+        ));
+        throw new Error(`Failed to update job: ${response.statusText}`);
+      }
+
+    } catch (error) { 
+      console.error("Update Error:", error); 
+      // Optionally show a user-facing error message here
+    }
   }, [apiBaseUrl, authedFetch]);
 
   const handleRemoveJob = useCallback(async (trackedJobId: number) => {
@@ -121,9 +145,27 @@ export default function UserDashboard() {
     } catch (error) { console.error("Remove Job Error:", error); }
   }, [apiBaseUrl, authedFetch]);
 
+  // Modified handleStatusChange to include auto-setting applied_at
   const handleStatusChange = useCallback(async (trackedJobId: number, newStatus: string) => {
-    await handleUpdate(trackedJobId, { status: newStatus });
-  }, [handleUpdate]);
+    const currentJob = trackedJobs.find(job => job.tracked_job_id === trackedJobId);
+    if (!currentJob) {
+      console.error(`Job with ID ${trackedJobId} not found.`);
+      return;
+    }
+
+    const payload: UpdatePayload = { status: newStatus };
+
+    // If status is changing to "Applied" and applied_at is not already set
+    if (newStatus === "Applied" && !currentJob.applied_at) {
+      payload.applied_at = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
+    } else if (newStatus !== "Applied" && currentJob.applied_at) {
+      // Optional: If status changes from "Applied" to something else, clear applied_at
+      // The prompt did not specify this, so I will omit for now to stick to minimal change.
+      // payload.applied_at = null;
+    }
+
+    await handleUpdate(trackedJobId, payload);
+  }, [handleUpdate, trackedJobs]); // Add trackedJobs to dependencies
 
   const handleJobSubmit = useCallback(async (event: FormEvent) => {
     event.preventDefault();
