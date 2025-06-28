@@ -17,6 +17,9 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, supports_credentials=True, expose_headers=["Authorization"])
 
+# --- Constants ---
+ANALYSIS_PROTOCOL_VERSION = '2.0'
+
 # --- AI Configuration ---
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 if not GEMINI_API_KEY:
@@ -35,7 +38,6 @@ def run_job_analysis(job_description_text, user_profile_text):
         raise ValueError("AI analysis cannot be run without GEMINI_API_KEY.")
     model = genai.GenerativeModel('gemini-1.5-pro-latest')
     
-    # *** FIX: Prompt now requests snake_case keys to match the database schema. ***
     prompt = f"""
         Analyze the following job description in the context of the provided user profile.
         Your output MUST be a single, minified JSON object with no extra text or markdown.
@@ -125,7 +127,6 @@ def submit_job():
 
             analysis_result = run_job_analysis(job_text, user_profile_text)
             
-            # *** FIX: Use snake_case keys to access the AI analysis result. ***
             company_name = analysis_result.get('company_name', 'Unknown Company')
             job_title = analysis_result.get('job_title', 'Unknown Title')
             
@@ -145,11 +146,25 @@ def submit_job():
             """, (company_id, company_name, job_title, job_url, 'User Submission'))
             job_id = cursor.fetchone()['id']
             
+            # *** MODIFIED: Perform UPSERT for job_analyses on composite key (job_id, user_id) ***
+            # This correctly creates a new analysis or updates an existing one for the specific user.
+            # It also stores the version of the analysis protocol.
             cursor.execute("""
-                INSERT INTO job_analyses (job_id, position_relevance_score, environment_fit_score, hiring_manager_view, matrix_rating, summary, qualification_gaps, recommended_testimonials)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (job_id) DO NOTHING;
+                INSERT INTO job_analyses (job_id, user_id, analysis_protocol_version, position_relevance_score, environment_fit_score, hiring_manager_view, matrix_rating, summary, qualification_gaps, recommended_testimonials)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (job_id, user_id) DO UPDATE SET
+                    analysis_protocol_version = EXCLUDED.analysis_protocol_version,
+                    position_relevance_score = EXCLUDED.position_relevance_score,
+                    environment_fit_score = EXCLUDED.environment_fit_score,
+                    hiring_manager_view = EXCLUDED.hiring_manager_view,
+                    matrix_rating = EXCLUDED.matrix_rating,
+                    summary = EXCLUDED.summary,
+                    qualification_gaps = EXCLUDED.qualification_gaps,
+                    recommended_testimonials = EXCLUDED.recommended_testimonials,
+                    updated_at = CURRENT_TIMESTAMP;
             """, (
-                job_id, analysis_result.get('position_relevance_score'), analysis_result.get('environment_fit_score'),
+                job_id, user_id, ANALYSIS_PROTOCOL_VERSION,
+                analysis_result.get('position_relevance_score'), analysis_result.get('environment_fit_score'),
                 analysis_result.get('hiring_manager_view'), analysis_result.get('matrix_rating'),
                 analysis_result.get('summary'), Json(analysis_result.get('qualification_gaps', [])),
                 Json(analysis_result.get('recommended_testimonials', []))
@@ -160,12 +175,16 @@ def submit_job():
             
             conn.commit()
             
+            # *** MODIFIED: Corrected JOIN to fetch analysis for the specific user ***
+            # This prevents data leakage by joining on both job_id and user_id.
             cursor.execute("""
                 SELECT j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
                        t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at,
                        ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
                        ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
-                FROM jobs j JOIN tracked_jobs t ON j.id = t.job_id LEFT JOIN job_analyses ja ON j.id = ja.job_id
+                FROM jobs j 
+                JOIN tracked_jobs t ON j.id = t.job_id 
+                LEFT JOIN job_analyses ja ON j.id = ja.job_id AND t.user_id = ja.user_id
                 WHERE t.id = %s;
             """, (tracked_job_id,))
             new_job_row = cursor.fetchone()
@@ -275,6 +294,8 @@ def get_tracked_jobs():
             cursor.execute("SELECT COUNT(*) FROM tracked_jobs WHERE user_id = %s;", (user_id,))
             total_count = cursor.fetchone()[0]
 
+            # *** MODIFIED: Corrected JOIN to fetch analysis for the specific user ***
+            # This prevents data leakage by joining on both job_id and user_id.
             sql = """
                 SELECT 
                     j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
@@ -283,7 +304,7 @@ def get_tracked_jobs():
                     ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
                 FROM jobs j
                 JOIN tracked_jobs t ON j.id = t.job_id
-                LEFT JOIN job_analyses ja ON j.id = ja.job_id
+                LEFT JOIN job_analyses ja ON j.id = ja.job_id AND t.user_id = ja.user_id
                 WHERE t.user_id = %s
                 ORDER BY t.created_at DESC, t.id DESC
                 LIMIT %s OFFSET %s;
