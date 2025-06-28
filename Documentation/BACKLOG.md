@@ -2,6 +2,11 @@
 
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
+Phase 1 (Current): User-driven, on-demand analysis. One user submits one job, we run one expensive analysis. This is what we have just hardened.
+Phase 2 (Medium-Term): A two-stage system.
+Lightweight Pre-Screening: A "gross" calculation (likely a fast, cheaper SQL query or a very simple model) runs across many user:job pairs to find promising candidates.
+Detailed Analysis: The full, expensive AI analysis (like we have now) is only triggered for the high-potential pairs identified in the pre-screening.
+Phase 3 (Long-Term): ML-driven clustering. Users and jobs are grouped by similarity. Analyses are run on cluster-to-cluster matches, creating massive efficiency and uncovering non-obvious opportunities.
 
 ---
 

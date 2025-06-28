@@ -10,6 +10,8 @@ from bs4 import BeautifulSoup
 import google.generativeai as genai
 import json
 
+from integrity_checks import register_cli_commands
+
 from auth import token_required
 
 # --- Initialization ---
@@ -435,3 +437,4 @@ def debug_env():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     app.run(debug=True, host='0.0.0.0', port=port)
+    register_cli_commands(app)
