@@ -273,7 +273,7 @@ def get_tracked_jobs():
                 JOIN tracked_jobs t ON j.id = t.job_id
                 LEFT JOIN job_analyses ja ON j.id = ja.job_id
                 WHERE t.user_id = %s
-                ORDER BY t.created_at DESC
+                ORDER BY t.created_at DESC, t.id DESC
                 LIMIT %s OFFSET %s;
             """
             cursor.execute(sql, (user_id, limit, offset))
