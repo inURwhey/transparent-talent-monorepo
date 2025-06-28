@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.12.0] - 2025-06-29 - New User Onboarding Fixes & UI Polish
+
+This release addresses critical new user onboarding issues, ensuring a smooth transition from sign-up to dashboard. It also enhances overall user experience through improved navigation consistency on the landing page and across the application header.
+
+### Added
+-   **Backend:** Implemented automatic creation of a default `user_profiles` entry for new users upon their first request to `/api/profile`, ensuring a profile always exists and preventing dashboard errors.
+
+### Changed
+-   **Frontend UI/UX:** The "Get Started" button on the landing page (`/`) is now dynamically context-aware. For signed-in users, it directs to `/dashboard`; for signed-out users, it directs to `/sign-up`.
+-   **Frontend UI/UX:** The "Transparent Talent" header text now functions as a clickable link, consistently navigating to the application's homepage (`/`).
+
+### Fixed
+-   **Onboarding:** Resolved the "An Error Occurred" issue experienced by new users attempting to access the dashboard immediately after sign-up, caused by a missing `user_profiles` entry.
+-   **UI/UX:** Eliminated the redundant "Go to Dashboard →" link on the landing page's hero section, streamlining navigation options.
+-   **UI/UX:** Corrected the navigation loop on the landing page for logged-in users who clicked "Get Started."
+
 ## [v0.11.0] - 2025-06-28 - Job Tracker Pagination & Stable Sorting
 
 This release introduces comprehensive pagination for the "My Job Tracker" table, significantly enhancing performance and user experience when managing numerous tracked jobs. A critical bug related to unstable data sorting on paginated results has also been resolved.

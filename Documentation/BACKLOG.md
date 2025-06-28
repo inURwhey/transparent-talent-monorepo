@@ -25,14 +25,15 @@
 | **Deployment: Production Domain** | 1000 | 1 | 100% | 0.25 | **4000** | **Done** |
 | **UI/UX: Auto-set 'Date Applied' on Status Change** | 1000 | 2 | 100% | 0.25 | **8000** | **Done** |
 | **UI/UX: Job Tracker Pagination** | 1000 | 2 | 100% | 0.5 | **4000** | **Done** |
-| **Bugfix: New Account Dashboard Error** | 1000 | 3 | 100% | 0.25 | **12000** | **To Do** |
+| **Bugfix: New Account Dashboard Error** | 1000 | 3 | 100% | 0.25 | **12000** | **Done** |
 | **Backend: Automated App Expiration** | 1000 | 1 | 100% | 0.25 | **4000** | **To Do** |
-| **UI/UX: Context-Aware "Get Started" Button** | 1000 | 1 | 100% | 0.25 | **4000** | **To Do** |
+| **UI/UX: Context-Aware "Get Started" Button** | 1000 | 1 | 100% | 0.25 | **4000** | **Done** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | **To Do** |
 | **UI/UX: 'Jobs for You' Module Restoration** | 1000 | 3 | 90% | 0.75 | **3600** | **To Do** |
 | **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | **To Do** |
 | **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | **To Do** |
 | **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | **To Do** |
+| **Feature: User Profile Onboarding & Data Input** | 1000 | 3 | 100% | 0.75 | **4000** | **To Do** |
 
 
 ## Tier 3: AI & System Intelligence (Mid-Term)
