@@ -34,6 +34,8 @@ def run_job_analysis(job_description_text, user_profile_text):
     if not GEMINI_API_KEY:
         raise ValueError("AI analysis cannot be run without GEMINI_API_KEY.")
     model = genai.GenerativeModel('gemini-1.5-pro-latest')
+    
+    # *** FIX: Prompt now requests snake_case keys to match the database schema. ***
     prompt = f"""
         Analyze the following job description in the context of the provided user profile.
         Your output MUST be a single, minified JSON object with no extra text or markdown.
@@ -49,16 +51,16 @@ def run_job_analysis(job_description_text, user_profile_text):
         ---
 
         Based on "Protocol User-Driven Job Analysis v1.1", provide a comprehensive analysis.
-        The JSON object must have the following keys:
-        - "positionRelevanceScore": A number from 0-50.
-        - "environmentFitScore": A number from 0-50.
-        - "hiringManagerView": A string, one of "Strong", "Possible", "Stretch", "Unlikely".
-        - "matrixRating": A string, one of "A", "B", "C", "D", "F".
+        The JSON object must have the following snake_case keys:
+        - "position_relevance_score": A number from 0-50.
+        - "environment_fit_score": A number from 0-50.
+        - "hiring_manager_view": A string, one of "Strong", "Possible", "Stretch", "Unlikely".
+        - "matrix_rating": A string, one of "A", "B", "C", "D", "F".
         - "summary": A 2-4 sentence summary of the opportunity.
-        - "qualificationGaps": An array of 2-3 strings listing key qualification gaps.
-        - "recommendedTestimonials": An array of 1-3 strings recommending impactful testimonials from the user's resume.
-        - "jobTitle": The official job title from the description.
-        - "companyName": The official company name from the description.
+        - "qualification_gaps": An array of 2-3 strings listing key qualification gaps.
+        - "recommended_testimonials": An array of 1-3 strings recommending impactful testimonials from the user's resume.
+        - "job_title": The official job title from the description.
+        - "company_name": The official company name from the description.
     """
     response = model.generate_content(prompt)
     cleaned_response_text = response.text.strip().replace('```json', '').replace('```', '').strip()
@@ -122,8 +124,10 @@ def submit_job():
             user_profile_text = "\n".join(user_profile_parts)
 
             analysis_result = run_job_analysis(job_text, user_profile_text)
-            company_name = analysis_result.get('companyName', 'Unknown Company')
-            job_title = analysis_result.get('jobTitle', 'Unknown Title')
+            
+            # *** FIX: Use snake_case keys to access the AI analysis result. ***
+            company_name = analysis_result.get('company_name', 'Unknown Company')
+            job_title = analysis_result.get('job_title', 'Unknown Title')
             
             cursor.execute("SELECT id FROM companies WHERE LOWER(name) = LOWER(%s)", (company_name,))
             company_row = cursor.fetchone()
@@ -145,10 +149,10 @@ def submit_job():
                 INSERT INTO job_analyses (job_id, position_relevance_score, environment_fit_score, hiring_manager_view, matrix_rating, summary, qualification_gaps, recommended_testimonials)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (job_id) DO NOTHING;
             """, (
-                job_id, analysis_result.get('positionRelevanceScore'), analysis_result.get('environmentFitScore'),
-                analysis_result.get('hiringManagerView'), analysis_result.get('matrixRating'),
-                analysis_result.get('summary'), Json(analysis_result.get('qualificationGaps', [])),
-                Json(analysis_result.get('recommendedTestimonials', []))
+                job_id, analysis_result.get('position_relevance_score'), analysis_result.get('environment_fit_score'),
+                analysis_result.get('hiring_manager_view'), analysis_result.get('matrix_rating'),
+                analysis_result.get('summary'), Json(analysis_result.get('qualification_gaps', [])),
+                Json(analysis_result.get('recommended_testimonials', []))
             ))
             
             cursor.execute("INSERT INTO tracked_jobs (user_id, job_id, status) VALUES (%s, %s, %s) RETURNING id;", (user_id, job_id, 'Saved'))
