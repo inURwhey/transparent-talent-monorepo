@@ -3,6 +3,7 @@
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
 
+* for the end_prompt, add to the backlog that user-submitted job URLs (that are successfully parsed) get added to queues for relevance calculated for all users and added to transparent talent's company knowledge set for meta-analysis.
 ---
 
 ## Tier 1: Foundational Infrastructure (Highest Priority)

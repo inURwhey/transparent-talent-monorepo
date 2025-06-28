@@ -27,5 +27,5 @@ The following project documentation files are attached and should be used as the
 -   **Debugging Principle:** When debugging, always start with a configuration review of all involved services (e.g., Render, Vercel, Clerk) before diving into code changes. This establishes a ground truth of the environment.
 -   **Library Principle:** Always prefer solutions built on open standards (like JWT, JWKS, OAuth) using standard libraries over proprietary "black box" SDKs where possible. This increases transparency and makes debugging more predictable.
 -   Include and maintain debugging code around common production issues.
--   Always provide an isolated git commands including commit message when pushing a code change.
+-   Always provide an isolated commit message when pushing a change.
 -   AI Studio's knowledge of Clerk's documentation has been very problematic. When interacting with Clerk, always start with the existing code and internet research.
