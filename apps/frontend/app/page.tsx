@@ -1,5 +1,8 @@
 // apps/frontend/app/page.tsx
 
+'use client'; // This directive is necessary for using client-side hooks like useAuth
+import { useAuth } from '@clerk/nextjs';
+
 import Link from 'next/link';
 
 export default function LandingPage() {
@@ -16,16 +19,10 @@ export default function LandingPage() {
               <p className="mt-6 text-lg leading-8 text-gray-600">
                 Transparent Talent is a systematic, AI-powered framework to help you stop guessing and start making data-driven career decisions.
               </p>
-              <div className="mt-10 flex items-center justify-center gap-x-6">
-                <Link
-                  href="/sign-up"
-                  className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                >
-                  Get Started
-                </Link>
-                <Link href="/dashboard" className="text-sm font-semibold leading-6 text-gray-900">
-                  Go to Dashboard <span aria-hidden="true">→</span>
-                </Link>
+              <div className="mt-10 flex items-center justify-center gap-x-6"> 
+                {/* This dynamic button handles navigation for both signed-in and signed-out states */}
+                <AuthAwareGetStartedButton />
+                {/* Removed the redundant "Go to Dashboard →" link */}
               </div>
             </div>
           </div>
@@ -36,7 +33,7 @@ export default function LandingPage() {
           <div className="mx-auto max-w-7xl px-6 lg:px-8">
             <div className="mx-auto max-w-2xl lg:text-center">
               <h2 className="text-base font-semibold leading-7 text-indigo-600">The Broken Talent Market</h2>
-              <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              <p className="mt-2 =text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
                 The Job Search is Inefficient and Opaque
               </p>
               <p className="mt-6 text-lg leading-8 text-gray-600">
@@ -96,5 +93,41 @@ export default function LandingPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+// New component to handle conditional "Get Started" button logic
+function AuthAwareGetStartedButton() {
+  const { isSignedIn, isLoaded } = useAuth();
+
+  if (!isLoaded) {
+    // Show a placeholder or nothing while auth state is loading
+    return (
+      <div className="rounded-md bg-indigo-300 px-3.5 py-2.5 text-sm font-semibold text-white cursor-not-allowed">
+        Loading...
+      </div>
+    );
+  }
+
+  if (isSignedIn) {
+    // If signed in, "Get Started" button should navigate to the dashboard
+    return (
+      <Link
+        href="/dashboard"
+        className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+      >
+        Go to Dashboard
+      </Link>
+    );
+  }
+
+  // If not signed in, "Get Started" button should navigate to sign-up
+  return (
+    <Link
+      href="/sign-up"
+      className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+    >
+      Get Started
+    </Link>
   );
 }
