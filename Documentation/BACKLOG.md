@@ -1,29 +1,20 @@
-# Transparent Talent: Product Backlog & Roadmap v1.10
+# Transparent Talent: Product Backlog & Roadmap v1.11
 
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
-Phase 1 (Current): User-driven, on-demand analysis. One user submits one job, we run one expensive analysis. This is what we have just hardened.
-Phase 2 (Medium-Term): A two-stage system.
-Lightweight Pre-Screening: A "gross" calculation (likely a fast, cheaper SQL query or a very simple model) runs across many user:job pairs to find promising candidates.
-Detailed Analysis: The full, expensive AI analysis (like we have now) is only triggered for the high-potential pairs identified in the pre-screening.
-Phase 3 (Long-Term): ML-driven clustering. Users and jobs are grouped by similarity. Analyses are run on cluster-to-cluster matches, creating massive efficiency and uncovering non-obvious opportunities.
 
-fetch users recommended jobs from all platforms by all notification channels (especially email?) and add them to tracked jobs.
+hide expired tracked jobs from the dashboard.
 
-URLs for job boards expire over time, and we should have an explicit means of taking this into account for backfills.
-
-job applications expire (after 30 days?). i remember having this feature before (maybe it's a status in tracked_jobs, or an implication for the front-end via applied_at)  but seem to have lost the explicitness along the way.
-
-establish triggered or scheduled jobs to build out a data lifecycle for transparent talent. when does a job object arrive, and what do we do with it? when does a user object arrive, and what do we do with it?
-
-define which jobs in the backlog are safe for 2.5 flash and which require 2.5 pro, and include it as a new backlog field.
+add "model" as a column in the backlog and determine which items are likely OK on Gemini 2.5 Flash and which ones likely require 2.5 Pro.
 
 ---
 
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Maintenance: Data Integrity Pass** | 1 | 2 | 100% | 0.25 | **8.0** | **To Do** |
+| **Refactor: Separate `tracked_jobs.status` into `status` and `status_reason` columns (with ENUMs)** | 1 | 3 | 100% | 0.75 | **4.0** | **To Do** |
+| **Backend: Scheduled Job URL Validity Checks & Status Updates** | 1 | 2 | 100% | 0.5 | **4.0** | **To Do** |
+| **Backend: Define & Implement Comprehensive Data Lifecycle Management** | 1 | 3 | 90% | 1.0 | **2.7** | **To Do** |
 
 
 ## Tier 2: Core User Experience & Differentiation
@@ -31,9 +22,11 @@ define which jobs in the backlog are safe for 2.5 flash and which require 2.5 pr
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | **To Do** |
 | **Feature: User Profile Onboarding & Data Input** | 1000 | 3 | 100% | 0.75 | **4000** | **To Do** |
-| **Backend: Automated App Expiration** | 1000 | 1 | 100% | 0.25 | **4000** | **To Do** |
-| **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | **To Do** |
+| **UI/UX: User-Controlled Job Archiving & Expiration Notifications** | 1000 | 2 | 90% | 0.5 | **3600** | **To Do** |
 | **UI/UX: 'Jobs for You' Module Restoration** | 1000 | 3 | 90% | 0.75 | **3600** | **To Do** |
+| **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | **To Do** |
+| **Feature: Automated Application Status Expiration & Notifications** | 1000 | 2 | 90% | 0.75 | **2400** | **To Do** |
+| **Backend: Automated App Expiration** | 1000 | 1 | 100% | 0.25 | **4000** | **To Do** |
 | **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | **To Do** |
 | **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | **To Do** |
 
@@ -42,8 +35,10 @@ define which jobs in the backlog are safe for 2.5 flash and which require 2.5 pr
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Feature: Instant Analysis for Known Jobs**| 1000 | 2 | 100% | 0.5 | **4000** | **To Do** |
+| **Automation: Tiered Job Analysis (Lightweight Pre-Screening + Detailed AI)** | 1000 | 3 | 90% | 1.5 | **1800** | **To Do** |
 | **Automation: Full API Job Analysis**| 1000 | 3 | 90% | 2.0 | **1350** | **To Do** |
 | **Feature: Proactive Anomaly Detection**| 1000 | 3 | 90% | 2.5 | **1080** | **To Do** |
+| **Feature: Automated Job Sourcing (Email/Platform Integration)** | 1000 | 2 | 80% | 2.0 | **800** | **To Do** |
 | **Documentation: Codify Industry Standards in Protocols** | 1 | 3 | 90% | 0.25 | **10.8** | **To Do** |
 | **Feature: "User News" Sourcing** | 1000 | 2 | 90% | 2.0 | **900** | **To Do** |
 | **AI: Multi-Model Verification**| 1000 | 2 | 90% | 2.0 | **900** | **To Do** |
@@ -61,6 +56,8 @@ define which jobs in the backlog are safe for 2.5 flash and which require 2.5 pr
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Infra: Background Jobs w/ Redis** | 1000 | 2 | 100% | 1.5 | **1333** | **To Do** |
 | **Platform: Business Certification** | 5000 | 3 | 50% | 6.0 | **1250** | **To Do** |
+| **AI: User & Job Clustering for Proactive Matching** | 1000 | 3 | 70% | 4.0 | **525** | **To Do** |
+| **Business: Tier AI Features by Model Cost/Capability** | 200 | 1 | 80% | 0.5 | **320** | **To Do** |
 | **Platform: System-Wide Analysis from User Submissions**| 1000 | 3 | 80% | 4.0 | **600** | **To Do** |
 | **Platform: System-Wide Relevance Calc**| 1000 | 3 | 90% | 6.0 | **450** | **To Do** |
 | **Revenue: "Bring Your Own Key" (BYOK) Model** | 200 | 1 | 70% | 0.5 | **280** | **To Do** |
@@ -71,6 +68,14 @@ define which jobs in the backlog are safe for 2.5 flash and which require 2.5 pr
 
 ## Completed Features & Bugfixes
 *This section lists all completed features and bugfixes, categorized by the release version they were delivered in, in reverse chronological order.*
+
+### [v0.13.0] - 2025-06-29 - Data Integrity & Analysis Hardening
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Maintenance: Data Integrity Pass** | T1 | 8.0 |
+| **Database: User-Specific Job Analysis & Versioning Schema** | T1 | N/A |
+| **Backend: Corrected Job Analysis UPSERT & Retrieval** | T1 | N/A |
+| **Data Cleanup: Mark Unreachable Tracked Jobs as 'Expired - Unreachable'** | T1 | N/A |
 
 ### [v0.12.0] - 2025-06-29
 | Feature/Bugfix | Original Tier | RICE Score |

@@ -1,4 +1,4 @@
-# Transparent Talent: System Brief v1.7
+# Transparent Talent: System Brief v1.8
 
 ## 1. Core Vision & Business Model
 *   **Problem:** The job market is inefficient, opaque, and biased.
@@ -23,12 +23,13 @@
 *   **Workflow Automation:** The user dashboard now intelligently automates the `applied_at` date for tracked jobs, setting it automatically when the status changes to 'Applied' and clearing it when changed from 'Applied', significantly streamlining user workflow. Frontend stability for data updates has also been improved.
 *   **Pagination Implemented:** The "My Job Tracker" table now supports full pagination, including server-side data fetching and robust sorting, allowing efficient browsing of large datasets.
 *   **Enhanced UI/UX:** Navigation has been polished; the header title links to the homepage, and the "Get Started" button on the landing page is now context-aware, directing users appropriately based on their login status.
+*   **Data Integrity & AI Analysis Hardening:** The database schema for `job_analyses` has been significantly hardened to correctly support per-user job analyses and include protocol versioning. Backend logic has been updated to align with this new schema. Historical data with invalid job URLs has been identified and marked as 'Expired - Unreachable' to maintain a clean and accurate user dashboard.
 
 ## 4. Immediate Backlog & Next Steps
-1.  **Backend: Automated App Expiration:** Create a mechanism to automatically flag or hide job postings that are likely no longer valid after a certain period. (RICE: 4000)
-2.  **UI: Transparent Relevance Scorecard:** Design and build the collapsible UI component that displays the detailed factors behind a job's score. (RICE: 3000)
-3.  **UI/UX: 'Jobs for You' Module Restoration:** Ensure the "Jobs for You" module is present, visible, and sorted by relevancy on the user dashboard. (RICE: 3600)
-4.  **Feature: Bulk Job Submission (CSV/URLs):** Allow users to submit multiple job URLs or a CSV of job data for analysis. (RICE: 1350)
-5.  **Feature: User Feedback Loop:** Implement a mechanism for users to provide feedback on AI analysis accuracy. (RICE: 1200)
-6.  **Feature: Define & Verify New User Account Flow:** Define and implement a comprehensive and verified onboarding flow for new user accounts beyond basic profile creation. (RICE: 6000)
-7.  **Feature: User Profile Onboarding & Data Input:** Provide a dedicated user interface and flow for new and existing users to establish and update their detailed profile information (e.g., career goals, skills, preferences) that is crucial for AI analysis. (RICE: 4000)
+1.  **Feature: Define & Verify New User Account Flow:** Define and implement a comprehensive and verified onboarding flow for new user accounts beyond basic profile creation. (RICE: 6000)
+2.  **Feature: User Profile Onboarding & Data Input:** Provide a dedicated user interface and flow for new and existing users to establish and update their detailed profile information (e.g., career goals, skills, preferences) that is crucial for AI analysis. (RICE: 4000)
+3.  **UI/UX: User-Controlled Job Archiving & Expiration Notifications:** Implement a 2-step process to expire and hide tracked jobs, including user notifications for "ghosted" applications. (RICE: 3600)
+4.  **UI/UX: 'Jobs for You' Module Restoration:** Ensure the "Jobs for You" module is present, visible, and sorted by relevancy on the user dashboard. (RICE: 3600)
+5.  **UI: Transparent Relevance Scorecard:** Design and build the collapsible UI component that displays the detailed factors behind a job's score. (RICE: 3000)
+6.  **Feature: Automated Application Status Expiration & Notifications:** Implement a mechanism to automatically flag or hide job postings that are likely no longer valid after a certain period, specifically for application statuses. (RICE: 2400)
+7.  **Backend: Automated App Expiration:** Create a mechanism to automatically flag or hide job postings that are likely no longer valid after a certain period. (RICE: 4000)

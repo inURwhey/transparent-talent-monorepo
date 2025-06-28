@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.13.0] - 2025-06-29 - Data Integrity & Analysis Hardening
+
+This release significantly improves the backend's data integrity, particularly for AI-driven job analyses. It ensures that analyses are correctly associated with specific users and includes versioning for future compatibility. Historical data was also cleaned up to improve dashboard clarity.
+
+### Added
+-   **Database:** Added `user_id` and `analysis_protocol_version` columns to the `job_analyses` table, and updated the primary key to a composite `(job_id, user_id)` to support per-user analyses.
+-   **Backend:** Implemented a new internal `ANALYSIS_PROTOCOL_VERSION` constant (`2.0`) to tag new and updated AI analyses.
+-   **Backend:** Added a temporary, authenticated `/api/debug/mark-unreachable-jobs` endpoint to facilitate a one-time data cleanup operation.
+
+### Changed
+-   **Backend API:** Modified the `/api/jobs/submit` endpoint to use an `UPSERT` (INSERT ON CONFLICT UPDATE) logic for `job_analyses` records, ensuring analyses are created or updated for specific user-job pairs.
+-   **Backend API:** Updated the `JOIN` condition in `/api/jobs/submit` and `/api/tracked-jobs` to correctly fetch `job_analyses` for the specific `user_id` and `job_id`, preventing data leakage and ensuring correct data display.
+
+### Fixed
+-   **Data Integrity:** Resolved the issue of `job_analyses` only storing a single analysis per job, now correctly supporting per-user analyses.
+-   **Historical Data:** Cleaned up historical `tracked_jobs` entries that lacked valid job URLs or v2.0 analyses, marking 295 such jobs as "Expired - Unreachable" in the database.
+-   **Backend Errors:** Corrected multiple SQL syntax errors in remediation scripts that prevented successful database updates, particularly in the `UPDATE FROM` clause.
+
 ## [v0.12.0] - 2025-06-29 - New User Onboarding Fixes & UI Polish
 
 This release addresses critical new user onboarding issues, ensuring a smooth transition from sign-up to dashboard. It also enhances overall user experience through improved navigation consistency on the landing page and across the application header.
