@@ -91,8 +91,6 @@ def submit_job():
             if cursor.fetchone():
                 return jsonify({"error": "You are already tracking this job."}), 409
 
-            # *** THE FIX IS HERE ***
-            # Select multiple, real columns to build a rich profile for the AI.
             profile_columns = [
                 "short_term_career_goal", "ideal_role_description", "core_strengths",
                 "skills_to_avoid", "preferred_industries", "industries_to_avoid",
@@ -105,7 +103,6 @@ def submit_job():
             if not user_profile_row:
                 return jsonify({"error": "User profile not found. Cannot perform analysis."}), 404
 
-            # Format the profile into a string for the AI, only including non-empty fields.
             user_profile_parts = []
             profile_labels = {
                 "short_term_career_goal": "Short-Term Career Goal", "ideal_role_description": "Ideal Role",
@@ -123,8 +120,6 @@ def submit_job():
                 return jsonify({"error": "User profile is too sparse. Please fill out your profile to enable analysis."}), 400
             
             user_profile_text = "\n".join(user_profile_parts)
-
-            # --- End of Fix ---
 
             analysis_result = run_job_analysis(job_text, user_profile_text)
             company_name = analysis_result.get('companyName', 'Unknown Company')
@@ -163,7 +158,7 @@ def submit_job():
             
             cursor.execute("""
                 SELECT j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
-                       t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at,
+                       t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at,
                        ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
                        ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
                 FROM jobs j JOIN tracked_jobs t ON j.id = t.job_id LEFT JOIN job_analyses ja ON j.id = ja.job_id
@@ -177,6 +172,7 @@ def submit_job():
                 "source": new_job_row["source"], "found_at": new_job_row["found_at"],
                 "tracked_job_id": new_job_row["tracked_job_id"], "status": new_job_row["status"],
                 "user_notes": new_job_row["user_notes"], "applied_at": new_job_row["applied_at"],
+                "created_at": new_job_row["created_at"],
                 "ai_analysis": {
                     "position_relevance_score": new_job_row["position_relevance_score"],
                     "environment_fit_score": new_job_row["environment_fit_score"],
@@ -250,7 +246,7 @@ def get_tracked_jobs():
             sql = """
                 SELECT 
                     j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
-                    t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at,
+                    t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at,
                     ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
                     ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
                 FROM jobs j
@@ -267,6 +263,7 @@ def get_tracked_jobs():
                     "source": row["source"], "found_at": row["found_at"],
                     "tracked_job_id": row["tracked_job_id"], "status": row["status"],
                     "user_notes": row["user_notes"], "applied_at": row["applied_at"],
+                    "created_at": row["created_at"],
                     "ai_analysis": None
                 }
                 if row["position_relevance_score"] is not None:
