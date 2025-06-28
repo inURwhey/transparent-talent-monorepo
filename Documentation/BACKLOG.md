@@ -8,6 +8,11 @@ Lightweight Pre-Screening: A "gross" calculation (likely a fast, cheaper SQL que
 Detailed Analysis: The full, expensive AI analysis (like we have now) is only triggered for the high-potential pairs identified in the pre-screening.
 Phase 3 (Long-Term): ML-driven clustering. Users and jobs are grouped by similarity. Analyses are run on cluster-to-cluster matches, creating massive efficiency and uncovering non-obvious opportunities.
 
+fetch users recommended jobs from all platforms by all notification channels (especially email?) and add them to tracked jobs.
+
+URLs for job boards expire over time, and we should have an explicit means of taking this into account for backfills.
+
+job applications expire (after 30 days?). i remember having this feature before (maybe it's a status in tracked_jobs, or an implication for the front-end via applied_at)  but seem to have lost the explicitness along the way.
 ---
 
 ## Tier 1: Foundational Infrastructure (Highest Priority)
