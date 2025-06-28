@@ -9,6 +9,7 @@
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Security: Implement User Authentication** | 1000 | 3 | 100% | 0.5 | **6000** | **Done** |
+| **Bugfix: Resolve Production Authentication** | 1000 | 3 | 100% | 0.25 | **12000** | **Done** |
 | **Architecture: Monorepo Setup** | 1 | 3 | 100% | 0.25 | **12.0** | **Done** |
 | **Deployment: Deploy Frontend** | 1000 | 3 | 100% | 0.25 | **12000** | **Done** |
 
