@@ -4,10 +4,13 @@ from psycopg2.extras import DictCursor
 import os
 import psycopg2
 from clerk_backend_api import Clerk
+# This import was missing and is shown in the official documentation
+from clerk_backend_api.jwks_helpers import AuthenticateRequestOptions
 import json
 
-# The Clerk() constructor automatically finds the CLERK_SECRET_KEY from the environment.
-clerk = Clerk()
+# Correct initialization, as per Clerk's official documentation [3]
+# The secret key is passed in as the bearer_auth token.
+sdk = Clerk(bearer_auth=os.getenv('CLERK_SECRET_KEY'))
 
 def get_db_connection():
     db_url = os.getenv('DATABASE_URL')
@@ -19,25 +22,17 @@ def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            auth_header = request.headers.get('Authorization')
-            if not auth_header:
-                return jsonify({"message": "Authorization header is missing"}), 401
+            # This is the canonical way to authenticate a request with the Python SDK.
+            # It directly mirrors the official documentation example. [3]
+            # There is no need to manually parse the header.
+            request_state = sdk.authenticate_request(request)
             
-            parts = auth_header.split()
-            if len(parts) != 2 or parts[0].lower() != 'bearer':
-                 return jsonify({"message": "Invalid Authorization header format"}), 401
-            token = parts[1]
-
-            # *** THE FINAL FIX IS HERE ***
-            # The previous error proves 'clerk.secret_key' does not exist.
-            # We must get the key directly from the environment and pass it in the options.
-            # This aligns with all the error messages we have seen.
-            options = { 
-                "header_token": token,
-                "secret_key": os.getenv('CLERK_SECRET_KEY') 
-            }
-            claims = clerk.authenticate_request(request, options=options)
+            # The authenticate_request method returns a state object.
+            # We check its status and get the claims from it.
+            if not request_state.is_signed_in:
+                 return jsonify({"message": "Not signed in"}), 401
             
+            claims = request_state.to_claims()
             clerk_user_id = claims.get('sub')
             
             if not clerk_user_id:
@@ -49,7 +44,9 @@ def token_required(f):
                 cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
                 user = cursor.fetchone()
                 if not user:
-                    clerk_user_info = clerk.users.get_user(user_id=clerk_user_id)
+                    # This logic uses the Clerk SDK to get user info, which requires bearer_auth
+                    # on the sdk object, which we have now configured correctly.
+                    clerk_user_info = sdk.users.get_user(user_id=clerk_user_id)
                     user_email = clerk_user_info.email_addresses[0].email_address
                     cursor.execute("SELECT * FROM users WHERE email = %s", (user_email,))
                     user = cursor.fetchone()
