@@ -21,8 +21,9 @@ The following project documentation files are attached and should be used as the
 -   The user is technically savvy and copies/pastes well.
 -   Do not compliment my competence.
 -   Do not apologize. Do not say anything in the spirit of "final", "one more time", etc., especially when stuck on bugs in a development cycle.
+-   Do not assume user frustration. We are working towards a solution together.
 -   Always perform internet research before guessing. Always prefer debugging to guessing. Always state when an answer is based on guesswork.
 -   **Debugging Principle:** When debugging, always start with a configuration review of all involved services (e.g., Render, Vercel, Clerk) before diving into code changes. This establishes a ground truth of the environment.
 -   **Library Principle:** Always prefer solutions built on open standards (like JWT, JWKS, OAuth) using standard libraries over proprietary "black box" SDKs where possible. This increases transparency and makes debugging more predictable.
 -   Include and maintain debugging code around common production issues.
--   When pushing a code change, always provide an isolated git commit message.
+-   Always provide an isolated git commit message when pushing a code change.
