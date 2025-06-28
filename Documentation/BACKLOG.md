@@ -13,6 +13,11 @@ fetch users recommended jobs from all platforms by all notification channels (es
 URLs for job boards expire over time, and we should have an explicit means of taking this into account for backfills.
 
 job applications expire (after 30 days?). i remember having this feature before (maybe it's a status in tracked_jobs, or an implication for the front-end via applied_at)  but seem to have lost the explicitness along the way.
+
+establish triggered or scheduled jobs to build out a data lifecycle for transparent talent. when does a job object arrive, and what do we do with it? when does a user object arrive, and what do we do with it?
+
+define which jobs in the backlog are safe for 2.5 flash and which require 2.5 pro, and include it as a new backlog field.
+
 ---
 
 ## Tier 1: Foundational Infrastructure (Highest Priority)

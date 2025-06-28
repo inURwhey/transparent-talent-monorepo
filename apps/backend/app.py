@@ -9,7 +9,6 @@ import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 import json
-from remediate_analyses import run_remediation_internal, mark_unreachable_jobs_as_expired
 
 from auth import token_required
 
@@ -433,21 +432,6 @@ def debug_env():
     }
     return jsonify(response)
 
-@app.route('/api/debug/mark-unreachable-jobs', methods=['POST'])
-def debug_mark_unreachable_jobs():
-    # Simple API key authentication for this temporary endpoint
-    api_key_header = request.headers.get('X-API-Key')
-    expected_api_key = os.getenv('INTEGRITY_CHECK_API_KEY') 
-
-    if not expected_api_key:
-        return jsonify({"error": "INTEGRITY_CHECK_API_KEY not configured on server."}), 500
-    if api_key_header != expected_api_key:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    # Run the marking process
-    results = mark_unreachable_jobs_as_expired()
-    return jsonify(results), 200
-    
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     app.run(debug=True, host='0.0.0.0', port=port)
