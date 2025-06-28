@@ -8,10 +8,11 @@ import requests
 import jwt
 from jwt import PyJWKClient
 
-# These environment variables are now the only external configuration needed.
+# --- CONFIGURATION ---
 ISSUER_URL = os.getenv('CLERK_ISSUER_URL')
-# This is your frontend URL, which will be in the 'azp' claim of the token.
-AUTHORIZED_PARTY = os.getenv('CLERK_AUTHORIZED_PARTY') 
+# CLERK_AUTHORIZED_PARTY is now a comma-separated string of allowed frontend URLs
+# e.g., "https://prod.url,https://preview.url,http://localhost:3000"
+AUTHORIZED_PARTIES = [party.strip() for party in os.getenv('CLERK_AUTHORIZED_PARTY', '').split(',') if party.strip()]
 jwks_client = PyJWKClient(f"{ISSUER_URL}/.well-known/jwks.json")
 
 def get_db_connection():
@@ -44,9 +45,6 @@ def token_required(f):
             
             token = auth_header.split(' ')[1]
             signing_key = jwks_client.get_signing_key_from_jwt(token)
-            
-            # This is a direct Python implementation of the logic from the documentation.
-            # We decode the token first, then manually validate the claims.
             claims = jwt.decode(token, signing_key.key, algorithms=["RS256"])
 
             # 1. Validate Issuer
@@ -54,10 +52,10 @@ def token_required(f):
                 print(f"--> FAILURE: Invalid Issuer. Expected: {ISSUER_URL}, Got: {claims.get('iss')}")
                 raise jwt.InvalidIssuerError("Invalid issuer.")
 
-            # 2. Validate Authorized Party (azp)
-            # This was the missing piece from the official documentation.
-            if claims.get('azp') != AUTHORIZED_PARTY:
-                print(f"--> FAILURE: Invalid Authorized Party. Expected: {AUTHORIZED_PARTY}, Got: {claims.get('azp')}")
+            # 2. Validate Authorized Party (azp) against the list of allowed URLs
+            azp_claim = claims.get('azp')
+            if not azp_claim or azp_claim not in AUTHORIZED_PARTIES:
+                print(f"--> FAILURE: Invalid Authorized Party. Got: '{azp_claim}', Expected one of: {AUTHORIZED_PARTIES}")
                 raise jwt.InvalidAudienceError("Invalid authorized party.")
 
             print("--> SUCCESS: Token claims validated (iss, azp).")
@@ -67,7 +65,6 @@ def token_required(f):
                 print("--> FAILURE: Token is missing 'sub' claim.")
                 return jsonify({"message": "Invalid token: missing user ID (sub) claim"}), 401
             
-            # --- Database logic for user lookup/creation ---
             conn = get_db_connection()
             with conn.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
