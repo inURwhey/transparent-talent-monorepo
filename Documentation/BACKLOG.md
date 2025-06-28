@@ -1,13 +1,14 @@
-# Transparent Talent: Product Backlog & Roadmap v1.8
+# Transparent Talent: Product Backlog & Roadmap v1.9
 
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
-* Perform a one-time pass of the db structure and schemas to make sure it aligns with industry standards and expectations.
+
 ---
 
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Architecture: Data Contract Standardization** | 2 | 3 | 100% | 0.25 | **24.0** | **To Do** |
 | **Security: Implement User Authentication** | 1000 | 3 | 100% | 0.5 | **6000** | **Done** |
 | **Bugfix: Resolve Production Authentication** | 1000 | 3 | 100% | 0.25 | **12000** | **Done** |
 | **Architecture: Monorepo Setup** | 1 | 3 | 100% | 0.25 | **12.0** | **Done** |
@@ -18,7 +19,7 @@
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Feature: Logged Out Experience** | 1000 | 2 | 100% | 0.25 | **8000** | **Done** |
 | **Feature: User Job Submission** | 1000 | 3 | 100% | 0.5 | **6000** | **Done** |
-| **UI: Tabular Job Tracker** | 1000 | 2 | 100% | 0.5 | **4000** | **To Do** |
+| **UI: Tabular Job Tracker** | 1000 | 2 | 100% | 0.5 | **4000** | **Done** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | **To Do** |
 | **Deployment: Production Domain** | 1000 | 1 | 100% | 0.25 | **4000** | **To Do** |
 | **Backend: Automated App Expiration** | 1000 | 1 | 100% | 0.25 | **4000** | **To Do** |

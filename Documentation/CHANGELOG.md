@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.0] - 2025-06-28 - Tabular Job Tracker & Data Contract Hardening
+
+This release replaces the simple job tracker with a full-featured, interactive data table. It also includes a critical bug fix that resolved a persistent data rendering issue on the dashboard, which was traced to a data contract mismatch between the frontend and backend API.
+
+### Added
+-   **UI: Interactive Job Tracker:** Implemented a sortable, filterable data table for the "My Job Tracker" section using `@tanstack/react-table` and `shadcn/ui` components.
+-   **Developer Protocol:** Added a "Monorepo Interaction Protocol" to `PROTOCOLS.md` to ensure correct package targeting during dependency installation.
+-   **Developer Protocol:** Added a "Debugging Principle" to `PROTOCOLS.md` to enforce data-driven hypothesis testing over guesswork.
+
+### Changed
+-   **Dashboard UX:** Replaced the previous list-based job tracker with the new `DataTable` component.
+-   **Data Contract Alignment:** Updated the frontend `TrackedJob` interface and all associated component logic (using `tracked_job_id` and `user_notes`) to match the actual data shape being delivered by the backend API.
+
+### Fixed
+-   **Critical Rendering Failure:** Resolved a bug where the dashboard would appear blank after data fetching. The issue was caused by a mismatch between the frontend's expected data keys (`id`, `notes`) and the API's actual keys (`tracked_job_id`, `user_notes`).
+-   **UI Bug:** Corrected a CSS `z-index` issue that caused dropdown menus in the new data table to be obscured by other rows.
+-   **Vercel Build Failure:** Resolved a `Cannot find module` error by creating a dedicated `input.tsx` component and correcting the import path in `data-table.tsx`.
+
 ## [v0.6.0] - 2025-06-28 - User-Driven Job Analysis
 
 This release introduces the first core interactive feature of the platform: allowing users to submit a job URL for on-demand analysis. This involved significant work across the entire stack.
