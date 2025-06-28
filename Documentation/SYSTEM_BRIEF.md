@@ -1,4 +1,4 @@
-# Transparent Talent: System Brief v1.6
+# Transparent Talent: System Brief v1.7
 
 ## 1. Core Vision & Business Model
 *   **Problem:** The job market is inefficient, opaque, and biased.
@@ -16,11 +16,11 @@
 
 ## 3. Current Project Status
 *   **Application is stable and functional.** The application now features a public-facing landing page for new user acquisition.
-*   **Core Feature Implemented:** Users can now submit a job URL for on-demand scraping and AI analysis. The results are saved to the user's profile and appear in their job tracker.
-*   **Authentication Hardened:** The frontend authentication middleware has been correctly implemented using the latest Clerk v5 standards, and the backend supports multiple frontend URLs for flexible deployments.
-*   **User Dashboard:** The frontend dashboard successfully loads all user data (profile, job matches, tracked jobs) from the authenticated backend API.
+*   **Core Feature Implemented:** The user dashboard now includes a sortable, filterable data table for the "My Job Tracker" section, significantly improving the user experience for managing tracked jobs.
+*   **Critical Bug Fix:** Resolved a persistent data contract mismatch between the frontend and backend that caused the dashboard to fail to render. This has hardened the application's stability.
+*   **User Dashboard:** The frontend dashboard successfully loads all user data (profile, job matches, tracked jobs) from the authenticated backend API and displays it in the appropriate components.
 
 ## 4. Immediate Backlog & Next Steps
-1.  **UI/UX: Tabular Job Tracker:** Convert the job tracker to a filterable, sortable table. (RICE: 4000)
-2.  **Feature: Instant Analysis for Known Jobs:** Improve the job submission UX by immediately returning existing analysis for known URLs. (RICE: 4000)
-3.  **UI/UX: Transparent Relevance Scorecard:** Design and build the collapsible UI component that displays the factors behind a job's score. (RICE: 3000)
+1.  **Architecture: Data Contract Standardization:** Perform a one-time pass of the backend API endpoints to ensure all JSON responses strictly align with the database's naming conventions. (RICE: 24.0)
+2.  **UI/UX: Transparent Relevance Scorecard:** Design and build the collapsible UI component that displays the detailed factors behind a job's score. (RICE: 3000)
+3.  **Deployment: Production Domain:** Configure and deploy the application to a production-ready domain. (RICE: 4000)
