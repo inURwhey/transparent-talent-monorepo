@@ -244,9 +244,25 @@ def get_user_jobs():
 @token_required
 def get_tracked_jobs():
     user_id = g.current_user['id']
+
+    # Pagination parameters
+    try:
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 10)) # Default limit to 10 items per page
+        if page < 1: page = 1
+        if limit < 1: limit = 1
+    except ValueError:
+        return jsonify({"error": "Invalid pagination parameters"}), 400
+
+    offset = (page - 1) * limit
+
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
+            # First, get the total count of jobs for the user
+            cursor.execute("SELECT COUNT(*) FROM tracked_jobs WHERE user_id = %s;", (user_id,))
+            total_count = cursor.fetchone()[0]
+
             sql = """
                 SELECT 
                     j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
@@ -256,9 +272,11 @@ def get_tracked_jobs():
                 FROM jobs j
                 JOIN tracked_jobs t ON j.id = t.job_id
                 LEFT JOIN job_analyses ja ON j.id = ja.job_id
-                WHERE t.user_id = %s ORDER BY t.created_at DESC;
+                WHERE t.user_id = %s
+                ORDER BY t.created_at DESC
+                LIMIT %s OFFSET %s;
             """
-            cursor.execute(sql, (user_id,))
+            cursor.execute(sql, (user_id, limit, offset))
             tracked_jobs = []
             for row in cursor.fetchall():
                 job = {
@@ -281,7 +299,12 @@ def get_tracked_jobs():
                         "recommended_testimonials": row["recommended_testimonials"]
                     }
                 tracked_jobs.append(job)
-            return jsonify(tracked_jobs)
+            return jsonify({
+                "tracked_jobs": tracked_jobs,
+                "total_count": total_count,
+                "page": page, # Current page (1-indexed)
+                "limit": limit # Items per page
+            })
     except Exception as e:
         print(f"ERROR in get_tracked_jobs: {str(e)}")
         return jsonify({"error": str(e)}), 500

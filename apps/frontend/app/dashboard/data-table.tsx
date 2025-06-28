@@ -13,6 +13,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  PaginationState, // Import PaginationState
 } from "@tanstack/react-table"
 import { ChevronDown } from "lucide-react"
 
@@ -36,11 +37,18 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  // New props for pagination
+  pagination: PaginationState;
+  setPagination: React.Dispatch<React.SetStateAction<PaginationState>>;
+  totalCount: number; // Total number of items across all pages
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  pagination, // Destructure new prop
+  setPagination, // Destructure new prop
+  totalCount, // Destructure new prop
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -56,17 +64,22 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    getPaginationRowModel: getPaginationRowModel(), // This enables pagination features
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    // Connect external pagination state
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
+      pagination, // Pass external pagination state
     },
+    onPaginationChange: setPagination, // Allow TanStack Table to update external state
+    manualPagination: true, // Tell TanStack Table that we handle pagination logic on the server
+    rowCount: totalCount, // Pass the total count from the server for correct pagination display
   })
 
   return (
@@ -159,8 +172,8 @@ export function DataTable<TData, TValue>({
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+          {/* Displaying pagination info using TanStack Table's built-in methods */}
+          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} (Total {totalCount} jobs).
         </div>
         <div className="space-x-2">
           <Button
