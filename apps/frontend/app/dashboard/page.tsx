@@ -12,7 +12,7 @@ import { getColumns } from './components/columns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // --- TYPE DEFINITIONS ---
 interface Profile {
@@ -24,8 +24,8 @@ interface Job {
   job_title: string;
   company_name: string;
   job_url: string;
-  job_posting_status: string; // Added
-  last_checked_at: string | null; // Added
+  job_posting_status: string;
+  last_checked_at: string | null;
 }
 interface AIAnalysis {
   position_relevance_score: number;
@@ -57,13 +57,13 @@ type UpdatePayload = {
   applied_at?: string | null;
   status?: string;
   is_excited?: boolean;
-  status_reason?: string | null; // Added for updating status_reason
+  status_reason?: string | null;
 };
 
 export default function UserDashboard() {
   // --- STATE MANAGEMENT ---
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [jobs, setJobs] = useState<Job[]>([]); // This state currently holds general jobs, not directly used in DataTable
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [debugError, setDebugError] = useState<string | null>(null);
@@ -72,14 +72,12 @@ export default function UserDashboard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
-  // New pagination state
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
   });
   const [totalTrackedJobsCount, setTotalTrackedJobsCount] = useState(0);
 
-  // New filter state
   const [filterStatus, setFilterStatus] = useState<'all' | 'active_application' | 'expired_application' | 'active_posting' | 'expired_posting'>('all');
 
   const { getToken } = useAuth();
@@ -107,7 +105,9 @@ export default function UserDashboard() {
 
       const data = await trackedJobsRes.json();
       setTrackedJobs(data.tracked_jobs);
-      setTotalTrackedJobsCount(data.total_count);
+      // Note: totalTrackedJobsCount here is the backend's total count *before* client-side filtering.
+      // The filtered count for pagination will be set locally.
+      setTotalTrackedJobsCount(data.total_count); 
 
     } catch (error: unknown) {
       setDebugError(error instanceof Error ? error.message : "An unknown error occurred while fetching tracked jobs.");
@@ -148,7 +148,6 @@ export default function UserDashboard() {
 
   const handleUpdate = useCallback(async (trackedJobId: number, payload: UpdatePayload) => {
     try {
-      // Optimistic UI update
       const optimisticUpdate: Partial<TrackedJob> = {};
       if (payload.status !== undefined) optimisticUpdate.status = payload.status;
       if (payload.notes !== undefined) optimisticUpdate.user_notes = payload.notes;
@@ -201,11 +200,9 @@ export default function UserDashboard() {
       payload.applied_at = null;
     }
 
-    // Clear status_reason if the status is changing from 'Expired' to a new active status
     if (currentJob.status === 'Expired' && newStatus !== 'Expired') {
         newStatusReason = null;
     } else if (newStatus === 'Expired' && currentJob.status !== 'Expired') {
-        // If manually setting to 'Expired', provide a default reason or keep existing if manually set
         newStatusReason = 'Manually expired by user';
     }
     payload.status_reason = newStatusReason;
@@ -236,19 +233,26 @@ export default function UserDashboard() {
 
   // --- FILTERING LOGIC ---
   const filteredTrackedJobs = useMemo(() => {
-    if (filterStatus === 'all') {
-      return trackedJobs;
-    } else if (filterStatus === 'active_application') {
-      return trackedJobs.filter(job => !['Expired', 'Rejected', 'Offer', 'Accepted', 'Withdrawn'].includes(job.status));
+    let filtered = trackedJobs;
+    if (filterStatus === 'active_application') {
+      // Define active applications as those actively in the pipeline
+      filtered = trackedJobs.filter(job => ['Applied', 'Interviewing', 'Offer'].includes(job.status));
     } else if (filterStatus === 'expired_application') {
-      return trackedJobs.filter(job => ['Expired', 'Rejected', 'Offer', 'Accepted', 'Withdrawn'].includes(job.status));
+      // Define expired applications as those no longer active in the pipeline
+      filtered = trackedJobs.filter(job => ['Expired', 'Rejected', 'Withdrawn', 'Accepted'].includes(job.status));
     } else if (filterStatus === 'active_posting') {
-      return trackedJobs.filter(job => job.job_posting_status === 'Active');
+      filtered = trackedJobs.filter(job => job.job_posting_status === 'Active');
     } else if (filterStatus === 'expired_posting') {
-      return trackedJobs.filter(job => job.job_posting_status !== 'Active');
+      filtered = trackedJobs.filter(job => job.job_posting_status !== 'Active');
     }
-    return trackedJobs;
+    return filtered;
   }, [trackedJobs, filterStatus]);
+
+  // Update total count and reset pagination when filter changes
+  useEffect(() => {
+    setTotalTrackedJobsCount(filteredTrackedJobs.length);
+    setPagination(prev => ({ ...prev, pageIndex: 0 }));
+  }, [filteredTrackedJobs, setTotalTrackedJobsCount, setPagination, filterStatus]); // Add filterStatus to dependencies
 
   // --- COLUMN DEFINITIONS ---
   const columns = useMemo(() => getColumns({ handleStatusChange, handleRemoveJob, handleToggleExcited }), [handleStatusChange, handleRemoveJob, handleToggleExcited]);
@@ -311,7 +315,7 @@ export default function UserDashboard() {
               data={filteredTrackedJobs}
               pagination={pagination}
               setPagination={setPagination}
-              totalCount={totalTrackedJobsCount}
+              totalCount={totalTrackedJobsCount} {/* This will now reflect the filtered count */}
             />
           </div>
         </div>

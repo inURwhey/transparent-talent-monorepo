@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 import google.generativeai as genai
 import json
 import re
-from functools import wraps # NEW: Import wraps for the new decorator
+# from functools import wraps # Removed as api_key_required is removed
 
 from auth import token_required
 
@@ -26,24 +26,15 @@ JOB_POSTING_MAX_AGE_DAYS = 60
 TRACKED_JOB_STALE_DAYS = 30
 LEGACY_URL_MALFORMED_PATTERN = re.compile(r".+\s+\(.+\)|\(.+?\)$")
 
-# NEW: Retrieve the API Key for integrity checks
-INTEGRITY_CHECK_API_KEY = os.getenv('INTEGRITY_CHECK_API_KEY')
-if not INTEGRITY_CHECK_API_KEY:
-    print("Warning: INTEGRITY_CHECK_API_KEY is not set. Admin endpoints might be unprotected or inaccessible.")
+# INTEGRITY_CHECK_API_KEY is no longer needed in app.py for these routes
+# INTEGRITY_CHECK_API_KEY = os.getenv('INTEGRITY_CHECK_API_KEY') 
+# if not INTEGRITY_CHECK_API_KEY:
+#     print("Warning: INTEGRITY_CHECK_API_KEY is not set. Admin endpoints might be unprotected or inaccessible.")
 
-# --- NEW: Simple API Key Authentication Decorator for Testing ---
-def api_key_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not INTEGRITY_CHECK_API_KEY:
-            return jsonify({"message": "API Key not configured on server."}), 500
-
-        api_key_header = request.headers.get('X-Api-Key') # Use a custom header like X-Api-Key
-        if not api_key_header or api_key_header != INTEGRITY_CHECK_API_KEY:
-            app.logger.warning("Attempted access to API key protected endpoint with missing or invalid key.")
-            return jsonify({"message": "Unauthorized: Invalid or missing API Key."}), 401
-        return f(*args, **kwargs)
-    return decorated_function
+# Removed the temporary api_key_required decorator
+# def api_key_required(f):
+#     @wraps(f)
+# # ... (rest of the removed decorator) ...
 
 
 # --- AI Configuration ---
@@ -549,8 +540,8 @@ def remove_tracked_job(tracked_job_id):
 
 # --- Endpoint to trigger job URL validity and age check ---
 @app.route('/api/admin/jobs/check-url-validity', methods=['POST'])
-# @token_required # TEMPORARILY COMMENTED OUT FOR API KEY TESTING
-@api_key_required # NEW: Use API key for testing
+@token_required # REINSTATED: Use Clerk JWT for admin endpoints
+# @api_key_required # REMOVED: Temporary API key removed
 def check_job_urls():
     """
     Checks the validity and age of job URLs and updates their status in the 'jobs' table.
@@ -568,7 +559,6 @@ def check_job_urls():
         twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
         sixty_days_ago = datetime.now(timezone.utc) - timedelta(days=JOB_POSTING_MAX_AGE_DAYS)
         
-        # Select jobs that need checking based on last_checked_at, age, or if they match legacy patterns.
         cur.execute("""
             SELECT id, job_url, status, found_at
             FROM jobs
@@ -653,8 +643,8 @@ def check_job_urls():
 
 # --- NEW: Endpoint to trigger tracked job application expiration ---
 @app.route('/api/admin/tracked-jobs/check-expiration', methods=['POST'])
-# @token_required # TEMPORARILY COMMENTED OUT FOR API KEY TESTING
-@api_key_required # NEW: Use API key for testing
+@token_required # REINSTATED: Use Clerk JWT for admin endpoints
+# @api_key_required # REMOVED: Temporary API key removed
 def check_tracked_job_expiration():
     """
     Checks tracked jobs for staleness based on last action (updated_at) and marks them expired.
