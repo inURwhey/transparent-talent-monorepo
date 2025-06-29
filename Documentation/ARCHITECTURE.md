@@ -1,3 +1,4 @@
+--- START OF FILE ARCHITECTURE.md ---
 # Transparent Talent - System Architecture
 
 Transparent Talent is architected as a modern, decoupled, three-tier full-stack application, augmented by external services for authentication and generative AI. This is a professional and highly scalable design.

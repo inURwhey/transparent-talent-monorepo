@@ -1,6 +1,20 @@
+--- START OF FILE CHANGELOG.md ---
 # Transparent Talent - Changelog
 
 All notable changes to this project will be documented in this file.
+
+## [v0.17.0] - 2025-06-30 - User Onboarding Redirection
+
+This release improves the new user onboarding experience by automatically redirecting new sign-ups to their profile page.
+
+### Added
+-   **Feature:** Implemented automatic redirection of new users to `/dashboard/profile` immediately after sign-up to streamline the onboarding process for profile completion.
+
+### Changed
+-   No existing features were changed in this release.
+
+### Fixed
+-   No specific bugs were identified or fixed in this release; changes were feature-driven.
 
 ## [v0.16.0] - 2025-06-30 - Shadcn UI Refinement & Core Component Installation
 
@@ -151,73 +165,25 @@ This release completes a key architectural task by standardizing the data contra
 -   **UI Bug:** Corrected a CSS issue where dropdown menus were semi-transparent and had an incorrect z-index, causing them to improperly overlap table content.
 -   **UI Bug:** Resolved an issue where newly submitted jobs would display "Invalid Date". The table now correctly shows the "Date Saved" for new entries and a placeholder for un-set "Date Applied" fields.
 
-## [v0.7.0] - 2025-06-28 - Tabular Job Tracker & Data Contract Hardening
+## [v0.7.0] - 2025-06-28
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **UI: Interactive Job Tracker** | T2 | 4000 |
 
-This release replaces the simple job tracker with a full-featured, interactive data table. It also includes a critical bug fix that resolved a persistent data rendering issue on the dashboard, which was traced to a data contract mismatch between the frontend and backend API.
+## [v0.6.0] - 2025-06-28
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Feature: User Job Submission** | T2 | 6000 |
 
-### Added
--   **UI: Interactive Job Tracker:** Implemented a sortable, filterable data table for the "My Job Tracker" section using `@tanstack/react-table` and `shadcn/ui` components.
--   **Developer Protocol:** Added a "Monorepo Interaction Protocol" to `PROTOCOLS.md` to ensure correct package targeting during dependency installation.
--   **Developer Protocol:** Added a "Debugging Principle" to `PROTOCOLS.md` to enforce data-driven hypothesis testing over guesswork.
+## [v0.5.0] - 2025-06-28
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Feature: Logged Out Experience** | T2 | 8000 |
 
-### Changed
--   **Dashboard UX:** Replaced the previous list-based job tracker with the new `DataTable` component.
--   **Data Contract Alignment:** Updated the frontend `TrackedJob` interface and all associated component logic (using `tracked_job_id` and `user_notes`) to match the actual data shape being delivered by the backend API.
-
-### Fixed
--   **Critical Rendering Failure:** Resolved a bug where the dashboard would appear blank after data fetching. The issue was caused by a mismatch between the frontend's expected data keys (`id`, `notes`) and the API's actual keys (`tracked_job_id`, `user_notes`).
--   **UI Bug:** Corrected a CSS `z-index` issue that caused dropdown menus in the new data table to be obscured by other rows.
--   **Vercel Build Failure:** Resolved a `Cannot find module` error by creating a dedicated `input.tsx` component and correcting the import path in `data-table.tsx`.
-
-## [v0.6.0] - 2025-06-28 - User-Driven Job Analysis
-
-This release introduces the first core interactive feature of the platform: allowing users to submit a job URL for on-demand analysis. This involved significant work across the entire stack.
-
-### Added
--   **Feature: User Job Submission:** Implemented a new form on the user dashboard for submitting job URLs.
--   **Backend API: Job Submission Endpoint:** Created a new `POST /api/jobs/submit` endpoint that scrapes the provided URL, sends the content and user profile context to the Gemini API for analysis, and saves the results.
--   **Database: `job_analyses` Table:** Added a new, dedicated table to the PostgreSQL schema to store the structured JSON results from the AI analysis in a scalable way, including relevance scores, summaries, and qualification gaps.
-
-### Changed
--   **Authentication:** The backend authentication decorator now supports a comma-separated list of URLs in the `CLERK_AUTHORIZED_PARTY` environment variable, making it more robust for Vercel preview deployments.
--   **AI Context:** The job analysis prompt is now dynamically built from multiple fields in the `user_profiles` table, providing a much richer context to the AI for more accurate analysis.
--   **Frontend State:** The main dashboard now optimistically updates the UI, adding a newly submitted job to the top of the tracker for immediate user feedback.
-
-### Fixed
--   **Backend Crash:** Resolved a persistent `500` server error on the `/api/profile` endpoint by correcting the SQL query to use the actual `short_term_career_goal` column name from the database schema.
--   **Job Submission Crash:** Fixed a `500` error in the submission workflow by replacing a query for a non-existent `summary` column with queries for actual `user_profiles` columns.
-
-## [v0.5.0] - 2025-06-28 - Public Landing Page & Middleware Hardening
-
-This release introduces a public-facing landing page to create a logged-out experience and hardens the authentication middleware after a significant debugging and refactoring effort.
-
-### Added
--   **Public Landing Page:** Implemented a new static landing page at the root route (`/`) to explain the product's value proposition to new and logged-out users.
--   **Developer Protocol:** Added a "Clerk Interaction Protocol" to the project's documentation to establish a stricter workflow for handling the high-risk Clerk frontend library.
-
-### Changed
--   **Authentication Middleware:** Refactored the frontend `middleware.ts` to correctly support both public and protected routes using the Clerk v5 SDK. All routes are now protected by default, with the landing page and sign-in/sign-up pages explicitly made public.
-
-### Fixed
--   **Clerk v5 Implementation:** Resolved a series of persistent build failures by correcting the Clerk middleware implementation. The code now uses the correct "opt-in to protection" model and the proper `auth.protect()` syntax, aligning it with official documentation.
-
-## [v0.4.0] - 2025-06-28 - Production Authentication Fix & Refactor
-
-This release resolves the critical authentication bug and makes the application fully functional. It involved a significant refactor of the backend authentication system to improve stability, transparency, and adherence to open standards.
-
-### Fixed
--   **Critical `401 Unauthorized` Error:** Resolved the persistent authentication failure that blocked all backend API requests. The user dashboard is now fully operational.
-
-### Changed
--   **Replaced Authentication Library:** Removed the `clerk-backend-api` dependency entirely. The backend now performs authentication manually using the standard `PyJWT` and `requests` libraries.
--   **Authentication Flow:** The authentication decorator (`@token_required`) now verifies JWTs by fetching public keys from Clerk's JWKS endpoint and validating standard claims (`iss`, `azp`) for improved security and transparency.
-
-### Added
--   **New Environment Variables:** Added `CLERK_ISSUER_URL` and `CLERK_AUTHORIZED_PARTY` to the backend configuration to support the new manual verification flow.
--   **Robust Auth Debugging:** Added extensive, detailed logging to the `auth.py` module to significantly speed up troubleshooting of any future token validation issues.
-
-### Removed
--   **Removed `clerk-backend-api`:** The unused and problematic Python library was removed from `requirements.txt`.
+## [v0.4.0] - 2025-06-28
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Bugfix: Resolve Production Authentication** | T1 | 12000 |
 
 ## [v0.3.1] - 2025-06-28 - Failed Authentication Bugfix Attempt
 
