@@ -30,7 +30,7 @@ export function useTrackedJobsApi() {
       if (!isUserLoaded) return;
       setIsLoading(true);
       try {
-        const url = `${apiBaseUrl}/api/tracked-jobs?page=1&limit=1000`; // Fetch all for now
+        const url = `${apiBaseUrl}/api/tracked-jobs?page=1&limit=1000`;
         const response = await authedFetch(url);
         if (!response.ok) throw new Error("Failed to fetch tracked jobs.");
         const data = await response.json();

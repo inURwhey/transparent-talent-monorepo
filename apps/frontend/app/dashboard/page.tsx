@@ -18,24 +18,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // --- TYPE DEFINITIONS ---
 import { type UpdatePayload } from './types';
 
+// Define the set of statuses that represent an active application pipeline
+const ACTIVE_PIPELINE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS'];
+
 
 export default function UserDashboard() {
   // --- STATE MANAGEMENT ---
-  // All tracked jobs data and actions are now managed by our custom hook.
   const { trackedJobs, isLoading: isLoadingJobs, error: jobsError, actions } = useTrackedJobsApi();
-
-  // The user object from Clerk for display purposes.
   const { isLoaded: isUserLoaded, user } = useUser();
 
-  // Local UI state that remains in the component.
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active_application' | 'expired_application' | 'active_posting' | 'expired_posting'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active_pipeline' | 'closed_pipeline' | 'active_posting' | 'expired_posting'>('all');
 
   
   // --- HANDLER FUNCTIONS ---
-  // These are now simple wrappers that call the more complex logic from our hook.
   const handleJobSubmit = useCallback(async (jobUrl: string) => {
     setIsSubmitting(true);
     setSubmissionError(null);
@@ -54,12 +52,23 @@ export default function UserDashboard() {
     const currentJob = trackedJobs.find(job => job.tracked_job_id === trackedJobId);
     if (!currentJob) return;
 
-    const payload: UpdatePayload = { status: newStatus };
-    if (newStatus === "Applied" && !currentJob.applied_at) {
-      payload.applied_at = new Date().toISOString();
-    } else if (newStatus !== "Applied" && currentJob.status === "Applied") {
-      payload.applied_at = null;
+    const payload: UpdatePayload = { status: newStatus, updated_at: new Date().toISOString() };
+    const now = new Date().toISOString();
+
+    // Implement side effects based on DATA_LIFECYCLE.md
+    if (newStatus === 'APPLIED' && !currentJob.applied_at) payload.applied_at = now;
+    if (newStatus === 'INTERVIEWING' && !currentJob.first_interview_at) payload.first_interview_at = now;
+    if (newStatus === 'OFFER_NEGOTIATIONS' && !currentJob.offer_received_at) payload.offer_received_at = now;
+    
+    // Set resolved_at for any terminal state
+    if (!ACTIVE_PIPELINE_STATUSES.includes(newStatus) && !currentJob.resolved_at) {
+        payload.resolved_at = now;
     }
+    // Clear resolved_at if moving back to an active state from a terminal one (e.g., accidental click)
+    if (ACTIVE_PIPELINE_STATUSES.includes(newStatus) && currentJob.resolved_at) {
+        payload.resolved_at = null;
+    }
+
     await actions.updateTrackedJob(trackedJobId, payload);
   }, [actions, trackedJobs]);
 
@@ -79,8 +88,8 @@ export default function UserDashboard() {
     if (filterStatus === 'all') return trackedJobs;
     return trackedJobs.filter(job => {
       switch (filterStatus) {
-        case 'active_application': return ['Applied', 'Interviewing', 'Offer'].includes(job.status);
-        case 'expired_application': return ['Expired', 'Rejected', 'Withdrawn', 'Accepted'].includes(job.status);
+        case 'active_pipeline': return ACTIVE_PIPELINE_STATUSES.includes(job.status);
+        case 'closed_pipeline': return !ACTIVE_PIPELINE_STATUSES.includes(job.status);
         case 'active_posting': return job.job_posting_status === 'Active';
         case 'expired_posting': return job.job_posting_status !== 'Active';
         default: return true;
@@ -147,8 +156,8 @@ export default function UserDashboard() {
                   </SelectTrigger>
                   <SelectContent>
                       <SelectItem value="all">All Jobs</SelectItem>
-                      <SelectItem value="active_application">Active Applications</SelectItem>
-                      <SelectItem value="expired_application">Expired Applications</SelectItem>
+                      <SelectItem value="active_pipeline">Active Pipeline</SelectItem>
+                      <SelectItem value="closed_pipeline">Closed Pipeline</SelectItem>
                       <SelectItem value="active_posting">Active Job Postings</SelectItem>
                       <SelectItem value="expired_posting">Expired Job Postings</SelectItem>
                   </SelectContent>
