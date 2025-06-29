@@ -4,10 +4,12 @@
 import { useState, useEffect, useCallback, FormEvent, useMemo } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
 import { PaginationState } from '@tanstack/react-table'; // Import PaginationState
+import Link from 'next/link'; // Import Link
 
 // --- COMPONENT & UTILITY IMPORTS ---
 import { DataTable } from './data-table';
 import { getColumns } from './components/columns'; // NEW: Import columns from their own file
+import { Button } from '@/components/ui/button'; // Ensure Button is imported
 
 // --- TYPE DEFINITIONS ---
 interface Profile {
@@ -230,10 +232,17 @@ export default function UserDashboard() {
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
       {profile && (
         <div className="max-w-7xl mx-auto">
-          <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-              <h1 className="text-3xl font-bold text-gray-800">{profile.full_name}</h1>
-              <p className="text-lg text-gray-600 mt-2">Short Term Goal:</p>
-              <p className="text-gray-700 italic">{profile.short_term_career_goal || "No goal set."}</p>
+          <div className="bg-white p-6 rounded-lg shadow-md mb-8 flex justify-between items-center"> {/* Added flex layout */}
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800">{profile.full_name || 'Your Dashboard'}</h1>
+                <p className="text-lg text-gray-600 mt-2">Short Term Goal:</p>
+                <p className="text-gray-700 italic">{profile.short_term_career_goal || "No goal set."}</p>
+              </div>
+              <Link href="/dashboard/profile" passHref>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                  Edit Profile
+                </Button>
+              </Link>
           </div>
           
           <div className="bg-white p-6 rounded-lg shadow-md mb-8">
