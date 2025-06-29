@@ -52,7 +52,8 @@ export default function UserDashboard() {
     const currentJob = trackedJobs.find(job => job.tracked_job_id === trackedJobId);
     if (!currentJob) return;
 
-    const payload: UpdatePayload = { status: newStatus, updated_at: new Date().toISOString() };
+    // *** THE FIX IS HERE: Removed the erroneous 'updated_at' property. ***
+    const payload: UpdatePayload = { status: newStatus };
     const now = new Date().toISOString();
 
     // Implement side effects based on DATA_LIFECYCLE.md
