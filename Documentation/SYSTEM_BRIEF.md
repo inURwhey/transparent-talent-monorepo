@@ -16,9 +16,10 @@
 
 ## 3. Current Project Status
 *   **Application is stable and functional on its production domain.** The application now features a public-facing landing page for new user acquisition and a fully functional, authenticated user dashboard.
+*   **Automated Data Hygiene & Expiration:** Automated processes are now in place to identify and update the status of expired job postings (based on URL validity, age, or legacy format) and stale tracked applications (based on inactivity).
+*   **Enhanced Job Tracker UI:** The "My Job Tracker" table displays clear statuses for job postings and tracked applications, including reasons for expiration. New filtering options allow users to efficiently view "All Jobs", "Active" or "Inactive" job applications, and "Active" or "Expired" job postings. The filtering and pagination now work cohesively.
 *   **New User Onboarding Improved:** Critical issues preventing new users from accessing the dashboard after sign-up have been resolved by ensuring a default user profile is automatically created. New users are now smoothly redirected to the profile page after signup, encouraging immediate profile completion.
 *   **Architectural Hardening:** The data contract between the backend and the AI service has been standardized to `snake_case`, improving system-wide consistency and maintainability. Authentication is robust across original and new production domains.
-*   **Core Feature Implemented:** The user dashboard now includes a sortable, filterable data table for the "My Job Tracker" section, significantly improving the user experience for managing tracked jobs.
 *   **UI Refactor & Bug Fixes:** Resolved several UI bugs and refactored the frontend by decoupling the data table's column definitions, improving code quality and future scalability.
 *   **Workflow Automation:** The user dashboard now intelligently automates the `applied_at` date for tracked jobs, setting it automatically when the status changes to 'Applied' and clearing it when changed from 'Applied', significantly streamlining user workflow. Frontend stability for data updates has also been improved.
 *   **Pagination Implemented:** The "My Job Tracker" table now supports full pagination, including server-side data fetching and robust sorting, allowing efficient browsing of large datasets.
@@ -31,16 +32,11 @@
 *   **UI/UX Improvement: Collapsible Profile Sections:** The User Profile page has been redesigned with collapsible sections for "Contact & Basic Information", "Career Aspirations", "Work Environment & Requirements", "Skills & Industry Focus", and "Personality & Self-Assessment", significantly improving the user experience for managing detailed profile data.
 
 ## 4. Immediate Backlog & Next Steps
-1.  **Backend: Scheduled Job URL Validity Checks & Status Updates:** This feature will improve data hygiene and user experience by automatically identifying and updating the status of job postings that are no longer accessible. (RICE: 4.0)
+1.  **Backend: Define & Implement Comprehensive Data Lifecycle Management:** Define and implement a comprehensive lifecycle for core data entities (users, companies, jobs, applications) within the backend, including state transitions and impacts. This will be documented in `ARCHITECTURE.md` or a new linked file. (RICE: 2.7)
 2.  **Feature: Define & Verify New User Account Flow:** Define and implement a comprehensive and verified onboarding flow for new user accounts beyond basic profile creation. (RICE: 6000)
-3.  **UI/UX: User-Controlled Job Archiving & Expiration Notifications:** Implement a 2-step process to expire and hide tracked jobs, including user notifications for "ghosted" applications. (RICE: 3600)
-4.  **UI/UX: 'Jobs for You' Module Restoration:** Ensure the "Jobs for You" module is present, visible, and sorted by relevancy on the user dashboard. (RICE: 3600)
-5.  **UI: Transparent Relevance Scorecard:** Design and build the collapsible UI component that displays the detailed factors behind a job's score. (RICE: 3000)
-6.  **Feature: Automated Application Status Expiration & Notifications:** Implement a mechanism to automatically flag or hide job postings that are likely no longer valid after a certain period, specifically for application statuses. (RICE: 2400)
-7.  **Feature: Geo-location for User's Current Location:** Implement geo-location for user's current location. (RICE: 2400)
-8.  **Backend: Automated App Expiration:** Create a mechanism to automatically flag or hide job postings that are likely no longer valid after a certain period. (RICE: 4000)
-9.  **Feature: Bulk Job Submission (CSV/URLs):** Allow users to submit multiple job URLs or a CSV of jobs for analysis and tracking. (RICE: 1350)
-10. **Feature: User Feedback Loop:** Implement a robust feedback mechanism for users to rate AI analyses and refine preferences. (RICE: 1200)
-11. **Backend: Enhance Job Data for AI Matching:** Build out jobs profile to include location, remote status, and other pertinent details to assist with user:job matching. (RICE: 12000)
-12. **Feature: Instant Analysis for Known Jobs:** Provide quick analysis for jobs already in the system. (RICE: 4000)
-13. **Refactor: Modularize Large Frontend/Backend Files (e.g., `dashboard/page.tsx`, `app.py`):** Break down monolithic files into smaller, more manageable modules. (RICE: 300)
+3.  **UI/UX: Multi-step Archiving/Hiding Workflow for Tracked Jobs:** Implement a more robust user interface for managing and hiding tracked jobs beyond simple filtering, potentially involving a multi-step archiving process. (RICE: 3600)
+4.  **UI/UX: Refine "Inactive Applications" Filter and Status Display:** Refine the "Inactive Applications" filter to accurately reflect status categories like "Expired," "Rejected," "Withdrawn," and "Accepted." (RICE: 8000)
+5.  **Bugfix: Status dropdown not persisting/collapsing on render size:** Investigate and fix the UI issue where the status dropdown does not persist its state or collapses unexpectedly based on browser render size. (RICE: 10000)
+6.  **Feature: Cascading Expiration from Job Posting to Applications:** When a job posting is marked as `Expired` (e.g., `Unreachable`, `Time Based`, `Legacy Format`), automatically initiate an expiration process for all associated `tracked_jobs` for all users, potentially offering user notifications and options for manual archiving. (RICE: 2400)
+7.  **UI/UX: Complex Notification System for Job Expiration:** Develop a sophisticated notification system for job expiration events, potentially including in-app alerts, email notifications, and user preferences for opting in/out of bulk vs. individual notifications. (RICE: 1800)
+8.  **Platform: Job Posting Multi-Context Awareness (Cities, Sources):** Architecturally recognize and manage that the same job posting can occur in multiple cities and appear at multiple sources, ensuring the system has awareness of these different contexts. (RICE: 1.05)

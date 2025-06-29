@@ -3,6 +3,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.19.0] - 2025-06-30 - Automated Expiration & UI Filtering
+
+This release introduces robust backend automation for identifying and marking expired job postings and stale tracked applications, significantly improving data hygiene. The user interface has also been enhanced with new status displays and filtering options to help users manage their job pipeline more effectively. Critical authentication and frontend build issues were resolved to ensure application stability.
+
+### Added
+-   **Backend Feature:** Implemented automated job posting expiration based on URL reachability, age (60 days from `found_at`), and identification of legacy malformed URLs, marking them with specific `Expired - Unreachable`, `Expired - Time Based`, or `Expired - Legacy Format` statuses in the `jobs` table.
+-   **Backend Feature:** Implemented automated tracked application expiration, marking applications as `Expired` with `Stale - No action in 30 days` reason if `updated_at` is older than 30 days and not in a final status.
+-   **Frontend UI:** Integrated `job_posting_status` and `last_checked_at` into the "My Job Tracker" table to show the status of the original job posting.
+-   **Frontend UI:** Added `status_reason` column to the "My Job Tracker" table to display reasons for application statuses (e.g., "Stale - No action in 30 days").
+-   **Frontend UI:** Implemented client-side filtering options for "My Job Tracker" to allow users to view "All Jobs", "Active Applications", "Inactive Applications", "Active Job Postings", and "Expired Job Postings".
+
+### Changed
+-   **Backend Architecture:** Refined `check_job_url_validity` to use a more precise regex for URL extraction and explicitly handle legacy malformed URLs outside the general validity check.
+-   **Frontend UI/UX:** Updated the "Active Applications" filter definition to include `Applied`, `Interviewing`, and `Offer` statuses, providing a more accurate representation of an active pipeline.
+-   **Frontend UI/UX:** The filter dropdown now dynamically updates the table's total count and resets pagination (`pageIndex` to 0) when a filter is applied, ensuring correct pagination behavior for filtered results.
+-   **Backend Authentication:** Enhanced `auth.py` with more detailed logging for JWT validation steps and improved error handling to provide better diagnostics for authentication failures.
+-   **Backend Authentication:** Temporarily (`v0.19.0` only for testing) modified `/api/admin` endpoints to use `X-Api-Key` authentication for easier testing, then reverted to `token_required` (Clerk JWT) for production security.
+
+### Fixed
+-   **Frontend Build:** Resolved persistent `Unexpected token main` syntax error in `apps/frontend/app/dashboard/page.tsx` that caused Vercel build failures.
+-   **Backend Authentication:** Corrected `JWT Invalid Token Error: Token is missing the "aud" claim` by re-implementing manual validation for Clerk's `azp` claim instead of `PyJWT`'s `audience` parameter.
+-   **Backend Data Query:** Fixed SQL regex operator usage (`~`) in `apps/backend/app.py` for matching legacy URL patterns in `jobs` table.
+
 ## [v0.18.0] - 2025-06-30 - Job Tracker Enhancement & Profile UX Improvements
 
 This release focuses on enhancing the job tracker's usability by introducing a "favorite" feature and improving the user profile management experience with collapsible sections for better navigation.

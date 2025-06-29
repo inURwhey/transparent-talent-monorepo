@@ -43,6 +43,7 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
 1.  **Ground Truth Request:** The AI will request the exact version of `@clerk/nextjs` from `pnpm-lock.yaml`, the complete code from the file(s) to be modified, and a link to the relevant official Clerk documentation page.
 2.  **Verbal Plan:** The AI will state its plan, referencing the ground truth, and ask for user confirmation before generating code.
 3.  **Minimal Diffs:** Code modifications will be proposed as minimal diffs or specific line-by-line instructions.
+*   **JWT Claim Validation:** Be aware that Clerk issues JWTs with the `azp` (authorized party) claim for audience validation, not the standard `aud` (audience) claim. When using `PyJWT`'s `jwt.decode` function, **do not** use the `audience` parameter. Instead, manually validate the `claims.get('azp')` against `AUTHORIZED_PARTIES` to avoid `InvalidAudienceError` and prevent deployment failures.
 
 ### Database Interaction Protocol v1.1
 *Objective:* To prevent backend errors caused by incorrect assumptions about the database schema.
@@ -58,5 +59,7 @@ This workflow should be executed sequentially within a single chat session to ma
 2.  **Initiate Preliminary Screening (Protocol 2.2):** From the list of leads generated in Step 1, select specific jobs to screen. The AI will apply the critical verification protocol to each.
 3.  **Initiate Detailed Analysis (Protocol User-Driven v1.1):** For jobs that pass screening, provide the full job description and request a detailed analysis.
 
----
-*(Protocols 6.0 and 7.0 remain unchanged)*
+## Code Generation Protocols
+*   **Full File Replacement vs. Targeted Changes:**
+    *   **Full File Replacement:** For changes involving adding or removing multiple functions/routes; significant restructuring or refactoring of existing code; modifying a TypeScript interface or Python data structure that affects multiple parts of the file; or addressing complex bugs where a full context is crucial.
+    *   **Targeted Changes:** For isolated changes that are a single line modification; adding or removing a single import statement; changing a literal value (e.g., a constant); or adding a single, small, self-contained `if` or `else` block.

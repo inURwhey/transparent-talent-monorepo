@@ -3,11 +3,8 @@
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
 
-- Feature: Bulk Actions for Tracked Jobs (e.g., Bulk Status Update, Bulk Delete)
 - Platform: Standard Business Email Addresses
 - Marketing: LinkedIn Company Profile
-- Backend: Build out job profiles and the import process to store important information
-- Backend: Build out user, company, and job lifecycles
 
 ---
 
@@ -32,12 +29,12 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | **To Do** |
-| **Backend: Automated Job Expiration & Data Hygiene** | 1000 | 1 | 100% | 0.25 | **4000** | Flash | **To Do** |
-| **UI/UX: Job Archiving, Filtering & Expiration Notifications** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | **To Do** |
+| **UI/UX: Multi-step Archiving/Hiding Workflow for Tracked Jobs** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | **To Do** |
 | **UI/UX: 'Jobs for You' Module Restoration** | 1000 | 3 | 90% | 0.75 | **3600** | Flash | **To Do** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | Flash | **To Do** |
 | **Feature: Geo-location for User's Current Location** | 1000 | 2 | 90% | 0.75 | **2400** | Pro | **To Do** |
-| **Backend: Automated App Expiration** | 1000 | 1 | 100% | 0.25 | **4000** | Flash | **To Do** |
+| **UI/UX: Refine "Inactive Applications" Filter and Status Display** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | **To Do** |
+| **Bugfix: Status dropdown not persisting/collapsing on render size.** | 1000 | 1 | 100% | 0.1 | **10000** | Flash | **To Do** |
 | **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | Pro | **To Do** |
 | **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | Pro | **To Do** |
 
@@ -47,7 +44,9 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Backend: Enhance Job Data for AI Matching** | 1000 | 3 | 100% | 0.5 | **12000** | Pro | **To Do** |
 | **Feature: Instant Analysis for Known Jobs**| 1000 | 2 | 100% | 0.5 | **4000** | Pro | **To Do** |
+| **Feature: Cascading Expiration from Job Posting to Applications** | 1000 | 3 | 80% | 1.0 | **2400** | Pro | **To Do** |
 | **Automation: Tiered Job Analysis (Lightweight Pre-Screening + Detailed AI)** | 1000 | 3 | 90% | 1.5 | **1800** | Pro | **To Do** |
+| **UI/UX: Complex Notification System for Job Expiration** | 1000 | 2 | 90% | 1.0 | **1800** | Pro | **To Do** |
 | **Feature: LinkedIn Profile/Resume Content Extraction & AI Parsing** | 1000 | 3 | 80% | 1.5 | **1600** | Pro | **To Do** |
 | **Automation: Full API Job Analysis**| 1000 | 3 | 90% | 2.0 | **1350** | Pro | **To Do** |
 | **Feature: Proactive Anomaly Detection**| 1000 | 3 | 90% | 2.5 | **1080** | Pro | **To Do** |
@@ -67,6 +66,7 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 ## Tier 4: Future Vision & Long-Term bets
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Platform: Job Posting Multi-Context Awareness (Cities, Sources)** | 1 | 3 | 70% | 2.0 | **1.05** | Pro | **To Do** |
 | **Infra: Background Jobs w/ Redis** | 1000 | 2 | 100% | 1.5 | **1333** | Pro | **To Do** |
 | **Platform: Business Certification** | 5000 | 3 | 50% | 6.0 | **1250** | N/A | **To Do** |
 | **AI: User & Job Clustering for Proactive Matching** | 1000 | 3 | 70% | 4.0 | **525** | Pro | **To Do** |
@@ -81,6 +81,15 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 
 ## Completed Features & Bugfixes
 *This section lists all completed features and bugfixes, categorized by the release version they were delivered in, in reverse chronological order.*
+
+### [v0.19.0] - 2025-06-30 - Automated Expiration & UI Filtering
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Backend: Automated Job Expiration & Data Hygiene** | T2 | 4000 |
+| **Backend: Automated App Expiration** | T2 | 4000 |
+| **UI/UX: Job Archiving, Filtering & Expiration Notifications** | T2 | 3600 |
+| **Bugfix: Frontend build error (Unexpected token main)** | UI/UX Polish | N/A |
+| **Bugfix: Backend authentication (JWT 'aud' claim / NameError)** | T1 | 12000 |
 
 ### [v0.18.0] - 2025-06-30 - Job Tracker Enhancement & Profile UX Improvements
 | Feature/Bugfix | Original Tier | RICE Score |
