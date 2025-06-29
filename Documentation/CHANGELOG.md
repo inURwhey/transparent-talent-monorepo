@@ -3,6 +3,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.24.0] - 2025-07-01 - User Profile Geolocation
+
+This release introduces the ability for users to add their geographic location to their profile, laying the groundwork for future proximity-based job searching.
+
+### Added
+-   **Feature:** A "Use My Current Location" button on the user profile page now allows users to capture their latitude and longitude via the browser's Geolocation API.
+-   **Feature:** A "Clear Location" button has been added, giving users control to remove their saved coordinate data.
+-   **Database:** Migrated the `user_profiles` table to add `latitude` and `longitude` columns.
+
+### Changed
+-   **Backend:** The `ProfileService` now correctly converts `Decimal` types from the database into `float`s before JSON serialization, preventing data type mismatches on the frontend.
+-   **Documentation:** `PROTOCOLS.md` has been updated with new "Full-File Output," "Backlog Content," and refined "Session Budgeting" protocols to improve development efficiency. `BACKLOG.md` has been streamlined to only include "To Do" items.
+
+### Fixed
+-   **Frontend:** Resolved a critical bug where `latitude` and `longitude` were being treated as strings after being fetched from the API, causing a `toFixed is not a function` error and crashing the profile page.
+-   **UI:** Restored all missing content within the collapsible sections of the profile page that was accidentally removed in a previous turn.
+
 ## [v0.23.0] - 2025-07-01 - Backend Service Layer Implementation
 
 This release completes the backend refactoring effort by introducing a dedicated service layer for business logic, further enhancing the application's architecture and maintainability.

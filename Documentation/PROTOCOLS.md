@@ -1,4 +1,4 @@
-# Transparent Talent: Operational Protocols v2.0
+# Transparent Talent: Operational Protocols v2.1
 
 ## Future State Note
 The ultimate goal for these protocols is to generate structured **JSON** output that can be directly consumed by our backend API. The current CSV/Sheet-based output is an intermediary step for the manual and semi-automated phases.
@@ -67,7 +67,7 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
 *   **Workflow & Heuristics:**
     1.  **Task Assessment:** At the start of a new task, the AI will assess its nature based on the backlog and user request.
     2.  **Strategy Recommendation:**
-        *   For **"Pro-level"** tasks, the AI will state: *"This is a complex task. I recommend we maintain a single, continuous context until it is complete. The value of our shared understanding will exceed the token cost."*
+        *   For **"Pro-level"** tasks, the AI will state: *"This is a complex task. I recommend we maintain a single, continuous context until it is complete."*
         *   For a batch of unrelated **"Flash-level"** tasks, the AI will state: *"These are discrete tasks. To optimize for cost and performance, I will treat each as a nearly independent request."*
 
 ### Development Cycle Protocol v1.0
@@ -78,8 +78,23 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
     2.  **Mandatory Commit Generation:** Before suggesting the next task or waiting for a deployment, the AI **must** provide a complete, well-formatted git commit message.
     3.  **Await Confirmation:** The AI will then instruct the user to commit and deploy the changes and will wait for confirmation of success before proceeding.
 
+### Full-File Output Protocol v1.0
+*   **Objective:** To prevent bugs and ensure clarity by providing complete, untruncated file contents during development.
+*   **Prime Directive:** When the AI is asked to provide the contents of a file for replacement, it **must** output the *entire*, complete, and untruncated contents of that file.
+*   **Rationale:** Abbreviating file contents with comments like `...` is counterproductive.
+
+### Backlog Content Protocol v1.0
+*   **Objective:** To streamline the `BACKLOG.md` file and reduce token cost.
+*   **Prime Directive:** When generating `BACKLOG.md` during an `END_PROMPT`, the AI will only include items with a "To Do" status, removing the "Completed" section.
+*   **Rationale:** The `CHANGELOG.md` is the official historical record. The completed list in the backlog is redundant and adds unnecessary token overhead.
+
 ## Workflow Guide: How to Run Protocols
-(This section remains unchanged)
+This workflow should be executed sequentially within a single chat session to maintain context.
+1.  **Initiate Company & Lead Discovery (Protocol 1.4):** Start by providing the user's profile and resume and requesting a 'Master Target Company List' and 'Preliminary Job Leads'.
+2.  **Initiate Preliminary Screening (Protocol 2.2):** From the list of leads generated in Step 1, select specific jobs to screen. The AI will apply the critical verification protocol to each.
+3.  **Initiate Detailed Analysis (Protocol User-Driven v1.1):** For jobs that pass screening, provide the full job description and request a detailed analysis.
 
 ## Code Generation Protocols
-(This section remains unchanged)
+*   **Full File Replacement vs. Targeted Changes:**
+    *   **Full File Replacement:** For changes involving adding or removing multiple functions/routes; significant restructuring or refactoring of existing code; modifying a TypeScript interface or Python data structure that affects multiple parts of the file; or addressing complex bugs where a full context is crucial.
+    *   **Targeted Changes:** For isolated changes that are a single line modification; adding or removing a single import statement; changing a literal value (e.g., a constant); or adding a single, small, self-contained `if` or `else` block.
