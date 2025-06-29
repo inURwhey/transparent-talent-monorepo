@@ -63,7 +63,6 @@ type UpdatePayload = {
 export default function UserDashboard() {
   // --- STATE MANAGEMENT ---
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [jobs, setJobs] = useState<Job[]>([]);
   const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [debugError, setDebugError] = useState<string | null>(null);
@@ -76,7 +75,7 @@ export default function UserDashboard() {
     pageIndex: 0,
     pageSize: 10,
   });
-  const [totalTrackedJobsCount, setTotalTrackedJobsCount] = useState(0);
+  const [totalFromBackend, setTotalFromBackend] = useState(0);
 
   const [filterStatus, setFilterStatus] = useState<'all' | 'active_application' | 'expired_application' | 'active_posting' | 'expired_posting'>('all');
 
@@ -96,68 +95,58 @@ export default function UserDashboard() {
   }, [getToken]);
 
   const fetchTrackedJobsData = useCallback(async () => {
-    try {
+    // Only set loading to true on the very first fetch
+    if (trackedJobs.length === 0) {
       setIsLoading(true);
-      const { pageIndex, pageSize } = pagination;
-      const url = `${apiBaseUrl}/api/tracked-jobs?page=${pageIndex + 1}&limit=${pageSize}`;
+    }
+    try {
+      // For this refactor, we will fetch *all* tracked jobs and paginate/filter on the client.
+      // This simplifies the logic and removes the API pagination dependency causing the loop.
+      // A future optimization could be full server-side pagination.
+      const url = `${apiBaseUrl}/api/tracked-jobs?page=1&limit=1000`; // Fetch all for client-side handling
       const trackedJobsRes = await authedFetch(url);
       if (!trackedJobsRes.ok) throw new Error(`Tracked jobs fetch failed`);
 
       const data = await trackedJobsRes.json();
       setTrackedJobs(data.tracked_jobs);
-      // Note: totalTrackedJobsCount here is the backend's total count *before* client-side filtering.
-      // The filtered count for pagination will be set locally.
-      setTotalTrackedJobsCount(data.total_count); 
+      setTotalFromBackend(data.total_count);
 
     } catch (error: unknown) {
       setDebugError(error instanceof Error ? error.message : "An unknown error occurred while fetching tracked jobs.");
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, authedFetch, pagination]);
+  }, [apiBaseUrl, authedFetch, trackedJobs.length]); // trackedJobs.length helps with initial isLoading state
 
+  // Initial data fetch for profile and the main tracked jobs list
   useEffect(() => {
     const fetchInitialData = async () => {
+      setIsLoading(true);
       try {
-        setIsLoading(true);
-        const [profileRes, jobsRes] = await Promise.all([
-          authedFetch(`${apiBaseUrl}/api/profile`),
-          authedFetch(`${apiBaseUrl}/api/jobs`)
-        ]);
-
+        const profileRes = await authedFetch(`${apiBaseUrl}/api/profile`);
         if (!profileRes.ok) throw new Error(`Profile fetch failed`);
-        if (!jobsRes.ok) throw new Error(`Jobs fetch failed`);
-
         setProfile(await profileRes.json());
-        setJobs(await jobsRes.json());
+        
+        // Now fetch tracked jobs
+        await fetchTrackedJobsData();
 
       } catch (error: unknown) {
         setDebugError(error instanceof Error ? error.message : "An unknown error occurred during initial data fetch.");
+        setIsLoading(false);
       }
     };
     if (isUserLoaded) {
-        fetchInitialData();
+      fetchInitialData();
     }
-  }, [isUserLoaded, apiBaseUrl, authedFetch]);
-
-  useEffect(() => {
-    if (isUserLoaded) {
-      fetchTrackedJobsData();
-    }
-  }, [isUserLoaded, fetchTrackedJobsData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isUserLoaded, apiBaseUrl, authedFetch]); // fetchTrackedJobsData is now stable enough to be excluded
 
   const handleUpdate = useCallback(async (trackedJobId: number, payload: UpdatePayload) => {
     try {
-      const optimisticUpdate: Partial<TrackedJob> = {};
-      if (payload.status !== undefined) optimisticUpdate.status = payload.status;
-      if (payload.notes !== undefined) optimisticUpdate.user_notes = payload.notes;
-      if (payload.applied_at !== undefined) optimisticUpdate.applied_at = payload.applied_at;
-      if (payload.is_excited !== undefined) optimisticUpdate.is_excited = payload.is_excited;
-      if (payload.status_reason !== undefined) optimisticUpdate.status_reason = payload.status_reason;
-
+      // Optimistically update the UI
       setTrackedJobs(prev => prev.map(job =>
         job.tracked_job_id === trackedJobId
-          ? { ...job, ...optimisticUpdate }
+          ? { ...job, ...payload }
           : job
       ));
 
@@ -166,9 +155,15 @@ export default function UserDashboard() {
       });
 
       if (!response.ok) {
+        // If the update fails, revert the change by re-fetching
         await fetchTrackedJobsData();
         throw new Error(`Failed to update job: ${response.statusText}`);
       }
+      // Optionally, update the specific job with the response from the server
+      const updatedJobFromServer = await response.json();
+      setTrackedJobs(prev => prev.map(job =>
+        job.tracked_job_id === trackedJobId ? { ...job, ...updatedJobFromServer } : job
+      ));
 
     } catch (error) {
       console.error("Update Error:", error);
@@ -178,35 +173,35 @@ export default function UserDashboard() {
 
   const handleRemoveJob = useCallback(async (trackedJobId: number) => {
     if (!window.confirm("Are you sure?")) return;
+    
+    const originalJobs = trackedJobs;
+    // Optimistically remove from UI
+    setTrackedJobs(prev => prev.filter(job => job.tracked_job_id !== trackedJobId));
+
     try {
-        await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, { method: 'DELETE' });
-        await fetchTrackedJobsData();
-    } catch (error) { console.error("Remove Job Error:", error); }
-  }, [apiBaseUrl, authedFetch, fetchTrackedJobsData]);
+        const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, { method: 'DELETE' });
+        if (!response.ok) {
+          // Revert if API call fails
+          setTrackedJobs(originalJobs);
+        }
+    } catch (error) { 
+        console.error("Remove Job Error:", error); 
+        setTrackedJobs(originalJobs); // Revert on error
+    }
+  }, [apiBaseUrl, authedFetch, trackedJobs]);
 
   const handleStatusChange = useCallback(async (trackedJobId: number, newStatus: string) => {
     const currentJob = trackedJobs.find(job => job.tracked_job_id === trackedJobId);
-    if (!currentJob) {
-      console.error(`Job with ID ${trackedJobId} not found.`);
-      return;
-    }
+    if (!currentJob) return;
 
     const payload: UpdatePayload = { status: newStatus };
-    let newStatusReason: string | null = currentJob.status_reason;
-
     if (newStatus === "Applied" && !currentJob.applied_at) {
-      payload.applied_at = new Date().toISOString().split('T')[0];
-    } else if (newStatus !== "Applied" && currentJob.applied_at) {
+      payload.applied_at = new Date().toISOString();
+    } else if (newStatus !== "Applied" && currentJob.status === "Applied") {
       payload.applied_at = null;
     }
-
-    if (currentJob.status === 'Expired' && newStatus !== 'Expired') {
-        newStatusReason = null;
-    } else if (newStatus === 'Expired' && currentJob.status !== 'Expired') {
-        newStatusReason = 'Manually expired by user';
-    }
-    payload.status_reason = newStatusReason;
-
+    
+    payload.status_reason = currentJob.status === 'Expired' && newStatus !== 'Expired' ? null : currentJob.status_reason;
     await handleUpdate(trackedJobId, payload);
   }, [handleUpdate, trackedJobs]);
 
@@ -223,46 +218,49 @@ export default function UserDashboard() {
       const response = await authedFetch(`${apiBaseUrl}/api/jobs/submit`, { method: 'POST', body: JSON.stringify({ job_url: jobUrl }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to submit job.');
-
+      
+      // Add the new job to the top of the list and reset pagination/filter
+      setTrackedJobs(prev => [result, ...prev]);
+      setFilterStatus('all');
       setPagination(prev => ({ ...prev, pageIndex: 0 }));
       setJobUrl('');
 
     } catch (error) { setSubmissionError(error instanceof Error ? error.message : 'An unknown error.'); }
     finally { setIsSubmitting(false); }
-  }, [apiBaseUrl, authedFetch, jobUrl, isSubmitting, setPagination]);
+  }, [apiBaseUrl, authedFetch, jobUrl, isSubmitting]);
 
   // --- FILTERING LOGIC ---
   const filteredTrackedJobs = useMemo(() => {
-    let filtered = trackedJobs;
-    if (filterStatus === 'active_application') {
-      // Define active applications as those actively in the pipeline
-      filtered = trackedJobs.filter(job => ['Applied', 'Interviewing', 'Offer'].includes(job.status));
-    } else if (filterStatus === 'expired_application') {
-      // Define expired applications as those no longer active in the pipeline
-      filtered = trackedJobs.filter(job => ['Expired', 'Rejected', 'Withdrawn', 'Accepted'].includes(job.status));
-    } else if (filterStatus === 'active_posting') {
-      filtered = trackedJobs.filter(job => job.job_posting_status === 'Active');
-    } else if (filterStatus === 'expired_posting') {
-      filtered = trackedJobs.filter(job => job.job_posting_status !== 'Active');
-    }
-    return filtered;
+    if (filterStatus === 'all') return trackedJobs;
+    return trackedJobs.filter(job => {
+      switch (filterStatus) {
+        case 'active_application':
+          return ['Applied', 'Interviewing', 'Offer'].includes(job.status);
+        case 'expired_application':
+          return ['Expired', 'Rejected', 'Withdrawn', 'Accepted'].includes(job.status);
+        case 'active_posting':
+          return job.job_posting_status === 'Active';
+        case 'expired_posting':
+          return job.job_posting_status !== 'Active';
+        default:
+          return true;
+      }
+    });
   }, [trackedJobs, filterStatus]);
 
-  // Update total count and reset pagination when filter changes
+  // *** THE FIX: This hook now *only* resets pagination when the filter changes. ***
   useEffect(() => {
-    setTotalTrackedJobsCount(filteredTrackedJobs.length);
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
-  }, [filteredTrackedJobs, setTotalTrackedJobsCount, setPagination, filterStatus]); // Add filterStatus to dependencies
+  }, [filterStatus]);
 
   // --- COLUMN DEFINITIONS ---
   const columns = useMemo(() => getColumns({ handleStatusChange, handleRemoveJob, handleToggleExcited }), [handleStatusChange, handleRemoveJob, handleToggleExcited]);
 
-    // --- RENDER LOGIC ---
-  // Ensure the below block is exactly as provided, replacing the existing 'RENDER LOGIC' section.
+  // --- RENDER LOGIC ---
   if (!isUserLoaded) {
     return <div className="min-h-screen flex items-center justify-center">Initializing session...</div>;
   }
-  if (isLoading && trackedJobs.length === 0 && totalTrackedJobsCount === 0) {
+  if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading Dashboard Data...</div>;
   }
   if (debugError) {
@@ -332,7 +330,7 @@ export default function UserDashboard() {
               data={filteredTrackedJobs}
               pagination={pagination}
               setPagination={setPagination}
-              totalCount={totalTrackedJobsCount}
+              totalCount={filteredTrackedJobs.length} // Pass the dynamic length of the filtered array
             />
           </div>
         </div>
