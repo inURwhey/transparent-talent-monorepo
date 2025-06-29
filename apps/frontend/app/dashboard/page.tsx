@@ -154,7 +154,7 @@ export default function UserDashboard() {
       if (payload.notes !== undefined) optimisticUpdate.user_notes = payload.notes;
       if (payload.applied_at !== undefined) optimisticUpdate.applied_at = payload.applied_at;
       if (payload.is_excited !== undefined) optimisticUpdate.is_excited = payload.is_excited;
-      if (payload.status_reason !== undefined) optimisticUpdate.status_reason = payload.status_reason; // Added optimistic update for status_reason
+      if (payload.status_reason !== undefined) optimisticUpdate.status_reason = payload.status_reason;
 
       setTrackedJobs(prev => prev.map(job =>
         job.tracked_job_id === trackedJobId
@@ -308,7 +308,7 @@ export default function UserDashboard() {
             </div>
             <DataTable
               columns={columns}
-              data={filteredTrackedJobs} {/* Use filtered data */}
+              data={filteredTrackedJobs}
               pagination={pagination}
               setPagination={setPagination}
               totalCount={totalTrackedJobsCount}
