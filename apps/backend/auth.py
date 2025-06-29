@@ -17,12 +17,35 @@ logger = logging.getLogger(__name__)
 
 # --- CONFIGURATION ---
 ISSUER_URL = os.getenv('CLERK_ISSUER_URL')
-# CLERK_AUTHORIZED_PARTY is now a comma-separated string of allowed frontend URLs
-# e.g., "https://prod.url,https://preview.url,http://localhost:3000"
-AUTHORIZED_PARTIES = [party.strip() for party in os.getenv('CLERK_AUTHORIZED_PARTY', '').split(',') if party.strip()]
 
-logger.info(f"Auth Module Init: ISSUER_URL = '{ISSUER_URL}'")
-logger.info(f"Auth Module Init: AUTHORIZED_PARTIES = {AUTHORIZED_PARTIES}")
+# Function to determine authorized parties based on VERCEL_ENV
+def get_authorized_parties():
+    vercel_env = os.getenv('VERCEL_ENV', 'development')  # Default to 'development' if not set
+    logger.info(f"VERCEL_ENV: {vercel_env}")
+
+    if vercel_env == 'production':
+        # Production: Use URLs from CLERK_AUTHORIZED_PARTY
+        parties = [party.strip() for party in os.getenv('CLERK_AUTHORIZED_PARTY', '').split(',') if party.strip()]
+        logger.info(f"Using production authorized parties: {parties}")
+        return parties
+    elif vercel_env == 'preview':
+        # Preview: Use the VERCEL_URL
+        vercel_url = os.getenv('VERCEL_URL')
+        if not vercel_url:
+            logger.warning("VERCEL_URL is not set in preview environment. Authentication may fail.")
+            return []  # Or handle this differently, e.g., return a default localhost URL
+        # VERCEL_URL does not include the protocol (https://), so prepend it
+        preview_url = f"https://{vercel_url}"
+        logger.info(f"Using preview authorized party: {preview_url}")
+        return [preview_url]
+    else:  # development
+        # Development: Use localhost
+        logger.info("Using development authorized party: http://localhost:3000")
+        return ["http://localhost:3000"]
+
+# Initialize authorized parties based on the environment
+AUTHORIZED_PARTIES = get_authorized_parties()
+
 
 jwks_client = None
 try:
@@ -77,10 +100,10 @@ def token_required(f):
             if not auth_header or not auth_header.startswith('Bearer '):
                 logger.warning("--> FAILURE: Auth header missing or invalid.")
                 return jsonify({"message": "Authorization header is missing or invalid"}), 401
-            
+
             token = auth_header.split(' ')[1]
             signing_key = jwks_client.get_signing_key_from_jwt(token)
-            
+
             # --- MODIFIED: Removed 'audience' parameter from jwt.decode ---
             # Manually validate 'azp' claim as Clerk issues 'azp' not 'aud'
             claims = jwt.decode(
@@ -98,12 +121,12 @@ def token_required(f):
                 raise jwt.InvalidAudienceError("Invalid authorized party.") # Using InvalidAudienceError for consistency
 
             logger.info("--> SUCCESS: Token claims validated (iss, azp, exp, nbf, iat).")
-            
+
             clerk_user_id = claims.get('sub')
             if not clerk_user_id:
                 logger.warning("--> FAILURE: Token is missing 'sub' claim.")
                 return jsonify({"message": "Invalid token: missing user ID (sub) claim"}), 401
-            
+
             conn = None
             try:
                 conn = get_db_connection()
@@ -116,7 +139,7 @@ def token_required(f):
                         if not user_email:
                             logger.error(f"Could not retrieve email for Clerk user {clerk_user_id}.")
                             return jsonify({"message": "Could not retrieve user email from Clerk"}), 500
-                        
+
                         cursor.execute("SELECT * FROM users WHERE email = %s AND clerk_user_id IS NULL", (user_email,))
                         user = cursor.fetchone()
                         if user:
