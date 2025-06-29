@@ -188,10 +188,10 @@ def submit_job():
             conn.commit()
             
             # *** MODIFIED: Corrected JOIN to fetch analysis for the specific user ***
-            # This prevents data leakage by joining on both job_id and user_id.
+            # Also fetch is_excited field for response
             cursor.execute("""
                 SELECT j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
-                       t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at,
+                       t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at, t.is_excited,
                        ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
                        ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
                 FROM jobs j 
@@ -208,6 +208,7 @@ def submit_job():
                 "tracked_job_id": new_job_row["tracked_job_id"], "status": new_job_row["status"],
                 "user_notes": new_job_row["user_notes"], "applied_at": new_job_row["applied_at"],
                 "created_at": new_job_row["created_at"],
+                "is_excited": new_job_row["is_excited"], # ADDED: is_excited to response
                 "ai_analysis": {
                     "position_relevance_score": new_job_row["position_relevance_score"],
                     "environment_fit_score": new_job_row["environment_fit_score"],
@@ -409,11 +410,11 @@ def get_tracked_jobs():
             total_count = cursor.fetchone()[0]
 
             # *** MODIFIED: Corrected JOIN to fetch analysis for the specific user ***
-            # This prevents data leakage by joining on both job_id and user_id.
+            # Also fetch is_excited field for response
             sql = """
                 SELECT 
                     j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
-                    t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at,
+                    t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at, t.is_excited, -- ADDED: t.is_excited
                     ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
                     ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
                 FROM jobs j
@@ -433,6 +434,7 @@ def get_tracked_jobs():
                     "tracked_job_id": row["tracked_job_id"], "status": row["status"],
                     "user_notes": row["user_notes"], "applied_at": row["applied_at"],
                     "created_at": row["created_at"],
+                    "is_excited": row["is_excited"], # ADDED: is_excited to response
                     "ai_analysis": None
                 }
                 if row["position_relevance_score"] is not None:
@@ -484,7 +486,8 @@ def add_tracked_job():
 def update_tracked_job(tracked_job_id):
     user_id = g.current_user['id']
     data = request.get_json()
-    if not data or not any(key in data for key in ['status', 'notes', 'applied_at']):
+    # MODIFIED: Added 'is_excited' to the list of fields to check for update data
+    if not data or not any(key in data for key in ['status', 'notes', 'applied_at', 'is_excited']):
         return jsonify({"error": "No update data provided"}), 400
     conn = get_db_connection()
     try:
@@ -502,6 +505,10 @@ def update_tracked_job(tracked_job_id):
             if 'applied_at' in data:
                 fields.append("applied_at = %s")
                 params.append(data['applied_at'])
+            # ADDED: Handle is_excited update
+            if 'is_excited' in data:
+                fields.append("is_excited = %s")
+                params.append(bool(data['is_excited'])) # Ensure it's a boolean
             if not fields:
                 return jsonify({"error": "No valid fields to update"}), 400
             sql = f"UPDATE tracked_jobs SET {', '.join(fields)} WHERE id = %s RETURNING *"
