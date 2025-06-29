@@ -6,12 +6,10 @@ import { useAuth, useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox'; // Added Checkbox import
+import { Checkbox } from '@/components/ui/checkbox';
 
 // --- COMPONENT & UTILITY IMPORTS ---
-// Removed DataTable and getColumns imports as they are not used on the profile page
-// import { DataTable } from '../data-table'; 
-// import { getColumns } from '../components/columns'; 
+// No changes here, still not using DataTable on profile page
 
 // --- TYPE DEFINITIONS ---
 interface Profile {
@@ -39,8 +37,8 @@ interface Profile {
     personality_16_personalities: string | null;
     personality_disc: string | null;
     personality_gallup_strengths: string | null;
-    preferred_work_style: string | null; // NEW FIELD
-    is_remote_preferred: boolean | null; // NEW FIELD
+    preferred_work_style: string | null;
+    is_remote_preferred: boolean | null;
 }
 
 // Define the shape of the data that can be sent to the PUT endpoint
@@ -93,20 +91,35 @@ export default function UserProfilePage() {
         fetchProfile();
     }, [isUserLoaded, isAuthLoaded, apiBaseUrl, authedFetch]);
 
+    // MODIFIED: Handle changes for all input types, including conditional logic for preferred_work_style
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { id, value } = e.target;
         setProfile(prev => {
             if (!prev) return null;
-            // For text/select fields, empty string means null
-            return { ...prev, [id]: value === '' ? null : value };
+            let updatedProfile = { ...prev };
+
+            // Handle value for text/select fields: empty string means null
+            updatedProfile = { ...updatedProfile, [id]: value === '' ? null : value };
+
+            // NEW LOGIC: If preferred_work_style is set to 'On-site', force is_remote_preferred to false
+            if (id === 'preferred_work_style') {
+                if (value === 'On-site') {
+                    updatedProfile.is_remote_preferred = false;
+                }
+                // If it changes *from* 'On-site' to something else,
+                // we don't implicitly change is_remote_preferred.
+                // The user can then manually set it back if they wish.
+            }
+
+            return updatedProfile;
         });
     }, []);
 
-    // NEW: Handle checkbox changes
+    // Handle checkbox changes (remains separate for clarity with onCheckedChange prop)
     const handleCheckboxChange = useCallback((id: keyof Profile, checked: boolean) => {
         setProfile(prev => {
             if (!prev) return null;
-            return { ...prev, [id]: checked }; // Checkbox value is a boolean
+            return { ...prev, [id]: checked };
         });
     }, []);
 
@@ -120,9 +133,9 @@ export default function UserProfilePage() {
 
         // Filter out fields that are not meant to be updated via this form or are internal
         const payload: ProfileUpdatePayload = { ...profile };
-        delete (payload as any).id; // Remove internal id
-        delete (payload as any).user_id; // Remove internal user_id
-        delete (payload as any).resume_url; // Resume URL handled separately (backlogged)
+        delete (payload as any).id;
+        delete (payload as any).user_id;
+        delete (payload as any).resume_url;
 
         try {
             const response = await authedFetch(`${apiBaseUrl}/api/profile`, {
@@ -136,10 +149,8 @@ export default function UserProfilePage() {
             }
 
             const updatedProfile: Profile = await response.json();
-            // Backend should return the full updated profile, re-set it to ensure consistency
             setProfile(updatedProfile);
             setSuccessMessage("Profile saved successfully!");
-            // Clear success message after a few seconds
             setTimeout(() => setSuccessMessage(null), 3000);
 
         } catch (err: any) {
@@ -154,7 +165,7 @@ export default function UserProfilePage() {
         return <div className="min-h-screen flex items-center justify-center">Loading profile...</div>;
     }
 
-    if (error && !profile) { // Show error if initial fetch failed and no profile data is available
+    if (error && !profile) {
         return (
             <div className="min-h-screen flex items-center justify-center text-center">
                 <div>
@@ -169,9 +180,7 @@ export default function UserProfilePage() {
             </div>
         );
     }
-    // If profile is null but no error, means it's still loading or just initialized.
-    // The initial loading state above should cover it.
-    if (!profile) return null; // Should not happen if isLoading handles initial state
+    if (!profile) return null;
 
     return (
         <main className="min-h-screen bg-gray-50 p-8 font-sans">
@@ -355,7 +364,7 @@ export default function UserProfilePage() {
                         <label htmlFor="preferred_company_size" className="block text-sm font-medium text-gray-700">Preferred Company Size</label>
                         <select
                             id="preferred_company_size"
-                            value={profile.preferred_company_size || 'null'} // Use 'null' string for actual null value
+                            value={profile.preferred_company_size || 'null'}
                             onChange={handleChange}
                             className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
                         >
@@ -368,12 +377,12 @@ export default function UserProfilePage() {
                         </select>
                     </div>
 
-                    {/* NEW: Preferred Work Style (Using native select) */}
+                    {/* Preferred Work Style (Using native select) */}
                     <div>
                         <label htmlFor="preferred_work_style" className="block text-sm font-medium text-gray-700">Preferred Work Style</label>
                         <select
                             id="preferred_work_style"
-                            value={profile.preferred_work_style || 'null'} // Use 'null' string for actual null value
+                            value={profile.preferred_work_style || 'null'}
                             onChange={handleChange}
                             className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
                         >
@@ -384,20 +393,23 @@ export default function UserProfilePage() {
                         </select>
                     </div>
 
-                    {/* NEW: Is Remote Preferred (Using Shadcn Checkbox) */}
-                    <div className="flex items-center space-x-2">
-                        <Checkbox
-                            id="is_remote_preferred"
-                            checked={profile.is_remote_preferred || false} // Default to false if null
-                            onCheckedChange={(checked: boolean) => handleCheckboxChange('is_remote_preferred', checked)}
-                        />
-                        <label
-                            htmlFor="is_remote_preferred"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                            I prefer remote work generally.
-                        </label>
-                    </div>
+                    {/* NEW: Is Remote Preferred (Using Shadcn Checkbox) - CONDITIONAL RENDERING */}
+                    {/* Only show this checkbox if preferred_work_style is NOT 'On-site' */}
+                    {profile.preferred_work_style !== 'On-site' && (
+                        <div className="flex items-center space-x-2">
+                            <Checkbox
+                                id="is_remote_preferred"
+                                checked={profile.is_remote_preferred || false}
+                                onCheckedChange={(checked: boolean) => handleCheckboxChange('is_remote_preferred', checked)}
+                            />
+                            <label
+                                htmlFor="is_remote_preferred"
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                                I prefer remote work generally.
+                            </label>
+                        </div>
+                    )}
 
                     {/* Ideal Work Culture */}
                     <div>
