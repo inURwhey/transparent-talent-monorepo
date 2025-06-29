@@ -10,8 +10,7 @@ import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 import json
-
-from auth import token_required
+import re
 
 # --- Initialization ---
 load_dotenv()
@@ -22,6 +21,8 @@ CORS(app, supports_credentials=True, expose_headers=["Authorization"])
 ANALYSIS_PROTOCOL_VERSION = '2.0'
 JOB_POSTING_MAX_AGE_DAYS = 60 # Job posting considered expired if found_at is older than this
 TRACKED_JOB_STALE_DAYS = 30 # Tracked job considered stale if no action (updated_at) in this many days
+# NEW: Regex for identifying known legacy malformed URLs
+LEGACY_URL_MALFORMED_PATTERN = re.compile(r"\s*\(.+\)|\(https?://.+?\)")
 
 # --- AI Configuration ---
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
@@ -35,58 +36,31 @@ def get_db_connection():
     if not db_url: raise ValueError("DATABASE_URL not set")
     return psycopg2.connect(db_url)
 
-# --- AI Helper Function ---
-def run_job_analysis(job_description_text, user_profile_text):
-    if not GEMINI_API_KEY:
-        raise ValueError("AI analysis cannot be run without GEMINI_API_KEY.")
-    model = genai.GenerativeModel('gemini-1.5-pro-latest')
-    
-    prompt = f"""
-        Analyze the following job description in the context of the provided user profile.
-        Your output MUST be a single, minified JSON object with no extra text or markdown.
-
-        USER PROFILE:
-        ---
-        {user_profile_text}
-        ---
-
-        JOB DESCRIPTION:
-        ---
-        {job_description_text}
-        ---
-
-        Based on "Protocol User-Driven Job Analysis v1.1", provide a comprehensive analysis.
-        The JSON object must have the following snake_case keys:
-        - "position_relevance_score": A number from 0-50.
-        - "environment_fit_score": A number from 0-50.
-        - "hiring_manager_view": A string, one of "Strong", "Possible", "Stretch", "Unlikely".
-        - "matrix_rating": A string, one of "A", "B", "C", "D", "F".
-        - "summary": A 2-4 sentence summary of the opportunity.
-        - "qualification_gaps": An array of 2-3 strings listing key qualification gaps.
-        - "recommended_testimonials": An array of 1-3 strings recommending impactful testimonials from the user's resume.
-        - "job_title": The official job title from the description.
-        - "company_name": The official company name from the description.
-    """
-    response = model.generate_content(prompt)
-    cleaned_response_text = response.text.strip().replace('```json', '').replace('```', '').strip()
-    return json.loads(cleaned_response_text)
-
 # --- Helper function to check URL validity ---
-def check_job_url_validity(url: str) -> bool:
+def check_job_url_validity(full_url_string: str) -> bool:
     """
-    Performs an HTTP HEAD request to check if a URL is reachable and returns a 2xx or 3xx status.
-    Uses a short timeout and handles common request exceptions.
+    Extracts a clean URL from a string and performs an HTTP HEAD request to check if it's reachable (2xx or 3xx status).
+    Handles cases where the string contains extra text or parentheses.
     """
+    # Regex to find a URL starting with http/https and ending before whitespace or common closing characters
+    # This regex is more robust for general cases, but the explicit legacy check is for specific patterns.
+    url_match = re.search(r"https?://[^\s)\]]+", full_url_string)
+    if not url_match:
+        app.logger.warning(f"No valid URL pattern found for HTTP request in string: {full_url_string}")
+        return False # No valid URL pattern that can be used for an HTTP request
+
+    clean_url = url_match.group(0) # Extract the matched URL part
+
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
-        response = requests.head(url, timeout=5, headers=headers, allow_redirects=True)
+        response = requests.head(clean_url, timeout=5, headers=headers, allow_redirects=True)
         # Consider 2xx and 3xx (redirects) status codes as valid/reachable
         return 200 <= response.status_code < 400
     except requests.exceptions.RequestException as e:
-        app.logger.warning(f"Error checking URL {url}: {e}")
+        app.logger.warning(f"Error checking URL '{clean_url}' extracted from '{full_url_string}': {e}")
         return False
     except Exception as e:
-        app.logger.error(f"Unexpected error in check_job_url_validity for {url}: {e}")
+        app.logger.error(f"Unexpected error in check_job_url_validity for '{clean_url}' extracted from '{full_url_string}': {e}")
         return False
 
 
@@ -116,7 +90,6 @@ def submit_job():
             if cursor.fetchone():
                 return jsonify({"error": "You are already tracking this job."}), 409
 
-            # --- MODIFIED: Added new profile columns to AI context ---
             profile_columns = [
                 "short_term_career_goal", "ideal_role_description", "core_strengths",
                 "skills_to_avoid", "preferred_industries", "industries_to_avoid",
@@ -142,13 +115,11 @@ def submit_job():
             }
             for col in profile_columns:
                 value = user_profile_row[col]
-                # Special handling for boolean 'is_remote_preferred' for AI context
                 if col == 'is_remote_preferred':
                     if value is True:
                         user_profile_parts.append(f"- {profile_labels[col]}: Yes, remote is preferred.")
                     elif value is False:
                         user_profile_parts.append(f"- {profile_labels[col]}: No, remote is not preferred.")
-                    # If None, don't add anything for this field
                 elif value and str(value).strip():
                     user_profile_parts.append(f"- {profile_labels[col]}: {value}")
 
@@ -170,9 +141,6 @@ def submit_job():
                 cursor.execute("INSERT INTO companies (name) VALUES (%s) RETURNING id", (company_name,))
                 company_id = cursor.fetchone()['id']
             
-            # --- MODIFIED: Insert/Update jobs with new status and last_checked_at ---
-            # When a job is submitted, its URL is implicitly checked and found active.
-            # So, set status to 'Active' and last_checked_at to now.
             cursor.execute("""
                 INSERT INTO jobs (company_id, company_name, job_title, job_url, source, status, last_checked_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -180,15 +148,12 @@ def submit_job():
                 company_id = EXCLUDED.company_id,
                 company_name = EXCLUDED.company_name,
                 job_title = EXCLUDED.job_title,
-                status = 'Active', -- Set to active if re-submitted or if it existed before
-                last_checked_at = %s -- Update check time on re-submission
+                status = 'Active',
+                last_checked_at = %s
                 RETURNING id;
             """, (company_id, company_name, job_title, job_url, 'User Submission', 'Active', datetime.now(timezone.utc), datetime.now(timezone.utc)))
             job_id = cursor.fetchone()['id']
             
-            # *** MODIFIED: Perform UPSERT for job_analyses on composite key (job_id, user_id) ***
-            # This correctly creates a new analysis or updates an existing one for the specific user.
-            # It also stores the version of the analysis protocol.
             cursor.execute("""
                 INSERT INTO job_analyses (job_id, user_id, analysis_protocol_version, position_relevance_score, environment_fit_score, hiring_manager_view, matrix_rating, summary, qualification_gaps, recommended_testimonials)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -210,14 +175,11 @@ def submit_job():
                 Json(analysis_result.get('recommended_testimonials', []))
             ))
             
-            # MODIFIED: Set status_reason to NULL for new tracked jobs
             cursor.execute("INSERT INTO tracked_jobs (user_id, job_id, status, status_reason) VALUES (%s, %s, %s, %s) RETURNING id;", (user_id, job_id, 'Saved', None))
             tracked_job_id = cursor.fetchone()['id']
             
             conn.commit()
             
-            # *** MODIFIED: Corrected JOIN to fetch analysis for the specific user ***
-            # Also fetch is_excited field for response, and new job status fields
             cursor.execute("""
                 SELECT j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
                        j.status as job_posting_status, j.last_checked_at,
@@ -241,7 +203,7 @@ def submit_job():
                 "user_notes": new_job_row["user_notes"], "applied_at": new_job_row["applied_at"],
                 "created_at": new_job_row["created_at"],
                 "is_excited": new_job_row["is_excited"],
-                "status_reason": new_job_row["status_reason"], # ADDED: status_reason to response
+                "status_reason": new_job_row["status_reason"],
                 "ai_analysis": {
                     "position_relevance_score": new_job_row["position_relevance_score"],
                     "environment_fit_score": new_job_row["environment_fit_score"],
@@ -395,7 +357,6 @@ def get_user_jobs():
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             excluded_companies = ['various', 'various companies', 'confidential']
-            # MODIFIED: Filter by job posting status to only show 'Active' ones by default
             sql = "SELECT id, company_name, job_title, job_url, source, status, last_checked_at FROM jobs WHERE LOWER(company_name) NOT IN %s AND status = 'Active' ORDER BY found_at DESC LIMIT 50"
             cursor.execute(sql, (tuple(excluded_companies),))
             jobs = [dict(row) for row in cursor.fetchall()]
@@ -428,7 +389,6 @@ def get_tracked_jobs():
             cursor.execute("SELECT COUNT(*) FROM tracked_jobs WHERE user_id = %s;", (user_id,))
             total_count = cursor.fetchone()[0]
 
-            # MODIFIED: Include status_reason in the select statement
             sql = """
                 SELECT 
                     j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
@@ -456,7 +416,7 @@ def get_tracked_jobs():
                     "user_notes": row["user_notes"], "applied_at": row["applied_at"],
                     "created_at": row["created_at"],
                     "is_excited": row["is_excited"],
-                    "status_reason": row["status_reason"], # ADDED: status_reason to response
+                    "status_reason": row["status_reason"],
                     "ai_analysis": None
                 }
                 if row["position_relevance_score"] is not None:
@@ -491,7 +451,6 @@ def add_tracked_job():
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            # MODIFIED: Include status_reason with NULL default
             cursor.execute(
                 "INSERT INTO tracked_jobs (user_id, job_id, status, status_reason) VALUES (%s, %s, %s, %s) RETURNING id;",
                 (user_id, job_id, 'Saved', None)
@@ -510,7 +469,6 @@ def add_tracked_job():
 def update_tracked_job(tracked_job_id):
     user_id = g.current_user['id']
     data = request.get_json()
-    # MODIFIED: Added 'status_reason' to the list of fields to check for update data
     if not data or not any(key in data for key in ['status', 'notes', 'applied_at', 'is_excited', 'status_reason']):
         return jsonify({"error": "No update data provided"}), 400
     conn = get_db_connection()
@@ -532,7 +490,6 @@ def update_tracked_job(tracked_job_id):
             if 'is_excited' in data:
                 fields.append("is_excited = %s")
                 params.append(bool(data['is_excited']))
-            # ADDED: Handle status_reason update
             if 'status_reason' in data:
                 fields.append("status_reason = %s")
                 params.append(data['status_reason'])
@@ -588,21 +545,20 @@ def check_job_urls():
         conn.autocommit = False
         cur = conn.cursor(cursor_factory=DictCursor)
 
-        # Select jobs that need checking based on last_checked_at or age
-        # Consider jobs with status 'Active', 'Expired - Unreachable', 'Expired - Time Based', 'Expired - Missing URL'
-        # to ensure they are re-evaluated.
-        # Prioritize jobs whose 'last_checked_at' is older than 24 hours.
         twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
         sixty_days_ago = datetime.now(timezone.utc) - timedelta(days=JOB_POSTING_MAX_AGE_DAYS)
         
+        # Select jobs that need checking based on last_checked_at or age
+        # Include all relevant statuses for re-evaluation
         cur.execute("""
             SELECT id, job_url, status, found_at
             FROM jobs
             WHERE last_checked_at IS NULL
                OR last_checked_at < %s
-               OR (status = 'Active' AND found_at < %s) -- Check active jobs that are too old
+               OR (status = 'Active' AND found_at < %s)
+               OR (job_url IS NOT NULL AND job_url != '' AND status = 'Active' AND %s ~ job_url) -- Look for legacy patterns in active jobs
             LIMIT 1000;
-        """, (twenty_four_hours_ago, sixty_days_ago))
+        """, (twenty_four_hours_ago, sixty_days_ago, LEGACY_URL_MALFORMED_PATTERN.pattern)) # Pass the pattern for WHERE clause
         
         jobs_to_check = cur.fetchall()
 
@@ -613,20 +569,27 @@ def check_job_urls():
             current_time_utc = datetime.now(timezone.utc)
             new_status = job['status'] # Start with current status
             
-            # 1. Handle missing URL
-            if not job['job_url']:
+            # Priority 1: Handle missing URL (NULL or empty string)
+            if not job['job_url'] or not job['job_url'].strip():
                 if job['status'] != 'Expired - Missing URL':
                     new_status = 'Expired - Missing URL'
                     app.logger.warning(f"Job ID {job['id']} has no job_url. Marking as '{new_status}'.")
                 else:
                     app.logger.info(f"Job ID {job['id']} already 'Expired - Missing URL'. Just updating check time.")
                 
+            # Priority 2: Handle known legacy malformed URLs
+            elif LEGACY_URL_MALFORMED_PATTERN.search(job['job_url']):
+                if job['status'] != 'Expired - Legacy Format':
+                    new_status = 'Expired - Legacy Format'
+                    app.logger.warning(f"Job ID {job['id']} URL '{job['job_url']}' matches legacy malformed pattern. Marking as '{new_status}'.")
+                else:
+                    app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' still 'Expired - Legacy Format'. Just updating check time.")
+            
+            # Priority 3: Standard URL validation for all other cases
             else:
-                # 2. Check URL reachability
                 is_valid_url = check_job_url_validity(job['job_url'])
 
                 if not is_valid_url:
-                    # URL is unreachable, mark as such
                     if job['status'] != 'Expired - Unreachable':
                         new_status = 'Expired - Unreachable'
                         app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' is unreachable. Marking as '{new_status}'.")
@@ -635,7 +598,6 @@ def check_job_urls():
                 else:
                     # URL is reachable, now check age
                     if job['found_at'] and job['found_at'] < sixty_days_ago:
-                        # Job is too old, mark as time-based expired
                         if job['status'] != 'Expired - Time Based':
                             new_status = 'Expired - Time Based'
                             app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' is too old (found_at). Marking as '{new_status}'.")
@@ -649,7 +611,6 @@ def check_job_urls():
                         else:
                             app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' is still 'Active'. Just updating check time.")
 
-            # Only update if status or last_checked_at needs to change
             if new_status != job['status'] or job['last_checked_at'] is None or job['last_checked_at'] < twenty_four_hours_ago:
                 cur.execute("""
                     UPDATE jobs
@@ -695,14 +656,12 @@ def check_tracked_job_expiration():
 
         thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=TRACKED_JOB_STALE_DAYS)
 
-        # Select tracked jobs that are not already in an 'expired' or 'final' status
-        # and whose 'updated_at' timestamp is older than 30 days.
         cur.execute("""
             SELECT id, user_id, status, status_reason, applied_at, created_at, updated_at
             FROM tracked_jobs
             WHERE status NOT IN ('Expired', 'Rejected', 'Offer', 'Accepted', 'Withdrawn')
               AND updated_at < %s
-            LIMIT 1000; -- Limit batch size for performance
+            LIMIT 1000;
         """, (thirty_days_ago,))
         
         jobs_to_check = cur.fetchall()
@@ -712,7 +671,6 @@ def check_tracked_job_expiration():
         for job in jobs_to_check:
             checked_count += 1
             
-            # Mark as 'Expired' and set reason if it's stale
             if job['status'] != 'Expired':
                 new_status = 'Expired'
                 new_reason = 'Stale - No action in 30 days'
