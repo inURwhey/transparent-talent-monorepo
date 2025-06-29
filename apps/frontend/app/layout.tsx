@@ -38,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider afterSignUpUrl="/dashboard/profile">
       <html lang="en">
         <body className={inter.className}>
           <Header />
