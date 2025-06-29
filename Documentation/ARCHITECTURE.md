@@ -2,7 +2,7 @@
 
 Transparent Talent is architected as a modern, decoupled, three-tier full-stack application, augmented by external services for authentication and generative AI. This is a professional and highly scalable design.
 
-![Transparent Talent Architecture Diagram](https://i.imgur.com/L1h2eU3.png)
+
 
 ## Tier 1: The Frontend (Client)
 
@@ -16,6 +16,7 @@ Transparent Talent is architected as a modern, decoupled, three-tier full-stack 
 *   **Technology:** Python with the Flask framework.
 *   **Purpose:** This is the "brain" of the application. It is responsible for all business logic, data processing, and security. It serves as the single, authoritative gateway to the database and other services.
 *   **How it Works:** It exposes a RESTful API with specific endpoints (e.g., `/api/users/profile`). It receives requests from the Frontend, validates the included JWT, interacts with the Database, calls external services, and sends back structured data (JSON) as a response.
+*   **Data Lifecycle Management:** The business logic for core entities follows a strictly defined state machine to ensure data integrity and predictable behavior. For a detailed breakdown of these state machines, see the **[Data Lifecycle Management](DATA_LIFECYCLE.md)** document.
 *   **Deployment:** Deployed as a web service on **Render**. It is connected to a production database and its deployment is automatically triggered by a git push to the main branch of the monorepo.
 
 ## Tier 3: The Database (Persistence Layer)

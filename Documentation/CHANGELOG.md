@@ -3,6 +3,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.20.0] - 2025-07-01 - Architectural Definition
+
+This release marks a significant architectural milestone. A comprehensive data lifecycle for the core `tracked_jobs` entity has been formally defined and documented, establishing a robust state machine that will govern all future application pipeline features. This work serves as the foundation for enhanced data integrity, advanced analytics, and new user-facing functionality.
+
+### Added
+-   **Architecture:** Created `Documentation/DATA_LIFECYCLE.md` to define a comprehensive state machine for the `tracked_jobs` entity. This foundational document includes explicit state definitions (e.g., `SAVED`, `INTERVIEWING`, `OFFER_NEGOTIATIONS`), controlled transition rules, key milestone timestamps (`applied_at`, `resolved_at`), and CRM-like features (`next_action_at`).
+
+### Changed
+-   **Documentation:** Refined and expanded the product backlog based on the data lifecycle planning session. The high-level "Define & Implement Data Lifecycle" epic was completed, and its implementation was broken down into several smaller, actionable tasks.
+-   **Documentation:** Added several new, high-value features to the backlog, including "Detailed Interview Stage Tracking", "AI-Assisted Offer Negotiation", and "User-set Reminders & Next Action Notifications".
+-   **Documentation:** Linked the `ARCHITECTURE.md` to the new `DATA_LIFECYCLE.md` document for better cross-reference.
+
 ## [v0.19.0] - 2025-06-30 - Automated Expiration & UI Filtering
 
 This release introduces robust backend automation for identifying and marking expired job postings and stale tracked applications, significantly improving data hygiene. The user interface has also been enhanced with new status displays and filtering options to help users manage their job pipeline more effectively. Critical authentication and frontend build issues were resolved to ensure application stability.

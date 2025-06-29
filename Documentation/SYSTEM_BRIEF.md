@@ -1,4 +1,4 @@
-# Transparent Talent: System Brief v1.8
+# Transparent Talent: System Brief v1.9
 
 ## 1. Core Vision & Business Model
 *   **Problem:** The job market is inefficient, opaque, and biased.
@@ -15,6 +15,7 @@
 *   **Architecture Style:** Decoupled three-tier application, managed in a **monorepo**.
 
 ## 3. Current Project Status
+*   **Architecture:** Formally defined and documented a comprehensive data lifecycle for tracked jobs in `DATA_LIFECYCLE.md`, creating a robust state machine that includes milestone timestamps, CRM-like functionality for next actions, and a foundation for future features like offer negotiation support and hiring funnel analytics.
 *   **Application is stable and functional on its production domain.** The application now features a public-facing landing page for new user acquisition and a fully functional, authenticated user dashboard.
 *   **Automated Data Hygiene & Expiration:** Automated processes are now in place to identify and update the status of expired job postings (based on URL validity, age, or legacy format) and stale tracked applications (based on inactivity).
 *   **Enhanced Job Tracker UI:** The "My Job Tracker" table displays clear statuses for job postings and tracked applications, including reasons for expiration. New filtering options allow users to efficiently view "All Jobs", "Active" or "Inactive" job applications, and "Active" or "Expired" job postings. The filtering and pagination now work cohesively.
@@ -32,11 +33,9 @@
 *   **UI/UX Improvement: Collapsible Profile Sections:** The User Profile page has been redesigned with collapsible sections for "Contact & Basic Information", "Career Aspirations", "Work Environment & Requirements", "Skills & Industry Focus", and "Personality & Self-Assessment", significantly improving the user experience for managing detailed profile data.
 
 ## 4. Immediate Backlog & Next Steps
-1.  **Backend: Define & Implement Comprehensive Data Lifecycle Management:** Define and implement a comprehensive lifecycle for core data entities (users, companies, jobs, applications) within the backend, including state transitions and impacts. This will be documented in `ARCHITECTURE.md` or a new linked file. (RICE: 2.7)
-2.  **Feature: Define & Verify New User Account Flow:** Define and implement a comprehensive and verified onboarding flow for new user accounts beyond basic profile creation. (RICE: 6000)
-3.  **UI/UX: Multi-step Archiving/Hiding Workflow for Tracked Jobs:** Implement a more robust user interface for managing and hiding tracked jobs beyond simple filtering, potentially involving a multi-step archiving process. (RICE: 3600)
+1.  **Refactor: Separate `tracked_jobs.status` into `status` and `status_reason` columns (with ENUMs):** The first implementation step of the new Data Lifecycle definition. This involves a database migration and refactoring backend logic. (RICE: 4.0)
+2.  **Refactor: Modularize Large Frontend/Backend Files:** Break down monolithic files like `app.py` and `page.tsx` into smaller, more maintainable service modules and components to improve code quality. (RICE: 300)
+3.  **Bugfix: Status dropdown not persisting/collapsing on render size:** Investigate and fix the UI issue where the status dropdown does not persist its state or collapses unexpectedly based on browser render size. (RICE: 10000)
 4.  **UI/UX: Refine "Inactive Applications" Filter and Status Display:** Refine the "Inactive Applications" filter to accurately reflect status categories like "Expired," "Rejected," "Withdrawn," and "Accepted." (RICE: 8000)
-5.  **Bugfix: Status dropdown not persisting/collapsing on render size:** Investigate and fix the UI issue where the status dropdown does not persist its state or collapses unexpectedly based on browser render size. (RICE: 10000)
-6.  **Feature: Cascading Expiration from Job Posting to Applications:** When a job posting is marked as `Expired` (e.g., `Unreachable`, `Time Based`, `Legacy Format`), automatically initiate an expiration process for all associated `tracked_jobs` for all users, potentially offering user notifications and options for manual archiving. (RICE: 2400)
-7.  **UI/UX: Complex Notification System for Job Expiration:** Develop a sophisticated notification system for job expiration events, potentially including in-app alerts, email notifications, and user preferences for opting in/out of bulk vs. individual notifications. (RICE: 1800)
-8.  **Platform: Job Posting Multi-Context Awareness (Cities, Sources):** Architecturally recognize and manage that the same job posting can occur in multiple cities and appear at multiple sources, ensuring the system has awareness of these different contexts. (RICE: 1.05)
+5.  **Feature: Define & Verify New User Account Flow:** Define and implement a comprehensive and verified onboarding flow for new user accounts beyond basic profile creation. (RICE: 6000)
+6.  **Feature: User-set Reminders & Next Action Notifications:** Implement the UI and backend logic for the new `next_action_at` and `next_action_notes` fields defined in the Data Lifecycle plan. (RICE: 4000)
