@@ -5,59 +5,68 @@
 
 ---
 
+## AI Model Column Definition
+The "AI Model" column indicates the estimated complexity and nuance required from the AI assistant (me) to generate and debug the code for a given feature. This helps in task prioritization and resource allocation for development assistance.
+
+*   **Flash:** The task is straightforward, involves well-defined patterns, and requires minimal nuanced understanding or complex multi-step reasoning from the AI assistant to generate the code and deployment instructions. Typically involves standard CRUD operations, simple UI components, or clear logical flows.
+*   **Pro:** The task is complex, requires deeper contextual understanding, nuanced code generation, advanced debugging strategies, or involves significant architectural decisions from the AI assistant's perspective. This might include optimizing complex algorithms, designing sophisticated data structures, or tackling tricky cross-service integrations.
+*   **N/A:** The task is primarily conceptual, strategic, or involves manual work that does not require the AI assistant's direct code generation assistance.
+
+---
+
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Refactor: Separate `tracked_jobs.status` into `status` and `status_reason` columns (with ENUMs)** | 1 | 3 | 100% | 0.75 | **4.0** | N/A | **To Do** |
+| **Refactor: Separate `tracked_jobs.status` into `status` and `status_reason` columns (with ENUMs)** | 1 | 3 | 100% | 0.75 | **4.0** | Flash | **To Do** |
 | **Backend: Scheduled Job URL Validity Checks & Status Updates** | 1 | 2 | 100% | 0.5 | **4.0** | Flash | **To Do** |
-| **Backend: Define & Implement Comprehensive Data Lifecycle Management** | 1 | 3 | 90% | 1.0 | **2.7** | N/A | **To Do** |
+| **Backend: Define & Implement Comprehensive Data Lifecycle Management** | 1 | 3 | 90% | 1.0 | **2.7** | Pro | **To Do** |
 
 
 ## Tier 2: Core User Experience & Differentiation
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | N/A | **To Do** |
-| **Feature: User Profile Onboarding & Data Input** | 1000 | 3 | 100% | 0.75 | **4000** | N/A | **To Do** |
-| **UI/UX: User-Controlled Job Archiving & Expiration Notifications** | 1000 | 2 | 90% | 0.5 | **3600** | N/A | **To Do** |
-| **UI/UX: 'Jobs for You' Module Restoration** | 1000 | 3 | 90% | 0.75 | **3600** | N/A | **To Do** |
-| **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | N/A | **To Do** |
+| **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | **To Do** |
+| **Feature: User Profile Onboarding & Data Input** | 1000 | 3 | 100% | 0.75 | **4000** | Flash | **To Do** |
+| **UI/UX: User-Controlled Job Archiving & Expiration Notifications** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | **To Do** |
+| **UI/UX: 'Jobs for You' Module Restoration** | 1000 | 3 | 90% | 0.75 | **3600** | Flash | **To Do** |
+| **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | Flash | **To Do** |
 | **Feature: Automated Application Status Expiration & Notifications** | 1000 | 2 | 90% | 0.75 | **2400** | Flash | **To Do** |
 | **Backend: Automated App Expiration** | 1000 | 1 | 100% | 0.25 | **4000** | Flash | **To Do** |
-| **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | Flash | **To Do** |
-| **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | N/A | **To Do** |
+| **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | Pro | **To Do** |
+| **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | Pro | **To Do** |
 
 
 ## Tier 3: AI & System Intelligence (Mid-Term)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Feature: Instant Analysis for Known Jobs**| 1000 | 2 | 100% | 0.5 | **4000** | Pro | **To Do** |
-| **Automation: Tiered Job Analysis (Lightweight Pre-Screening + Detailed AI)** | 1000 | 3 | 90% | 1.5 | **1800** | Flash & Pro | **To Do** |
+| **Automation: Tiered Job Analysis (Lightweight Pre-Screening + Detailed AI)** | 1000 | 3 | 90% | 1.5 | **1800** | Pro | **To Do** |
 | **Automation: Full API Job Analysis**| 1000 | 3 | 90% | 2.0 | **1350** | Pro | **To Do** |
 | **Feature: Proactive Anomaly Detection**| 1000 | 3 | 90% | 2.5 | **1080** | Pro | **To Do** |
-| **Feature: Automated Job Sourcing (Email/Platform Integration)** | 1000 | 2 | 90% | 0.75 | **900** | Flash | **To Do** |
+| **Feature: Automated Job Sourcing (Email/Platform Integration)** | 1000 | 2 | 90% | 0.75 | **900** | Pro | **To Do** |
 | **Documentation: Codify Industry Standards in Protocols** | 1 | 3 | 90% | 0.25 | **10.8** | N/A | **To Do** |
-| **Feature: "User News" Sourcing** | 1000 | 2 | 90% | 2.0 | **900** | Flash | **To Do** |
-| **AI: Multi-Model Verification**| 1000 | 2 | 90% | 2.0 | **900** | Flash & Pro | **To Do** |
+| **Feature: "User News" Sourcing** | 1000 | 2 | 90% | 2.0 | **900** | Pro | **To Do** |
+| **AI: Multi-Model Verification**| 1000 | 2 | 90% | 2.0 | **900** | Pro | **To Do** |
 | **Feature: Verifiable Outcomes**| 1000 | 3 | 80% | 3.0 | **800** | Pro | **To Do** |
-| **Backend: Automated News Sourcing** | 1000 | 1 | 90% | 2.0 | **450** | Flash | **To Do** |
-| **Backend: System-Wide Staleness Logic** | 1000 | 1 | 100% | 0.5 | **2000** | Flash | **To Do** |
+| **Backend: Automated News Sourcing** | 1000 | 1 | 90% | 2.0 | **450** | Pro | **To Do** |
+| **Backend: System-Wide Staleness Logic** | 1000 | 1 | 100% | 0.5 | **2000** | Pro | **To Do** |
 | **Feature: "Transparent Rejection"**| 1000 | 3 | 80% | 2.0 | **1200** | Pro | **To Do** |
-| **Feature: Browser Extension** | 500 | 2 | 80% | 3.0 | **267** | N/A | **To Do** |
+| **Feature: Browser Extension** | 500 | 2 | 80% | 3.0 | **267** | Pro | **To Do** |
 | **AI: Full Data Leverage Mandate** | 1 | 3 | 90% | 1.0 | **2.7** | N/A | **To Do** |
 | **AI: Automated Prompt QA System** | 1 | 3 | 80% | 3.0 | **0.8** | Pro | **To Do** |
-| **Backend: DB-Driven AI Protocols** | 1 | 2 | 100% | 0.5 | **4.0** | N/A | **To Do** |
+| **Backend: DB-Driven AI Protocols** | 1 | 2 | 100% | 0.5 | **4.0** | Pro | **To Do** |
 
 ## Tier 4: Future Vision & Long-Term bets
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Infra: Background Jobs w/ Redis** | 1000 | 2 | 100% | 1.5 | **1333** | N/A | **To Do** |
-| **Platform: Business Certification** | 5000 | 3 | 50% | 6.0 | **1250** | Pro | **To Do** |
+| **Infra: Background Jobs w/ Redis** | 1000 | 2 | 100% | 1.5 | **1333** | Pro | **To Do** |
+| **Platform: Business Certification** | 5000 | 3 | 50% | 6.0 | **1250** | N/A | **To Do** |
 | **AI: User & Job Clustering for Proactive Matching** | 1000 | 3 | 70% | 4.0 | **525** | Pro | **To Do** |
 | **Business: Tier AI Features by Model Cost/Capability** | 200 | 1 | 80% | 0.5 | **320** | N/A | **To Do** |
 | **Platform: System-Wide Analysis from User Submissions**| 1000 | 3 | 80% | 4.0 | **600** | Pro | **To Do** |
 | **Platform: System-Wide Relevance Calc**| 1000 | 3 | 90% | 6.0 | **450** | Pro | **To Do** |
-| **Revenue: "Bring Your Own Key" (BYOK) Model** | 200 | 1 | 70% | 0.5 | **280** | N/A | **To Do** |
-| **Platform: Data Access for Biz** | 1000 | 3 | 50% | 6.0 | **250** | N/A | **To Do** |
+| **Revenue: "Bring Your Own Key" (BYOK) Model** | 200 | 1 | 70% | 0.5 | **280** | Pro | **To Do** |
+| **Platform: Data Access for Biz** | 1000 | 3 | 50% | 6.0 | **250** | Pro | **To Do** |
 | **BI: ML User/Company Clustering** | 10 | 3 | 80% | 4.0 | **6.0** | Pro | **To Do** |
 
 ---

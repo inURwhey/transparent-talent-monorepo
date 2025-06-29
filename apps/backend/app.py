@@ -1,3 +1,4 @@
+# Path: apps/backend/app.py
 import os
 import psycopg2
 from psycopg2.extras import DictCursor, Json
@@ -247,10 +248,98 @@ def get_user_profile():
                 profile = cursor.fetchone() # Fetch the newly created profile
                 conn.commit() # Commit the insert operation
             
-            return jsonify(dict(profile))
+            # Ensure all profile fields are returned, even if null, so frontend doesn't break expecting keys
+            # Convert DictRow to a plain dictionary, replacing None with empty string for text fields
+            # (or keeping None for other types if that's preferred by frontend)
+            profile_dict = {}
+            if profile:
+                for col in cursor.description:
+                    col_name = col.name
+                    value = profile[col_name]
+                    # Convert None to empty string for text fields for frontend convenience
+                    if col_name in ['full_name', 'current_location', 'linkedin_profile_url', 'resume_url',
+                                    'short_term_career_goal', 'long_term_career_goals', 'desired_annual_compensation',
+                                    'desired_title', 'ideal_role_description', 'preferred_company_size',
+                                    'ideal_work_culture', 'disliked_work_culture', 'core_strengths',
+                                    'skills_to_avoid', 'non_negotiable_requirements', 'deal_breakers',
+                                    'preferred_industries', 'industries_to_avoid', 'personality_adjectives',
+                                    'personality_16_personalities', 'personality_disc', 'personality_gallup_strengths'] and value is None:
+                        profile_dict[col_name] = ""
+                    else:
+                        profile_dict[col_name] = value
+            
+            return jsonify(profile_dict)
     except Exception as e:
         print(f"ERROR in get_user_profile: {str(e)}")
         return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/profile', methods=['PUT'])
+@token_required
+def update_user_profile():
+    user_id = g.current_user['id']
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided for profile update"}), 400
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=DictCursor) as cursor:
+            # Check if profile exists, if not, create it first (though GET /api/profile should ensure this)
+            cursor.execute("SELECT id FROM user_profiles WHERE user_id = %s", (user_id,))
+            existing_profile = cursor.fetchone()
+            if not existing_profile:
+                # This should ideally not happen if GET /api/profile is called first for new users
+                cursor.execute("INSERT INTO user_profiles (user_id) VALUES (%s) RETURNING id;", (user_id,))
+                conn.commit() # Commit the insert to ensure it exists for the update
+            
+            # Build dynamic UPDATE query
+            fields_to_update = []
+            params = []
+            
+            # Define allowed fields that can be updated for security and schema alignment
+            allowed_profile_fields = [
+                "full_name", "current_location", "linkedin_profile_url", "resume_url",
+                "short_term_career_goal", "long_term_career_goals", "desired_annual_compensation",
+                "desired_title", "ideal_role_description", "preferred_company_size",
+                "ideal_work_culture", "disliked_work_culture", "core_strengths",
+                "skills_to_avoid", "non_negotiable_requirements", "deal_breakers",
+                "preferred_industries", "industries_to_avoid", "personality_adjectives",
+                "personality_16_personalities", "personality_disc", "personality_gallup_strengths"
+            ]
+
+            for field, value in data.items():
+                if field in allowed_profile_fields:
+                    fields_to_update.append(f"{field} = %s")
+                    params.append(value)
+            
+            if not fields_to_update:
+                return jsonify({"message": "No valid profile fields to update"}), 200 # No changes needed
+
+            sql = f"UPDATE user_profiles SET {', '.join(fields_to_update)} WHERE user_id = %s RETURNING *;"
+            params.append(user_id)
+            
+            cursor.execute(sql, tuple(params))
+            updated_profile = cursor.fetchone()
+            conn.commit()
+
+            if updated_profile:
+                profile_dict = {}
+                for col in cursor.description:
+                    profile_dict[col.name] = updated_profile[col.name]
+                return jsonify(profile_dict), 200
+            else:
+                return jsonify({"error": "Failed to update profile or profile not found."}), 500
+
+    except psycopg2.Error as e:
+        conn.rollback()
+        print(f"DATABASE ERROR in update_user_profile: {e}")
+        return jsonify({"error": "A database error occurred."}), 500
+    except Exception as e:
+        conn.rollback()
+        print(f"An unexpected error occurred in update_user_profile: {e}")
+        return jsonify({"error": "An internal server error occurred."}), 500
     finally:
         conn.close()
 
