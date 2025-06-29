@@ -257,10 +257,27 @@ export default function UserDashboard() {
   // --- COLUMN DEFINITIONS ---
   const columns = useMemo(() => getColumns({ handleStatusChange, handleRemoveJob, handleToggleExcited }), [handleStatusChange, handleRemoveJob, handleToggleExcited]);
 
-  // --- RENDER LOGIC ---
-  if (!isUserLoaded) return <div className="min-h-screen flex items-center justify-center">Initializing session...</div>
-  if (isLoading && trackedJobs.length === 0 && totalTrackedJobsCount === 0) return <div className="min-h-screen flex items-center justify-center">Loading Dashboard Data...</div>
-  if (debugError) return (<div className="min-h-screen flex items-center justify-center text-center"><div><h2 className="text-xl font-semibold text-red-600">An Error Occurred</h2><p className="text-gray-600 mt-2">There was an issue loading your dashboard data.</p><p className="text-sm mt-4 text-red-700 font-mono bg-red-50 p-4 rounded-md"><strong>Error Details:</strong> {debugError}</p></div></div>);
+    // --- RENDER LOGIC ---
+  // Ensure the below block is exactly as provided, replacing the existing 'RENDER LOGIC' section.
+  if (!isUserLoaded) {
+    return <div className="min-h-screen flex items-center justify-center">Initializing session...</div>;
+  }
+  if (isLoading && trackedJobs.length === 0 && totalTrackedJobsCount === 0) {
+    return <div className="min-h-screen flex items-center justify-center">Loading Dashboard Data...</div>;
+  }
+  if (debugError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-center">
+        <div>
+          <h2 className="text-xl font-semibold text-red-600">An Error Occurred</h2>
+          <p className="text-gray-600 mt-2">There was an issue loading your dashboard data.</p>
+          <p className="text-sm mt-4 text-red-700 font-mono bg-red-50 p-4 rounded-md">
+            <strong>Error Details:</strong> {debugError}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
@@ -315,7 +332,7 @@ export default function UserDashboard() {
               data={filteredTrackedJobs}
               pagination={pagination}
               setPagination={setPagination}
-              totalCount={totalTrackedJobsCount} {/* This will now reflect the filtered count */}
+              totalCount={totalTrackedJobsCount}
             />
           </div>
         </div>
