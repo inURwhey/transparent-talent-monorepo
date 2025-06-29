@@ -27,7 +27,8 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | **To Do** |
-| **Refine UI Components: Implement Shadcn UI for Textarea, Label, and Select** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | **To Do** |
+| **Feature: Redirect Signup to Profile Page** | 1000 | 3 | 100% | 0.25 | **12000** | Flash | **To Do** |
+| **UI/UX: Add "Excited?" Favorite Column to Job Tracker** | 1000 | 2 | 90% | 0.25 | **7200** | Flash | **To Do** |
 | **UI/UX: User-Controlled Job Archiving & Expiration Notifications** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | **To Do** |
 | **UI/UX: 'Jobs for You' Module Restoration** | 1000 | 3 | 90% | 0.75 | **3600** | Flash | **To Do** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | Flash | **To Do** |
@@ -78,6 +79,12 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 ## Completed Features & Bugfixes
 *This section lists all completed features and bugfixes, categorized by the release version they were delivered in, in reverse chronological order.*
 
+### [v0.16.0] - 2025-06-30 - Shadcn UI Refinement & Core Component Installation
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Refine UI Components: Implement Shadcn UI for Textarea, Label, and Select** | T2 | 8000 |
+| **UI/UX Polish: Add Dashboard Link to Profile Page** | UI/UX Polish | 10000 |
+
 ### [v0.15.0] - 2025-06-30 - User Profile Work Style & Remote Preferences
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
@@ -126,7 +133,7 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 ### [v0.7.0] - 2025-06-28
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
-| **UI: Tabular Job Tracker** | T2 | 4000 |
+| **UI: Interactive Job Tracker** | T2 | 4000 |
 
 ### [v0.6.0] - 2025-06-28
 | Feature/Bugfix | Original Tier | RICE Score |

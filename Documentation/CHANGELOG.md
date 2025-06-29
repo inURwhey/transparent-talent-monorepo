@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.16.0] - 2025-06-30 - Shadcn UI Refinement & Core Component Installation
+
+This release focuses on improving the user interface consistency by adopting Shadcn UI components more broadly across the application and establishing foundational UI components for future development.
+
+### Added
+-   **UI Components:** Installed core Shadcn UI components (`label`, `textarea`, `select`) in `apps/frontend`, configuring `components.json` with `Zinc` as the base color.
+
+### Changed
+-   **Frontend UI:** Replaced all native HTML `<label>`, `<textarea>`, and `<select>` elements with their corresponding Shadcn UI components (`Label`, `Textarea`, `Select`) on the User Profile management page (`apps/frontend/app/dashboard/profile/page.tsx`).
+-   **Frontend UI:** Updated the "Paste Job Posting URL" label on the main Dashboard page (`apps/frontend/app/dashboard/page.tsx`) to use the Shadcn UI `Label` component.
+
+### Fixed
+-   No specific bugs were identified or fixed in this release; changes were feature-driven.
+
 ## [v0.15.0] - 2025-06-30 - User Profile Work Style & Remote Preferences
 
 This release introduces new user profile fields to capture preferred work style and remote preferences, enhancing the context for future AI job matching. It also refines the user interface for these new fields to prevent logical inconsistencies.

@@ -26,13 +26,15 @@
 *   **Data Integrity & AI Analysis Hardening:** The database schema for `job_analyses` has been significantly hardened to correctly support per-user job analyses and include protocol versioning. Backend logic has been updated to align with this new schema. Historical data with invalid job URLs has been identified and marked as 'Expired - Unreachable' to maintain a clean and accurate user dashboard.
 *   **User Profile Management:** A comprehensive user profile management page has been implemented, allowing users to input and update their detailed career preferences, essential for personalized AI analysis. Associated backend API and navigation have been established. Frontend build stability for this page has been significantly improved by resolving module import errors.
 *   **Work Style & Remote Preferences:** Users can now specify their `preferred_work_style` (e.g., On-site, Remote, Hybrid) and a general `is_remote_preferred` flag within their profile. The UI for these fields intelligently adapts to prevent conflicting inputs, and this information is now fed to the AI for improved job analysis relevance.
+*   **Shadcn UI Integration:** Key UI components (labels, text areas, and select dropdowns) have been fully migrated to use Shadcn UI components across the profile and dashboard pages, enhancing visual consistency and project maintainability.
 
 ## 4. Immediate Backlog & Next Steps
-1.  **Backend: Enhance Job Data for AI Matching:** Build out jobs profile to include location, remote status, and other pertinent details to assist with user:job matching. (RICE: 12000)
-2.  **Refine UI Components: Implement Shadcn UI for Textarea, Label, and Select:** (RICE: 8000)
-3.  **Feature: Define & Verify New User Account Flow:** Define and implement a comprehensive and verified onboarding flow for new user accounts beyond basic profile creation. (RICE: 6000)
-4.  **UI/UX: User-Controlled Job Archiving & Expiration Notifications:** Implement a 2-step process to expire and hide tracked jobs, including user notifications for "ghosted" applications. (RICE: 3600)
-5.  **UI/UX: 'Jobs for You' Module Restoration:** Ensure the "Jobs for You" module is present, visible, and sorted by relevancy on the user dashboard. (RICE: 3600)
-6.  **UI: Transparent Relevance Scorecard:** Design and build the collapsible UI component that displays the detailed factors behind a job's score. (RICE: 3000)
-7.  **Feature: Automated Application Status Expiration & Notifications:** Implement a mechanism to automatically flag or hide job postings that are likely no longer valid after a certain period, specifically for application statuses. (RICE: 2400)
-8.  **Backend: Automated App Expiration:** Create a mechanism to automatically flag or hide job postings that are likely no longer valid after a certain period. (RICE: 4000)
+1.  **Feature: Redirect Signup to Profile Page:** Define and implement a comprehensive and verified onboarding flow for new user accounts beyond basic profile creation. (RICE: 12000)
+2.  **Backend: Enhance Job Data for AI Matching:** Build out jobs profile to include location, remote status, and other pertinent details to assist with user:job matching. (RICE: 12000)
+3.  **UI/UX: Add "Excited?" Favorite Column to Job Tracker:** Implement a true/false check column on the job tracker to allow users to favorite applications. (RICE: 7200)
+4.  **Feature: Define & Verify New User Account Flow:** Define and implement a comprehensive and verified onboarding flow for new user accounts beyond basic profile creation. (RICE: 6000)
+5.  **UI/UX: User-Controlled Job Archiving & Expiration Notifications:** Implement a 2-step process to expire and hide tracked jobs, including user notifications for "ghosted" applications. (RICE: 3600)
+6.  **UI/UX: 'Jobs for You' Module Restoration:** Ensure the "Jobs for You" module is present, visible, and sorted by relevancy on the user dashboard. (RICE: 3600)
+7.  **UI: Transparent Relevance Scorecard:** Design and build the collapsible UI component that displays the detailed factors behind a job's score. (RICE: 3000)
+8.  **Feature: Automated Application Status Expiration & Notifications:** Implement a mechanism to automatically flag or hide job postings that are likely no longer valid after a certain period, specifically for application statuses. (RICE: 2400)
+9.  **Backend: Automated App Expiration:** Create a mechanism to automatically flag or hide job postings that are likely no longer valid after a certain period. (RICE: 4000)
