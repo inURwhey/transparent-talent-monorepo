@@ -1,241 +1,45 @@
-# Transparent Talent: Product Backlog & Roadmap v1.11
+# Transparent Talent: Business Plan v1.3
 
-## Unrefined Ideas & Brainstorming
-*This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
+## 1. Executive Summary
+Transparent Talent is poised to revolutionize the global talent marketplace by introducing a layer of objective, standardized, and two-way transparency. Beginning as a solution for individual job seekers, our vision is to become the "Nielsen for talent," providing verified, multi-dimensional data for both candidates and businesses. We aim to replace subjective, keyword-driven hiring with explicit relevance calculations, reducing friction, bias, and wasted effort across the entire talent ecosystem.
 
-- Feature: Bulk Actions for Tracked Jobs (e.g., Bulk Status Update, Bulk Delete)
-- Platform: Standard Business Email Addresses
-- Marketing: LinkedIn Company Profile
-- Backend: Build out job profiles and the import process to store important information
-- Backend: Build out user, company, and job lifecycles
+## 2. Problem Statement: The Broken Talent Market
+Today's job market is fundamentally inefficient and opaque, suffering from systemic failures that harm both job seekers and employers, including: overwhelming noise on job boards, opaque matching algorithms, information asymmetry, and subjective bias in hiring decisions. This results in massive economic inefficiency, high time-to-hire, poor candidate experience, and suboptimal talent allocation.
 
----
+## 3. Solution: The "Nielsen for Talent"
+Our solution evolves through two phases:
+*   **Short-Term (Individual Empowerment):** An AI-powered framework that provides individuals with a systematic methodology to evaluate job opportunities. This phase has three core pillars:
+    1.  **AI-Powered Scoring:** We evaluate jobs submitted by the user or found by the system.
+    2.  **Dynamic Feedback Loop:** The system incorporates direct user feedback (e.g., thumbs-up/down on matches) to continuously learn and refine its understanding of a user's nuanced preferences.
+    3.  **Proactive Anomaly Detection:** The platform actively identifies and flags inconsistencies between a user's stated goals and their behavior (e.g., watchlisting misaligned companies). This serves as a career clarity tool and creates natural opportunities for AI-driven or human coaching interventions.
+*   **Long-Term (Marketplace Infrastructure):** A foundational, transparent layer for the entire talent ecosystem.
+    *   **System-Wide Relevance Engine:** When a job enters our system from any source, we will automatically calculate its relevance for *every user on the platform*. This creates a constantly updated, personalized feed of opportunities and builds a unique, proprietary dataset.
+    *   **Standardized Profiles & Verification:** We will offer verified, multi-dimensional profiles for both candidates and businesses to enable fair, efficient matching.
 
-## AI Model Column Definition
-The "AI Model" column indicates the estimated complexity and nuance required from the AI assistant (me) to generate and debug the code for a given feature. This helps in task prioritization and resource allocation for development assistance.
+## 4. Vision & Mission
+*   **Vision:** To create a global talent marketplace built on objective, two-way transparency, where every individual finds a fulfilling role and every organization finds the perfect talent.
+*   **Mission:** To empower individuals and businesses with a transparent, data-driven framework for talent matching, ultimately creating a more efficient and equitable talent ecosystem.
 
-*   **Flash:** The task is straightforward, involves well-defined patterns, and requires minimal nuanced understanding or complex multi-step reasoning from the AI assistant to generate the code and deployment instructions. Typically involves standard CRUD operations, simple UI components, or clear logical flows.
-*   **Pro:** The task is complex, requires deeper contextual understanding, nuanced code generation, advanced debugging strategies, or involves significant architectural decisions from the AI assistant's perspective. This might include optimizing complex algorithms, designing sophisticated data structures, or tackling tricky cross-service integrations.
-*   **N/A:** The task is primarily conceptual, strategic, or involves manual work that does not require the AI assistant's direct code generation assistance.
+## 5. Founding Philosophy
+Transparent Talent is founded on the belief that if a company's core mission is not justice, it will not prioritize creating it. Our purpose is to build a company where justice *is* the purpose of its existence. We challenge the "meritocracy myth" by focusing on objective, standardized metrics to foster more equitable opportunities. We also directly confront the inefficiencies of the **bloated and complacent recruiting industry, which thrives on opaque practices and information asymmetry.** By creating radical, two-way transparency, we aim to make many traditional recruiting functions redundant, capturing market share by providing a more efficient and just alternative.
 
----
+This conviction is fueled by a unique market insight: **companies and individuals are thinking too small about AI's potential.** They don't yet see at scale how the paradigm of what one informed and passionate individual can achieve has fundamentally shifted. The timeframe for the broader market to understand this shift appears to be on the order of years, not months. This creates a temporary but powerful window of opportunity for those brave enough to seize the moment—to build the proof of concept and establish a new standard before the incumbents can react. This market dislocation is the driving force behind the founding of Transparent Talent.
 
-## Tier 1: Foundational Infrastructure (Highest Priority)
-| Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Refactor: Separate `tracked_jobs.status` into `status` and `status_reason` columns (with ENUMs)** | 1 | 3 | 100% | 0.75 | **4.0** | Flash | **To Do** |
-| **Backend: Scheduled Job URL Validity Checks & Status Updates** | 1 | 2 | 100% | 0.5 | **4.0** | Flash | **To Do** |
-| **Refactor: Modularize Large Frontend/Backend Files (e.g., `dashboard/page.tsx`, `app.py`)** | 1 | 3 | 100% | 1.0 | **300** | Pro | **To Do** |
-| **Backend: Define & Implement Comprehensive Data Lifecycle Management** | 1 | 3 | 90% | 1.0 | **2.7** | Pro | **To Do** |
+## 6. Market Analysis & Competition
+The global HR technology market is vast, but our true target is the **market share held by traditional recruitment agencies and their outdated models.** While we have adjacent competitors in AI Job Assistants and Talent Marketplaces, our key differentiator is our mission to **disintermediate** the hiring process. Our "Nielsen for Talent" model, which makes matching logic explicit to both parties, is a direct threat to business models that rely on gatekeeping and opaqueness.
 
+## 7. Products & Services (Revenue Streams)
+Our model evolves from B2C to a B2B and ecosystem focus.
+*   **Individual Tier:** Freemium model with paid tiers for advanced, personalized framework implementation and coaching.
+*   **Business Tier:**
+    *   **Business Certification:** Annual fees for accrediting organizations committed to transparent and equitable hiring practices.
+    *   **Data Access:** Subscription fees for businesses to access the standardized, verified "Nielsen for talent" data layer.
+    *   **Enterprise Solutions:** High-value implementation packages for creating internal transparent marketplaces, improving retention, and reducing bias.
+*   **Partner Tier:** Licensing and certification programs for career coaches and outplacement firms.
 
-## Tier 2: Core User Experience & Differentiation
-| Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | **To Do** |
-| **UI/UX: User-Controlled Job Archiving & Expiration Notifications** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | **To Do** |
-| **UI/UX: 'Jobs for You' Module Restoration** | 1000 | 3 | 90% | 0.75 | **3600** | Flash | **To Do** |
-| **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | Flash | **To Do** |
-| **Feature: Automated Application Status Expiration & Notifications** | 1000 | 2 | 90% | 0.75 | **2400** | Flash | **To Do** |
-| **Feature: Geo-location for User's Current Location** | 1000 | 2 | 90% | 0.75 | **2400** | Pro | **To Do** |
-| **Backend: Automated App Expiration** | 1000 | 1 | 100% | 0.25 | **4000** | Flash | **To Do** |
-| **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | Pro | **To Do** |
-| **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | Pro | **To Do** |
-
-
-## Tier 3: AI & System Intelligence (Mid-Term)
-| Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Backend: Enhance Job Data for AI Matching** | 1000 | 3 | 100% | 0.5 | **12000** | Pro | **To Do** |
-| **Feature: Instant Analysis for Known Jobs**| 1000 | 2 | 100% | 0.5 | **4000** | Pro | **To Do** |
-| **Automation: Tiered Job Analysis (Lightweight Pre-Screening + Detailed AI)** | 1000 | 3 | 90% | 1.5 | **1800** | Pro | **To Do** |
-| **Feature: LinkedIn Profile/Resume Content Extraction & AI Parsing** | 1000 | 3 | 80% | 1.5 | **1600** | Pro | **To Do** |
-| **Automation: Full API Job Analysis**| 1000 | 3 | 90% | 2.0 | **1350** | Pro | **To Do** |
-| **Feature: Proactive Anomaly Detection**| 1000 | 3 | 90% | 2.5 | **1080** | Pro | **To Do** |
-| **Feature: Automated Job Sourcing (Email/Platform Integration)** | 1000 | 2 | 90% | 0.75 | **900** | Pro | **To Do** |
-| **Documentation: Codify Industry Standards in Protocols** | 1 | 3 | 90% | 0.25 | **10.8** | N/A | **To Do** |
-| **Feature: "User News" Sourcing** | 1000 | 2 | 90% | 2.0 | **900** | Pro | **To Do** |
-| **AI: Multi-Model Verification**| 1000 | 2 | 90% | 2.0 | **900** | Pro | **To Do** |
-| **Feature: Verifiable Outcomes**| 1000 | 3 | 80% | 3.0 | **800** | Pro | **To Do** |
-| **Backend: Automated News Sourcing** | 1000 | 1 | 90% | 2.0 | **450** | Pro | **To Do** |
-| **Backend: System-Wide Staleness Logic** | 1000 | 1 | 100% | 0.5 | **2000** | Pro | **To Do** |
-| **Feature: "Transparent Rejection"**| 1000 | 3 | 80% | 2.0 | **1200** | Pro | **To Do** |
-| **Feature: Browser Extension** | 500 | 2 | 80% | 3.0 | **267** | Pro | **To Do** |
-| **AI: Full Data Leverage Mandate** | 1 | 3 | 90% | 1.0 | **2.7** | N/A | **To Do** |
-| **AI: Automated Prompt QA System** | 1 | 3 | 80% | 3.0 | **0.8** | Pro | **To Do** |
-| **Backend: DB-Driven AI Protocols** | 1 | 2 | 100% | 0.5 | **4.0** | Pro | **To Do** |
-
-## Tier 4: Future Vision & Long-Term bets
-| Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Infra: Background Jobs w/ Redis** | 1000 | 2 | 100% | 1.5 | **1333** | Pro | **To Do** |
-| **Platform: Business Certification** | 5000 | 3 | 50% | 6.0 | **1250** | N/A | **To Do** |
-| **AI: User & Job Clustering for Proactive Matching** | 1000 | 3 | 70% | 4.0 | **525** | Pro | **To Do** |
-| **Business: Tier AI Features by Model Cost/Capability** | 200 | 1 | 80% | 0.5 | **320** | N/A | **To Do** |
-| **Platform: System-Wide Analysis from User Submissions**| 1000 | 3 | 80% | 4.0 | **600** | Pro | **To Do** |
-| **Platform: System-Wide Relevance Calc**| 1000 | 3 | 90% | 6.0 | **450** | Pro | **To Do** |
-| **Revenue: "Bring Your Own Key" (BYOK) Model** | 200 | 1 | 70% | 0.5 | **280** | Pro | **To Do** |
-| **Platform: Data Access for Biz** | 1000 | 3 | 50% | 6.0 | **250** | N/A | **To Do** |
-| **BI: ML User/Company Clustering** | 10 | 3 | 80% | 4.0 | **6.0** | Pro | **To Do** |
-
----
-
-## Completed Features & Bugfixes
-*This section lists all completed features and bugfixes, categorized by the release version they were delivered in, in reverse chronological order.*
-
-### [v0.18.0] - 2025-06-30 - Job Tracker Enhancement & Profile UX Improvements
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **Feature: Add "Excited?" Favorite Column to Job Tracker** | T2 | 7200 |
-| **UI/UX: Group Profile Fields into Collapsible Subsections** | T2 | 7200 |
-| **UI/UX Polish: Status Dropdown Shadcn UI Migration** | UI/UX Polish | N/A |
-| **UI/UX Polish: Reorder 'Excited?' Column** | UI/UX Polish | N/A |
-
-### [v0.17.0] - 2025-06-30 - User Onboarding Redirection
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **Feature: Redirect Signup to Profile Page** | T2 | 12000 |
-
-### [v0.16.0] - 2025-06-30 - Shadcn UI Refinement & Core Component Installation
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **Refine UI Components: Implement Shadcn UI for Textarea, Label, and Select** | T2 | 8000 |
-| **UI/UX Polish: Add Dashboard Link to Profile Page** | UI/UX Polish | 10000 |
-
-### [v0.15.0] - 2025-06-30 - User Profile Work Style & Remote Preferences
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **Feature: Preferred Work Style & Remote Preference** | T2 | 8000 |
-
-### [v0.14.0] - 2025-06-29 - User Profile Management & UI Bugfixes
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **Feature: User Profile Onboarding & Data Input** | T2 | 4000 |
-
-### [v0.13.0] - 2025-06-29 - Data Integrity & Analysis Hardening
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **Maintenance: Data Integrity Pass** | T1 | 8.0 |
-| **Database: User-Specific Job Analysis & Versioning Schema** | T1 | N/A |
-| **Backend: Corrected Job Analysis UPSERT & Retrieval** | T1 | N/A |
-| **Data Cleanup: Mark Unreachable Tracked Jobs as 'Expired - Unreachable'** | T1 | N/A |
-
-### [v0.12.0] - 2025-06-29
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **Bugfix: New Account Dashboard Error** | T2 | 12000 |
-| **UI/UX: Context-Aware "Get Started" Button** | T2 | 4000 |
-| **UI/UX: Header "Transparent Talent" Link to Homepage** | UI/UX Polish | N/A |
-
-### [v0.11.0] - 2025-06-28
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **UI/UX: Job Tracker Pagination** | T2 | 4000 |
-
-### [v0.10.0] - 2025-06-28
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **UI/UX: Auto-set 'Date Applied' on Status Change** | T2 | 8000 |
-
-### [v0.9.0] - 2025-06-28
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **Deployment: Production Domain** | T2 | 4000 |
-
-### [v0.8.0] - 2025-06-28 - Data Contract Standardization & UI Refactor
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **Architecture: Data Contract Standardization** | T1 | 24.0 |
-
-### [v0.7.0] - 2025-06-28
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **UI: Interactive Job Tracker** | T2 | 4000 |
-
-### [v0.6.0] - 2025-06-28
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **Feature: User Job Submission** | T2 | 6000 |
-
-### [v0.5.0] - 2025-06-28
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **Feature: Logged Out Experience** | T2 | 8000 |
-
-### [v0.4.0] - 2025-06-28
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **Bugfix: Resolve Production Authentication** | T1 | 12000 |
-
-### [v0.3.1] - 2025-06-28 - Failed Authentication Bugfix Attempt
-
-This release documents a significant but unsuccessful attempt to resolve the critical production authentication bug. While the issue persists, the debugging process revealed key insights into the unexpected behavior of the `clerk-backend-api` library, which will inform the next attempt.
-
-### Changed
--   **Iterative Debugging on `auth.py`:** Multiple versions of the `token_required` decorator were deployed to diagnose a series of cascading errors. This process invalidated several common implementation patterns.
-
-### Fixed
--   **Clerk Dashboard Misconfiguration:** Corrected a user-facing issue where a misconfigured "Restrictions" list was improperly blocking valid user sign-in attempts.
-
-### Unresolved Issues
--   **Critical `401 Unauthorized` Error:** The root cause of the authentication failure remains. The latest logs indicate the `clerk.authenticate_request()` method is throwing a `TypeError: Clerk.authenticate_request() missing 1 required positional argument: 'options'`, even when provided with what appear to be the correct parameters. The exact expected structure for the `options` argument remains unknown.
-
-## [v0.3.0] - 2025-06-27 - End-to-End User Authentication
-
-This version implements a complete, secure authentication system across the entire application stack, from the frontend client to the backend API.
-
-### Added
--   **User Authentication:** Integrated Clerk for robust user sign-up, sign-in, and session management across the full stack.
--   **Frontend Middleware:** Added `middleware.ts` to the Next.js app to protect all routes and enforce authentication.
--   **Backend Token Validation:** Created an `auth.py` decorator in the Flask backend to validate JWTs on all protected API endpoints.
--   **Clerk SDKs:** Added `@clerk/nextjs` to the frontend and `clerk-backend-api` to the backend.
--   **Database Migration:** Added a `clerk_user_id` column to the `users` table to link application data with the authentication provider.
-
-### Changed
--   **API Security:** All backend endpoints in `app.py` were refactored to be protected by the `@token_required` decorator and to securely derive the user's identity from the session, removing user identifiers from URL parameters.
--   **Frontend Dashboard:** The main dashboard component was refactored to use modern, secure data-loading hooks (`useAuth`, `useUser`) instead of relying on URL parameters.
--   **Frontend Layout:** Modified `apps/frontend/app/layout.tsx` to include the `<ClerkProvider>` and user session controls (`<UserButton>`).
-
-### Fixed
--   **Vercel Deployments:** Resolved a series of `MIDDLEWARE_INVOCATION_FAILED` and TypeScript build errors by correcting the Clerk middleware implementation and component props.
--   **Render Deployments:** Fixed numerous `ModuleNotFoundError` and `TypeError` crashes by correcting the Clerk python package name (`clerk-backend-api`), updating the import paths in `auth.py`, and aligning the Clerk client usage with the specific library version's requirements.
--   **Python Versioning:** Discovered and confirmed that the original Python version (3.13) was incompatible with the authentication libraries, necessitating a downgrade to a stable LTS version (3.12) for production deployments.
-
-## [v0.2.0] - 2025-06-26 - Monorepo Migration & Production Deployment
-
-This version marks the successful re-architecting of the project into a professional monorepo structure and the full deployment of all services to production hosting environments.
-
-### Added
--   **`vercel.json`:** Created a Vercel configuration file to provide explicit build and routing instructions, ensuring successful deployment of the frontend application.
--   **`ARCHITECTURE.md`:** Added a dedicated document to formally describe the full-stack system architecture.
-
-### Changed
--   **Repository Structure:** Migrated the entire codebase from two separate projects into a single monorepo, managed with pnpm workspaces and Turborepo.
--   **Frontend Deployment:** The Next.js frontend is now deployed to **Vercel** from the `apps/frontend` directory of the monorepo.
--   **Backend Deployment:** The Render deployment configuration was updated to correctly build and deploy the Flask API from the `apps/backend` directory of the monorepo.
-
-### Fixed
--   Resolved multiple Git submodule issues that prevented proper version tracking of the frontend and backend applications.
--   Corrected conflicting `package-lock.json` and `next.config.ts` files that caused local and production build failures.
--   Systematically debugged and resolved a series of Vercel 404 deployment errors by correcting build outputs and implementing explicit routing rules.
-
-## [v0.1.0] - 2025-06-26 - Initial MVP and Data Foundation
-
-This initial version represents the successful transition from a manual, spreadsheet-based system to a functional full-stack web application with a robust data foundation.
-
-### Added
--   **Initial Backend API (v1):** Deployed a Python Flask application to Render, serving user data and job information via a RESTful API.
--   **Job Tracker Functionality:** Implemented full CRUD (`GET`, `POST`, `PUT`, `DELETE`) endpoints for tracked jobs, allowing users to manage their application pipeline.
--   **Initial Frontend Dashboard (v1):** Developed a local Next.js application that successfully connects to the backend API to display user profiles, watchlists, job matches, and the interactive job tracker.
--   **Comprehensive Data Migration:**
-    *   Successfully designed and executed a migration script to import all historical user and company data from **Bubble JSON exports** into the new PostgreSQL database.
-    *   Successfully designed and executed a second, more complex migration script to parse, clean, and import all historical application data from multiple **CSV files** (`TT Opportunities`, `Greg Freed - Job Search`).
-    *   Unified all disparate data sources into a single, relational database, creating a comprehensive foundation for all future features.
-
-### Changed
--   **Upgraded Database:** Migrated from a conceptual file-based system to a production-grade **PostgreSQL** database hosted on Render.
--   **Enhanced Business Logic:** Refined API endpoints to filter out irrelevant job data and intelligently handle application status changes.
-
-### Fixed
--   Resolved multiple Python dependency issues (`flask_cors`) to ensure stable deployment on Render.
--   Corrected and iteratively fixed database schema mismatches discovered during the complex data migration process.
+## 8. Operations & Implementation Plan (Roadmap)
+Our strategy is a phased rollout that prioritizes validation before scaling.
+*   **Phase 1 (MVP):** Validate the core AI framework with individual users and career coaches to refine the scoring model and prove efficacy. (Completed)
+*   **Phase 2 (Platform Buildout):** Develop the full-stack application (Next.js, Flask, PostgreSQL) with a robust user dashboard and initial tooling. (Current Phase)
+*   **Phase 3 (Enterprise & B2B):** Launch Business Certification and Data Access products. Build out enterprise solutions for internal mobility.
+*   **Phase 4 (Marketplace):** Develop the full "Nielsen for talent" data infrastructure, including verification systems and integration APIs for HR systems.
