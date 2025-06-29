@@ -7,11 +7,13 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-// --- NEW SHADCN UI IMPORTS ---
+// --- SHADCN UI IMPORTS ---
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
+// NEW: Collapsible component imports
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown, ChevronUp } from 'lucide-react'; // Icons for collapsible state
 
 // --- TYPE DEFINITIONS ---
 interface Profile {
@@ -58,6 +60,14 @@ export default function UserProfilePage() {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+    // NEW: State for collapsible sections
+    const [isPersonalInfoOpen, setIsPersonalInfoOpen] = useState(true);
+    const [isCareerGoalsOpen, setIsCareerGoalsOpen] = useState(false);
+    const [isWorkEnvOpen, setIsWorkEnvOpen] = useState(false);
+    const [isSkillsOpen, setIsSkillsOpen] = useState(false);
+    const [isPersonalityOpen, setIsPersonalityOpen] = useState(false);
+
 
     const authedFetch = useCallback(async (url: string, options: RequestInit = {}) => {
         const token = await getToken();
@@ -201,307 +211,339 @@ export default function UserProfilePage() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Full Name */}
-                    <div>
-                        <Label htmlFor="full_name" className="block text-sm font-medium text-gray-700">Full Name</Label>
-                        <Input
-                            id="full_name"
-                            type="text"
-                            value={profile.full_name || ''}
-                            onChange={(e) => handleChange('full_name', e.target.value)}
-                            className="mt-1"
-                        />
-                    </div>
+                    {/* Collapsible: Contact & Basic Information */}
+                    <Collapsible
+                        open={isPersonalInfoOpen}
+                        onOpenChange={setIsPersonalInfoOpen}
+                        className="border rounded-md shadow-sm bg-gray-50"
+                    >
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                            Contact & Basic Information
+                            {isPersonalInfoOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="p-4 bg-white space-y-4">
+                            {/* Full Name */}
+                            <div>
+                                <Label htmlFor="full_name">Full Name</Label>
+                                <Input
+                                    id="full_name"
+                                    type="text"
+                                    value={profile.full_name || ''}
+                                    onChange={(e) => handleChange('full_name', e.target.value)}
+                                />
+                            </div>
+                            {/* Current Location */}
+                            <div>
+                                <Label htmlFor="current_location">Current Location</Label>
+                                <Input
+                                    id="current_location"
+                                    type="text"
+                                    value={profile.current_location || ''}
+                                    onChange={(e) => handleChange('current_location', e.target.value)}
+                                />
+                            </div>
+                            {/* LinkedIn Profile URL */}
+                            <div>
+                                <Label htmlFor="linkedin_profile_url">LinkedIn Profile URL</Label>
+                                <Input
+                                    id="linkedin_profile_url"
+                                    type="url"
+                                    value={profile.linkedin_profile_url || ''}
+                                    onChange={(e) => handleChange('linkedin_profile_url', e.target.value)}
+                                    placeholder="https://www.linkedin.com/in/yourprofile/"
+                                />
+                            </div>
+                        </CollapsibleContent>
+                    </Collapsible>
 
-                    {/* Short Term Career Goal */}
-                    <div>
-                        <Label htmlFor="short_term_career_goal" className="block text-sm font-medium text-gray-700">Short-Term Career Goal</Label>
-                        <Textarea
-                            id="short_term_career_goal"
-                            value={profile.short_term_career_goal || ''}
-                            onChange={(e) => handleChange('short_term_career_goal', e.target.value)}
-                            className="mt-1 block w-full"
-                            rows={3}
-                        />
-                    </div>
+                    {/* Collapsible: Career Aspirations */}
+                    <Collapsible
+                        open={isCareerGoalsOpen}
+                        onOpenChange={setIsCareerGoalsOpen}
+                        className="border rounded-md shadow-sm bg-gray-50"
+                    >
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                            Career Aspirations
+                            {isCareerGoalsOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="p-4 bg-white space-y-4">
+                            {/* Short Term Career Goal */}
+                            <div>
+                                <Label htmlFor="short_term_career_goal">Short-Term Career Goal</Label>
+                                <Textarea
+                                    id="short_term_career_goal"
+                                    value={profile.short_term_career_goal || ''}
+                                    onChange={(e) => handleChange('short_term_career_goal', e.target.value)}
+                                    rows={3}
+                                />
+                            </div>
+                            {/* Long Term Career Goals */}
+                            <div>
+                                <Label htmlFor="long_term_career_goals">Long-Term Career Goals</Label>
+                                <Textarea
+                                    id="long_term_career_goals"
+                                    value={profile.long_term_career_goals || ''}
+                                    onChange={(e) => handleChange('long_term_career_goals', e.target.value)}
+                                    rows={3}
+                                />
+                            </div>
+                            {/* Desired Title */}
+                            <div>
+                                <Label htmlFor="desired_title">Desired Job Title</Label>
+                                <Input
+                                    id="desired_title"
+                                    type="text"
+                                    value={profile.desired_title || ''}
+                                    onChange={(e) => handleChange('desired_title', e.target.value)}
+                                />
+                            </div>
+                            {/* Desired Annual Compensation */}
+                            <div>
+                                <Label htmlFor="desired_annual_compensation">Desired Annual Compensation</Label>
+                                <Input
+                                    id="desired_annual_compensation"
+                                    type="text"
+                                    value={profile.desired_annual_compensation || ''}
+                                    onChange={(e) => handleChange('desired_annual_compensation', e.target.value)}
+                                    placeholder="$150,000 - $180,000"
+                                />
+                            </div>
+                            {/* Ideal Role Description */}
+                            <div>
+                                <Label htmlFor="ideal_role_description">Ideal Role Description</Label>
+                                <Textarea
+                                    id="ideal_role_description"
+                                    value={profile.ideal_role_description || ''}
+                                    onChange={(e) => handleChange('ideal_role_description', e.target.value)}
+                                    rows={5}
+                                />
+                            </div>
+                        </CollapsibleContent>
+                    </Collapsible>
 
-                    {/* Ideal Role Description */}
-                    <div>
-                        <Label htmlFor="ideal_role_description" className="block text-sm font-medium text-gray-700">Ideal Role Description</Label>
-                        <Textarea
-                            id="ideal_role_description"
-                            value={profile.ideal_role_description || ''}
-                            onChange={(e) => handleChange('ideal_role_description', e.target.value)}
-                            className="mt-1 block w-full"
-                            rows={5}
-                        />
-                    </div>
+                    {/* Collapsible: Work Environment & Requirements */}
+                    <Collapsible
+                        open={isWorkEnvOpen}
+                        onOpenChange={setIsWorkEnvOpen}
+                        className="border rounded-md shadow-sm bg-gray-50"
+                    >
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                            Work Environment & Requirements
+                            {isWorkEnvOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="p-4 bg-white space-y-4">
+                            {/* Preferred Work Style (Using Shadcn Select) */}
+                            <div>
+                                <Label htmlFor="preferred_work_style">Preferred Work Style</Label>
+                                <Select
+                                    value={profile.preferred_work_style || 'null'}
+                                    onValueChange={(value) => handleChange('preferred_work_style', value)}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="No Preference" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="null">No Preference</SelectItem>
+                                        <SelectItem value="On-site">On-site</SelectItem>
+                                        <SelectItem value="Remote">Remote</SelectItem>
+                                        <SelectItem value="Hybrid">Hybrid</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                    {/* Core Strengths */}
-                    <div>
-                        <Label htmlFor="core_strengths" className="block text-sm font-medium text-gray-700">Core Strengths (comma-separated)</Label>
-                        <Textarea
-                            id="core_strengths"
-                            value={profile.core_strengths || ''}
-                            onChange={(e) => handleChange('core_strengths', e.target.value)}
-                            className="mt-1 block w-full"
-                            rows={3}
-                        />
-                    </div>
+                            {/* Is Remote Preferred (Using Shadcn Checkbox) - CONDITIONAL RENDERING */}
+                            {profile.preferred_work_style !== 'On-site' && (
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="is_remote_preferred"
+                                        checked={profile.is_remote_preferred || false}
+                                        onCheckedChange={(checked: boolean) => handleCheckboxChange('is_remote_preferred', checked)}
+                                    />
+                                    <Label
+                                        htmlFor="is_remote_preferred"
+                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    >
+                                        I prefer remote work generally.
+                                    </Label>
+                                </div>
+                            )}
 
-                    {/* Skills to Avoid */}
-                    <div>
-                        <Label htmlFor="skills_to_avoid" className="block text-sm font-medium text-gray-700">Skills / Technologies to Avoid (comma-separated)</Label>
-                        <Textarea
-                            id="skills_to_avoid"
-                            value={profile.skills_to_avoid || ''}
-                            onChange={(e) => handleChange('skills_to_avoid', e.target.value)}
-                            className="mt-1 block w-full"
-                            rows={3}
-                        />
-                    </div>
+                            {/* Preferred Company Size (Using Shadcn Select) */}
+                            <div>
+                                <Label htmlFor="preferred_company_size">Preferred Company Size</Label>
+                                <Select
+                                    value={profile.preferred_company_size || 'null'}
+                                    onValueChange={(value) => handleChange('preferred_company_size', value)}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="No Preference" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="null">No Preference</SelectItem>
+                                        <SelectItem value="Startup (1-50 employees)">Startup (1-50 employees)</SelectItem>
+                                        <SelectItem value="Small (51-200 employees)">Small (51-200 employees)</SelectItem>
+                                        <SelectItem value="Medium (201-1000 employees)">Medium (201-1000 employees)</SelectItem>
+                                        <SelectItem value="Large (1001-10000 employees)">Large (1001-10000 employees)</SelectItem>
+                                        <SelectItem value="Enterprise (10000+ employees)">Enterprise (10000+ employees)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                    {/* Preferred Industries */}
-                    <div>
-                        <Label htmlFor="preferred_industries" className="block text-sm font-medium text-gray-700">Preferred Industries (comma-separated)</Label>
-                        <Textarea
-                            id="preferred_industries"
-                            value={profile.preferred_industries || ''}
-                            onChange={(e) => handleChange('preferred_industries', e.target.value)}
-                            className="mt-1 block w-full"
-                            rows={2}
-                        />
-                    </div>
+                            {/* Ideal Work Culture */}
+                            <div>
+                                <Label htmlFor="ideal_work_culture">Ideal Work Culture (e.g., "Collaborative", "Autonomous", "Fast-paced")</Label>
+                                <Textarea
+                                    id="ideal_work_culture"
+                                    value={profile.ideal_work_culture || ''}
+                                    onChange={(e) => handleChange('ideal_work_culture', e.target.value)}
+                                    rows={3}
+                                />
+                            </div>
 
-                    {/* Industries to Avoid */}
-                    <div>
-                        <Label htmlFor="industries_to_avoid" className="block text-sm font-medium text-gray-700">Industries to Avoid (comma-separated)</Label>
-                        <Textarea
-                            id="industries_to_avoid"
-                            value={profile.industries_to_avoid || ''}
-                            onChange={(e) => handleChange('industries_to_avoid', e.target.value)}
-                            className="mt-1 block w-full"
-                            rows={2}
-                        />
-                    </div>
+                            {/* Disliked Work Culture */}
+                            <div>
+                                <Label htmlFor="disliked_work_culture">Disliked Work Culture</Label>
+                                <Textarea
+                                    id="disliked_work_culture"
+                                    value={profile.disliked_work_culture || ''}
+                                    onChange={(e) => handleChange('disliked_work_culture', e.target.value)}
+                                    rows={3}
+                                />
+                            </div>
 
-                    {/* Current Location - Using Input, which is available */}
-                    <div>
-                        <Label htmlFor="current_location" className="block text-sm font-medium text-gray-700">Current Location</Label>
-                        <Input
-                            id="current_location"
-                            type="text"
-                            value={profile.current_location || ''}
-                            onChange={(e) => handleChange('current_location', e.target.value)}
-                            className="mt-1"
-                        />
-                    </div>
+                            {/* Non-Negotiable Requirements */}
+                            <div>
+                                <Label htmlFor="non_negotiable_requirements">Non-Negotiable Requirements</Label>
+                                <Textarea
+                                    id="non_negotiable_requirements"
+                                    value={profile.non_negotiable_requirements || ''}
+                                    onChange={(e) => handleChange('non_negotiable_requirements', e.target.value)}
+                                    rows={3}
+                                />
+                            </div>
 
-                    {/* LinkedIn Profile URL - Using Input */}
-                    <div>
-                        <Label htmlFor="linkedin_profile_url" className="block text-sm font-medium text-gray-700">LinkedIn Profile URL</Label>
-                        <Input
-                            id="linkedin_profile_url"
-                            type="url"
-                            value={profile.linkedin_profile_url || ''}
-                            onChange={(e) => handleChange('linkedin_profile_url', e.target.value)}
-                            className="mt-1"
-                            placeholder="https://www.linkedin.com/in/yourprofile/"
-                        />
-                    </div>
+                            {/* Deal Breakers */}
+                            <div>
+                                <Label htmlFor="deal_breakers">Deal Breakers (e.g., "On-call rotation", "Strictly in-office")</Label>
+                                <Textarea
+                                    id="deal_breakers"
+                                    value={profile.deal_breakers || ''}
+                                    onChange={(e) => handleChange('deal_breakers', e.target.value)}
+                                    rows={3}
+                                />
+                            </div>
+                        </CollapsibleContent>
+                    </Collapsible>
 
-                    {/* Desired Title - Using Input */}
-                    <div>
-                        <Label htmlFor="desired_title" className="block text-sm font-medium text-gray-700">Desired Job Title</Label>
-                        <Input
-                            id="desired_title"
-                            type="text"
-                            value={profile.desired_title || ''}
-                            onChange={(e) => handleChange('desired_title', e.target.value)}
-                            className="mt-1"
-                        />
-                    </div>
+                    {/* Collapsible: Skills & Industry Focus */}
+                    <Collapsible
+                        open={isSkillsOpen}
+                        onOpenChange={setIsSkillsOpen}
+                        className="border rounded-md shadow-sm bg-gray-50"
+                    >
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                            Skills & Industry Focus
+                            {isSkillsOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="p-4 bg-white space-y-4">
+                            {/* Core Strengths */}
+                            <div>
+                                <Label htmlFor="core_strengths">Core Strengths (comma-separated)</Label>
+                                <Textarea
+                                    id="core_strengths"
+                                    value={profile.core_strengths || ''}
+                                    onChange={(e) => handleChange('core_strengths', e.target.value)}
+                                    rows={3}
+                                />
+                            </div>
+                            {/* Skills to Avoid */}
+                            <div>
+                                <Label htmlFor="skills_to_avoid">Skills / Technologies to Avoid (comma-separated)</Label>
+                                <Textarea
+                                    id="skills_to_avoid"
+                                    value={profile.skills_to_avoid || ''}
+                                    onChange={(e) => handleChange('skills_to_avoid', e.target.value)}
+                                    rows={3}
+                                />
+                            </div>
+                            {/* Preferred Industries */}
+                            <div>
+                                <Label htmlFor="preferred_industries">Preferred Industries (comma-separated)</Label>
+                                <Textarea
+                                    id="preferred_industries"
+                                    value={profile.preferred_industries || ''}
+                                    onChange={(e) => handleChange('preferred_industries', e.target.value)}
+                                    rows={2}
+                                />
+                            </div>
+                            {/* Industries to Avoid */}
+                            <div>
+                                <Label htmlFor="industries_to_avoid">Industries to Avoid (comma-separated)</Label>
+                                <Textarea
+                                    id="industries_to_avoid"
+                                    value={profile.industries_to_avoid || ''}
+                                    onChange={(e) => handleChange('industries_to_avoid', e.target.value)}
+                                    rows={2}
+                                />
+                            </div>
+                        </CollapsibleContent>
+                    </Collapsible>
 
-                    {/* Desired Annual Compensation - Using Input */}
-                    <div>
-                        <Label htmlFor="desired_annual_compensation" className="block text-sm font-medium text-gray-700">Desired Annual Compensation</Label>
-                        <Input
-                            id="desired_annual_compensation"
-                            type="text"
-                            value={profile.desired_annual_compensation || ''}
-                            onChange={(e) => handleChange('desired_annual_compensation', e.target.value)}
-                            className="mt-1"
-                            placeholder="$150,000 - $180,000"
-                        />
-                    </div>
-
-                    {/* Non-Negotiable Requirements */}
-                    <div>
-                        <Label htmlFor="non_negotiable_requirements" className="block text-sm font-medium text-gray-700">Non-Negotiable Requirements</Label>
-                        <Textarea
-                            id="non_negotiable_requirements"
-                            value={profile.non_negotiable_requirements || ''}
-                            onChange={(e) => handleChange('non_negotiable_requirements', e.target.value)}
-                            className="mt-1 block w-full"
-                            rows={3}
-                        />
-                    </div>
-
-                    {/* Deal Breakers */}
-                    <div>
-                        <Label htmlFor="deal_breakers" className="block text-sm font-medium text-gray-700">Deal Breakers (e.g., "On-call rotation", "Strictly in-office")</Label>
-                        <Textarea
-                            id="deal_breakers"
-                            value={profile.deal_breakers || ''}
-                            onChange={(e) => handleChange('deal_breakers', e.target.value)}
-                            className="mt-1 block w-full"
-                            rows={3}
-                        />
-                    </div>
-
-                    {/* Preferred Company Size (Using Shadcn Select) */}
-                    <div>
-                        <Label htmlFor="preferred_company_size" className="block text-sm font-medium text-gray-700">Preferred Company Size</Label>
-                        <Select
-                            value={profile.preferred_company_size || 'null'}
-                            onValueChange={(value) => handleChange('preferred_company_size', value)}
-                        >
-                            <SelectTrigger className="w-full mt-1">
-                                <SelectValue placeholder="No Preference" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="null">No Preference</SelectItem>
-                                <SelectItem value="Startup (1-50 employees)">Startup (1-50 employees)</SelectItem>
-                                <SelectItem value="Small (51-200 employees)">Small (51-200 employees)</SelectItem>
-                                <SelectItem value="Medium (201-1000 employees)">Medium (201-1000 employees)</SelectItem>
-                                <SelectItem value="Large (1001-10000 employees)">Large (1001-10000 employees)</SelectItem>
-                                <SelectItem value="Enterprise (10000+ employees)">Enterprise (10000+ employees)</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {/* Preferred Work Style (Using Shadcn Select) */}
-                    <div>
-                        <Label htmlFor="preferred_work_style" className="block text-sm font-medium text-gray-700">Preferred Work Style</Label>
-                        <Select
-                            value={profile.preferred_work_style || 'null'}
-                            onValueChange={(value) => handleChange('preferred_work_style', value)}
-                        >
-                            <SelectTrigger className="w-full mt-1">
-                                <SelectValue placeholder="No Preference" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="null">No Preference</SelectItem>
-                                <SelectItem value="On-site">On-site</SelectItem>
-                                <SelectItem value="Remote">Remote</SelectItem>
-                                <SelectItem value="Hybrid">Hybrid</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {/* NEW: Is Remote Preferred (Using Shadcn Checkbox) - CONDITIONAL RENDERING */}
-                    {/* Only show this checkbox if preferred_work_style is NOT 'On-site' */}
-                    {profile.preferred_work_style !== 'On-site' && (
-                        <div className="flex items-center space-x-2">
-                            <Checkbox
-                                id="is_remote_preferred"
-                                checked={profile.is_remote_preferred || false}
-                                onCheckedChange={(checked: boolean) => handleCheckboxChange('is_remote_preferred', checked)}
-                            />
-                            <Label
-                                htmlFor="is_remote_preferred"
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                                I prefer remote work generally.
-                            </Label>
-                        </div>
-                    )}
-
-                    {/* Ideal Work Culture */}
-                    <div>
-                        <Label htmlFor="ideal_work_culture" className="block text-sm font-medium text-gray-700">Ideal Work Culture (e.g., "Collaborative", "Autonomous", "Fast-paced")</Label>
-                        <Textarea
-                            id="ideal_work_culture"
-                            value={profile.ideal_work_culture || ''}
-                            onChange={(e) => handleChange('ideal_work_culture', e.target.value)}
-                            className="mt-1 block w-full"
-                            rows={3}
-                        />
-                    </div>
-
-                    {/* Disliked Work Culture */}
-                    <div>
-                        <Label htmlFor="disliked_work_culture" className="block text-sm font-medium text-gray-700">Disliked Work Culture</Label>
-                        <Textarea
-                            id="disliked_work_culture"
-                            value={profile.disliked_work_culture || ''}
-                            onChange={(e) => handleChange('disliked_work_culture', e.target.value)}
-                            className="mt-1 block w-full"
-                            rows={3}
-                        />
-                    </div>
-
-                    {/* Long Term Career Goals */}
-                    <div>
-                        <Label htmlFor="long_term_career_goals" className="block text-sm font-medium text-gray-700">Long-Term Career Goals</Label>
-                        <Textarea
-                            id="long_term_career_goals"
-                            value={profile.long_term_career_goals || ''}
-                            onChange={(e) => handleChange('long_term_career_goals', e.target.value)}
-                            className="mt-1 block w-full"
-                            rows={3}
-                        />
-                    </div>
-
-                    {/* Personality Adjectives */}
-                    <div>
-                        <Label htmlFor="personality_adjectives" className="block text-sm font-medium text-gray-700">Personality Adjectives (e.g., "Curious", "Analytical", "Adaptable")</Label>
-                        <Textarea
-                            id="personality_adjectives"
-                            value={profile.personality_adjectives || ''}
-                            onChange={(e) => handleChange('personality_adjectives', e.target.value)}
-                            className="mt-1 block w-full"
-                            rows={2}
-                        />
-                    </div>
-
-                    {/* Personality 16 Personalities - Using Input */}
-                    <div>
-                        <Label htmlFor="personality_16_personalities" className="block text-sm font-medium text-gray-700">16 Personalities Type</Label>
-                        <Input
-                            id="personality_16_personalities"
-                            type="text"
-                            value={profile.personality_16_personalities || ''}
-                            onChange={(e) => handleChange('personality_16_personalities', e.target.value)}
-                            className="mt-1"
-                            placeholder="e.g., INTJ-T"
-                        />
-                    </div>
-
-                    {/* Personality DISC - Using Input */}
-                    <div>
-                        <Label htmlFor="personality_disc" className="block text-sm font-medium text-gray-700">DISC Profile</Label>
-                        <Input
-                            id="personality_disc"
-                            type="text"
-                            value={profile.personality_disc || ''}
-                            onChange={(e) => handleChange('personality_disc', e.target.value)}
-                            className="mt-1"
-                            placeholder="e.g., D-I"
-                        />
-                    </div>
-
-                    {/* Personality Gallup Strengths */}
-                    <div>
-                        <Label htmlFor="personality_gallup_strengths" className="block text-sm font-medium text-gray-700">Gallup Strengths (comma-separated)</Label>
-                        <Textarea
-                            id="personality_gallup_strengths"
-                            value={profile.personality_gallup_strengths || ''}
-                            onChange={(e) => handleChange('personality_gallup_strengths', e.target.value)}
-                            className="mt-1 block w-full"
-                            rows={2}
-                        />
-                    </div>
+                    {/* Collapsible: Personality & Self-Assessment */}
+                    <Collapsible
+                        open={isPersonalityOpen}
+                        onOpenChange={setIsPersonalityOpen}
+                        className="border rounded-md shadow-sm bg-gray-50"
+                    >
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                            Personality & Self-Assessment
+                            {isPersonalityOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="p-4 bg-white space-y-4">
+                            {/* Personality Adjectives */}
+                            <div>
+                                <Label htmlFor="personality_adjectives">Personality Adjectives (e.g., "Curious", "Analytical", "Adaptable")</Label>
+                                <Textarea
+                                    id="personality_adjectives"
+                                    value={profile.personality_adjectives || ''}
+                                    onChange={(e) => handleChange('personality_adjectives', e.target.value)}
+                                    rows={2}
+                                />
+                            </div>
+                            {/* Personality 16 Personalities */}
+                            <div>
+                                <Label htmlFor="personality_16_personalities">16 Personalities Type</Label>
+                                <Input
+                                    id="personality_16_personalities"
+                                    type="text"
+                                    value={profile.personality_16_personalities || ''}
+                                    onChange={(e) => handleChange('personality_16_personalities', e.target.value)}
+                                    placeholder="e.g., INTJ-T"
+                                />
+                            </div>
+                            {/* Personality DISC */}
+                            <div>
+                                <Label htmlFor="personality_disc">DISC Profile</Label>
+                                <Input
+                                    id="personality_disc"
+                                    type="text"
+                                    value={profile.personality_disc || ''}
+                                    onChange={(e) => handleChange('personality_disc', e.target.value)}
+                                    placeholder="e.g., D-I"
+                                />
+                            </div>
+                            {/* Personality Gallup Strengths */}
+                            <div>
+                                <Label htmlFor="personality_gallup_strengths">Gallup Strengths (comma-separated)</Label>
+                                <Textarea
+                                    id="personality_gallup_strengths"
+                                    value={profile.personality_gallup_strengths || ''}
+                                    onChange={(e) => handleChange('personality_gallup_strengths', e.target.value)}
+                                    rows={2}
+                                />
+                            </div>
+                        </CollapsibleContent>
+                    </Collapsible>
 
                     <Button type="submit" disabled={isSaving} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
                         {isSaving ? 'Saving...' : 'Save Profile'}
