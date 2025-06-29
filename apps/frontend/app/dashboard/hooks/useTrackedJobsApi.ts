@@ -7,7 +7,9 @@ import { type TrackedJob, type UpdatePayload } from '../types';
 
 export function useTrackedJobsApi() {
   const { getToken, isLoaded: isUserLoaded } = useAuth();
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  // Use BACKEND_PREVIEW_URL if available, otherwise default to NEXT_PUBLIC_API_BASE_URL
+  const apiBaseUrl = process.env.BACKEND_PREVIEW_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
 
   // State managed by the hook
   const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
@@ -74,10 +76,10 @@ export function useTrackedJobsApi() {
         body: JSON.stringify(payload)
       });
       if (!response.ok) throw new Error("Update failed, reverting.");
-      
+
       const updatedFromServer = await response.json();
       // Final update with authoritative data from server
-      setTrackedJobs(prev => prev.map(job => 
+      setTrackedJobs(prev => prev.map(job =>
         job.tracked_job_id === trackedJobId ? updatedFromServer : job
       ));
 
