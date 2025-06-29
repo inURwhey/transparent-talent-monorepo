@@ -32,6 +32,7 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
     *   Navigate to the `apps/frontend` directory.
     *   Run `npx shadcn@latest add <component-name>` (e.g., `npx shadcn@latest add collapsible`). The `shadcn-ui` CLI is deprecated.
     *   **Confirm successful installation locally** before proceeding with code that uses the new component or pushing changes.
+5.  **Clarification for Ambiguity:** If a task involves an implementation choice that is not explicitly specified (e.g., UI default state, specific styling, handling of edge cases), and a "best guess" could reasonably lead to multiple revisions or deployments, the AI **must** ask the user for clarification before generating code.
 
 ### Clerk Interaction Protocol v1.0
 *Objective:* To prevent debugging cycles and ensure correctness when modifying authentication code related to the `@clerk/nextjs` library.
@@ -56,31 +57,6 @@ This workflow should be executed sequentially within a single chat session to ma
 1.  **Initiate Company & Lead Discovery (Protocol 1.4):** Start by providing the user's profile and resume and requesting a 'Master Target Company List' and 'Preliminary Job Leads'.
 2.  **Initiate Preliminary Screening (Protocol 2.2):** From the list of leads generated in Step 1, select specific jobs to screen. The AI will apply the critical verification protocol to each.
 3.  **Initiate Detailed Analysis (Protocol User-Driven v1.1):** For jobs that pass screening, provide the full job description and request a detailed analysis.
-
----
-
-## Protocol 1.4: User-Profile Based Company & Lead Discovery
-*Objective:* To identify relevant target companies and initial raw job postings based on a user's profile.
-*AI Instructions:*
-1.  Analyze user profile to extract key search criteria (titles, skills, industries, preferences, deal-breakers).
-2.  Perform deep web searches for companies matching these criteria, excluding any companies on the user's "avoid" list.
-3.  Compile a "Master Target Company List" with company name, website, careers page URL, and a rationale for targeting.
-4.  Scan career pages and general job boards for these target companies to compile a list of "Preliminary Job Leads" (Company, Title, URL, Source).
-
-## Protocol 2.2: Batch Job Preliminary Screening
-*Objective:* To quickly evaluate a batch of job leads to determine if a full analysis is warranted.
-*AI Instructions:* For each job lead:
-1.  **Critical Verification:** Confirm the job posting is live and reliable, check for previous applications, verify company size, and check for hard "deal-breakers".
-2.  **Decision:** Output a `PROCEED` or `DO NOT PROCEED` decision.
-3.  **Output (if PROCEED):** Provide a single-line summary ready for staging.
-
-## Protocol User-Driven Job Analysis v1.1
-*Objective:* To conduct a comprehensive relevance analysis of a single job against a user's profile.
-*AI Instructions:*
-1.  **Re-Verification:** Briefly confirm the job is still live.
-2.  **Position Relevance Scoring (0-50):** Evaluate alignment with user's core expertise, role scope, leadership tier, compensation, and career goals.
-3.  **Environment Fit Scoring (0-50):** Evaluate alignment with company size, culture, team structure, and location/flexibility.
-4.  **Synthesized Analysis:** Provide an estimated "Hiring Manager View," the final Matrix Rating, a 2-4 sentence summary, key qualification gaps, and recommended testimonials.
 
 ---
 *(Protocols 6.0 and 7.0 remain unchanged)*

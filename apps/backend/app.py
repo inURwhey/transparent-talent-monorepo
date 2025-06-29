@@ -5,8 +5,8 @@ from psycopg2.extras import DictCursor, Json
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 from dotenv import load_dotenv
-from datetime import date
-import requests
+from datetime import date, datetime, timezone, timedelta # Added datetime, timezone, timedelta
+import requests # Already present, ensuring it's available for the new function
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 import json
@@ -68,6 +68,26 @@ def run_job_analysis(job_description_text, user_profile_text):
     response = model.generate_content(prompt)
     cleaned_response_text = response.text.strip().replace('```json', '').replace('```', '').strip()
     return json.loads(cleaned_response_text)
+
+# --- NEW: Helper function to check URL validity ---
+def check_job_url_validity(url: str) -> bool:
+    """
+    Performs an HTTP HEAD request to check if a URL is reachable and returns a 2xx status.
+    Uses a short timeout and handles common request exceptions.
+    """
+    try:
+        # Use a short timeout to quickly identify unreachable URLs
+        # User-Agent is often required to avoid 403 Forbidden errors from some servers
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
+        response = requests.head(url, timeout=5, headers=headers, allow_redirects=True)
+        # Consider 2xx status codes as valid, and also 3xx redirects as initially reachable
+        return 200 <= response.status_code < 400
+    except requests.exceptions.RequestException as e:
+        app.logger.warning(f"Error checking URL {url}: {e}")
+        return False
+    except Exception as e:
+        app.logger.error(f"Unexpected error in check_job_url_validity for {url}: {e}")
+        return False
 
 
 # --- API Endpoints ---
@@ -150,12 +170,20 @@ def submit_job():
                 cursor.execute("INSERT INTO companies (name) VALUES (%s) RETURNING id", (company_name,))
                 company_id = cursor.fetchone()['id']
             
+            # --- MODIFIED: Insert/Update jobs with new status and last_checked_at ---
+            # When a job is submitted, its URL is implicitly checked and found active.
+            # So, set status to 'Active' and last_checked_at to now.
             cursor.execute("""
-                INSERT INTO jobs (company_id, company_name, job_title, job_url, source)
-                VALUES (%s, %s, %s, %s, %s) ON CONFLICT (job_url) DO UPDATE SET
-                company_id = EXCLUDED.company_id, company_name = EXCLUDED.company_name, job_title = EXCLUDED.job_title
+                INSERT INTO jobs (company_id, company_name, job_title, job_url, source, status, last_checked_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (job_url) DO UPDATE SET
+                company_id = EXCLUDED.company_id,
+                company_name = EXCLUDED.company_name,
+                job_title = EXCLUDED.job_title,
+                status = 'Active', -- Set to active if re-submitted or if it existed before
+                last_checked_at = %s -- Update check time on re-submission
                 RETURNING id;
-            """, (company_id, company_name, job_title, job_url, 'User Submission'))
+            """, (company_id, company_name, job_title, job_url, 'User Submission', 'Active', datetime.now(timezone.utc), datetime.now(timezone.utc)))
             job_id = cursor.fetchone()['id']
             
             # *** MODIFIED: Perform UPSERT for job_analyses on composite key (job_id, user_id) ***
@@ -188,9 +216,10 @@ def submit_job():
             conn.commit()
             
             # *** MODIFIED: Corrected JOIN to fetch analysis for the specific user ***
-            # Also fetch is_excited field for response
+            # Also fetch is_excited field for response, and new job status fields
             cursor.execute("""
                 SELECT j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
+                       j.status as job_posting_status, j.last_checked_at, -- NEW FIELDS
                        t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at, t.is_excited,
                        ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
                        ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
@@ -205,6 +234,8 @@ def submit_job():
                 "job_id": new_job_row["job_id"], "company_name": new_job_row["company_name"],
                 "job_title": new_job_row["job_title"], "job_url": new_job_row["job_url"],
                 "source": new_job_row["source"], "found_at": new_job_row["found_at"],
+                "job_posting_status": new_job_row["job_posting_status"], # NEW
+                "last_checked_at": new_job_row["last_checked_at"],       # NEW
                 "tracked_job_id": new_job_row["tracked_job_id"], "status": new_job_row["status"],
                 "user_notes": new_job_row["user_notes"], "applied_at": new_job_row["applied_at"],
                 "created_at": new_job_row["created_at"],
@@ -376,7 +407,8 @@ def get_user_jobs():
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             excluded_companies = ['various', 'various companies', 'confidential']
-            sql = "SELECT id, company_name, job_title, job_url, source FROM jobs WHERE LOWER(company_name) NOT IN %s ORDER BY found_at DESC LIMIT 50"
+            # --- MODIFIED: Filter by job posting status ---
+            sql = "SELECT id, company_name, job_title, job_url, source, status, last_checked_at FROM jobs WHERE LOWER(company_name) NOT IN %s AND status = 'Active' ORDER BY found_at DESC LIMIT 50"
             cursor.execute(sql, (tuple(excluded_companies),))
             jobs = [dict(row) for row in cursor.fetchall()]
             return jsonify(jobs)
@@ -410,10 +442,11 @@ def get_tracked_jobs():
             total_count = cursor.fetchone()[0]
 
             # *** MODIFIED: Corrected JOIN to fetch analysis for the specific user ***
-            # Also fetch is_excited field for response
+            # Also fetch is_excited field for response, and new job status fields
             sql = """
                 SELECT 
                     j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
+                    j.status as job_posting_status, j.last_checked_at, -- NEW FIELDS
                     t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at, t.is_excited, -- ADDED: t.is_excited
                     ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
                     ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
@@ -431,6 +464,8 @@ def get_tracked_jobs():
                     "job_id": row["job_id"], "company_name": row["company_name"],
                     "job_title": row["job_title"], "job_url": row["job_url"],
                     "source": row["source"], "found_at": row["found_at"],
+                    "job_posting_status": row["job_posting_status"], # NEW
+                    "last_checked_at": row["last_checked_at"],       # NEW
                     "tracked_job_id": row["tracked_job_id"], "status": row["status"],
                     "user_notes": row["user_notes"], "applied_at": row["applied_at"],
                     "created_at": row["created_at"],
@@ -540,6 +575,118 @@ def remove_tracked_job(tracked_job_id):
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
+
+# --- NEW: Endpoint to trigger job URL validity check ---
+@app.route('/api/admin/jobs/check-url-validity', methods=['POST'])
+@token_required
+def check_job_urls():
+    """
+    Checks the validity of job URLs and updates their status in the 'jobs' table.
+    This endpoint is intended to be called by a scheduled task (e.g., Render Cron Job).
+    """
+    checked_count = 0
+    expired_count = 0
+    errors = []
+
+    try:
+        conn = get_db_connection()
+        conn.autocommit = False # Ensure transactions are managed manually
+        cur = conn.cursor(cursor_factory=DictCursor) # Use DictCursor for easier access to column names
+
+        # Select active jobs that haven't been checked in the last 24 hours.
+        # We also want to select jobs that were previously marked "Expired - Unreachable"
+        # but whose last_checked_at is older than 24 hours to re-verify if they've come back online.
+        twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
+        
+        cur.execute("""
+            SELECT id, job_url, status
+            FROM jobs
+            WHERE (status = 'Active' AND (last_checked_at IS NULL OR last_checked_at < %s))
+               OR (status = 'Expired - Unreachable' AND last_checked_at < %s)
+            LIMIT 1000; -- Limit to prevent overwhelming the system in one go
+        """, (twenty_four_hours_ago, twenty_four_hours_ago))
+        
+        jobs_to_check = cur.fetchall()
+
+        app.logger.info(f"Found {len(jobs_to_check)} jobs to check URLs for.")
+
+        for job in jobs_to_check:
+            checked_count += 1
+            current_time_utc = datetime.now(timezone.utc)
+
+            if not job['job_url']:
+                # Handle cases where job_url is missing
+                if job['status'] != 'Expired - Missing URL': # Only update if status is different
+                    app.logger.warning(f"Job ID {job['id']} has no job_url. Marking as 'Expired - Missing URL'.")
+                    cur.execute("""
+                        UPDATE jobs
+                        SET status = 'Expired - Missing URL', last_checked_at = %s
+                        WHERE id = %s;
+                    """, (current_time_utc, job['id']))
+                    expired_count += 1
+                else:
+                    # Just update last_checked_at if already marked as missing URL
+                    cur.execute("""
+                        UPDATE jobs
+                        SET last_checked_at = %s
+                        WHERE id = %s;
+                    """, (current_time_utc, job['id']))
+                continue # Move to the next job
+
+            is_valid = check_job_url_validity(job['job_url'])
+            
+            if not is_valid:
+                # Mark as 'Expired - Unreachable' if URL is not valid and not already marked as such
+                if job['status'] != 'Expired - Unreachable':
+                    app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' is unreachable. Marking as 'Expired - Unreachable'.")
+                    cur.execute("""
+                        UPDATE jobs
+                        SET status = 'Expired - Unreachable', last_checked_at = %s
+                        WHERE id = %s;
+                    """, (current_time_utc, job['id']))
+                    expired_count += 1
+                else:
+                    # If already 'Expired - Unreachable' and still unreachable, just update last_checked_at
+                    cur.execute("""
+                        UPDATE jobs
+                        SET last_checked_at = %s
+                        WHERE id = %s;
+                    """, (current_time_utc, job['id']))
+            else:
+                # If it was previously 'Expired - Unreachable' or 'Expired - Missing URL' but is now reachable, set back to 'Active'
+                if job['status'] in ['Expired - Unreachable', 'Expired - Missing URL']:
+                    app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' is now reachable. Marking as 'Active'.")
+                    cur.execute("""
+                        UPDATE jobs
+                        SET status = 'Active', last_checked_at = %s
+                        WHERE id = %s;
+                    """, (current_time_utc, job['id']))
+                else:
+                    # Just update last_checked_at for active valid URLs that were already active
+                    cur.execute("""
+                        UPDATE jobs
+                        SET last_checked_at = %s
+                        WHERE id = %s;
+                    """, (current_time_utc, job['id']))
+        
+        conn.commit()
+        app.logger.info(f"Finished checking job URLs. Checked: {checked_count}, Marked/Re-activated: {expired_count}")
+        return jsonify({
+            "message": "Job URL validity check completed.",
+            "jobs_checked": checked_count,
+            "jobs_marked_expired_or_reactivated": expired_count, # More accurate count
+            "errors": errors
+        }), 200
+
+    except Exception as e:
+        if conn: conn.rollback() # Rollback in case of error
+        app.logger.error(f"Error during job URL validity check: {e}")
+        return jsonify({"message": "Internal server error during URL check.", "error": str(e)}), 500
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+
 
 @app.route('/api/debug-env', methods=['GET'])
 def debug_env():
