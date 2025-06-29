@@ -82,14 +82,16 @@ class AdminService:
         with db.cursor() as cur:
             thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=config.TRACKED_JOB_STALE_DAYS)
             
-            # Select active applications where there has been no update for 30 days
-            cur.execute("""
+            # *** THE FIX IS HERE: The list of terminal states now uses the new ENUM values. ***
+            terminal_states = ('EXPIRED', 'REJECTED', 'OFFER_ACCEPTED', 'WITHDRAWN')
+            
+            cur.execute(f"""
                 SELECT id, user_id
                 FROM tracked_jobs
-                WHERE status NOT IN ('Expired', 'Rejected', 'Offer Accepted', 'Withdrawn')
+                WHERE status NOT IN %s
                   AND updated_at < %s
                 LIMIT 1000;
-            """, (thirty_days_ago,))
+            """, (terminal_states, thirty_days_ago))
             
             jobs_to_expire = cur.fetchall()
 
@@ -100,7 +102,7 @@ class AdminService:
 
             # Perform a bulk update for efficiency
             job_ids_to_expire = [job['id'] for job in jobs_to_expire]
-            new_status = 'Expired'
+            new_status = 'EXPIRED'
             new_reason = f'Stale - No action in {config.TRACKED_JOB_STALE_DAYS} days'
             
             cur.execute("""

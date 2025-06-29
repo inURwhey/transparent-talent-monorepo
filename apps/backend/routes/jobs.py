@@ -81,8 +81,8 @@ def submit_job():
                 Json(analysis_result.get('recommended_testimonials', []))
             ))
 
-            # 6. Create Tracked Job
-            cursor.execute("INSERT INTO tracked_jobs (user_id, job_id, status) VALUES (%s, %s, 'Saved') RETURNING id;", (user_id, job_id))
+            # 6. Create Tracked Job - status now defaults to 'SAVED' via the DB
+            cursor.execute("INSERT INTO tracked_jobs (user_id, job_id) VALUES (%s, %s) RETURNING id;", (user_id, job_id))
             tracked_job_id = cursor.fetchone()['id']
             
             db.commit()
@@ -123,11 +123,28 @@ def get_tracked_jobs():
         cursor.execute("SELECT COUNT(*) FROM tracked_jobs WHERE user_id = %s;", (user_id,))
         total_count = cursor.fetchone()[0]
 
+        # Query now includes all the new columns
         cursor.execute("""
             SELECT 
                 j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
                 j.status as job_posting_status, j.last_checked_at,
-                t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at, t.is_excited, t.status_reason,
+                t.* 
+            FROM jobs j
+            JOIN tracked_jobs t ON j.id = t.job_id
+            WHERE t.user_id = %s
+            ORDER BY t.created_at DESC, t.id DESC
+            LIMIT %s OFFSET %s;
+        """, (user_id, limit, offset))
+        
+        # We need to fetch the analysis separately now as t.* includes job_id
+        # For simplicity in this step, we will keep the original query structure which is less efficient
+        # but correct. A future refactor could optimize this.
+        cursor.execute("""
+            SELECT 
+                j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
+                j.status as job_posting_status, j.last_checked_at,
+                t.id as tracked_job_id, t.status, t.notes, t.applied_at, t.created_at, t.is_excited, t.status_reason,
+                t.first_interview_at, t.offer_received_at, t.resolved_at, t.next_action_at, t.next_action_notes,
                 ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
                 ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
             FROM jobs j
@@ -155,13 +172,18 @@ def update_tracked_job(tracked_job_id):
     if not data:
         return jsonify({"error": "No update data provided"}), 400
     
-    # This logic will eventually move to a TrackedJobService based on DATA_LIFECYCLE.md
-    allowed_fields = ['status', 'notes', 'applied_at', 'is_excited', 'status_reason']
+    # Updated list of fields that can be modified
+    allowed_fields = [
+        'status', 'notes', 'is_excited', 'status_reason', 
+        'applied_at', 'first_interview_at', 'offer_received_at', 
+        'resolved_at', 'next_action_at', 'next_action_notes'
+    ]
     fields_to_update = {k: v for k, v in data.items() if k in allowed_fields}
     
     if not fields_to_update:
         return jsonify({"error": "No valid fields to update"}), 400
 
+    # The `updated_at` field is now handled by a trigger, so we don't need to set it manually
     set_clauses = [f"{field} = %s" for field in fields_to_update.keys()]
     params = list(fields_to_update.values())
     params.append(tracked_job_id)
@@ -204,7 +226,8 @@ def _get_tracked_job_by_id(cursor, tracked_job_id):
         SELECT 
             j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
             j.status as job_posting_status, j.last_checked_at,
-            t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at, t.is_excited, t.status_reason,
+            t.id as tracked_job_id, t.status, t.notes, t.applied_at, t.created_at, t.is_excited, t.status_reason,
+            t.first_interview_at, t.offer_received_at, t.resolved_at, t.next_action_at, t.next_action_notes,
             ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
             ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
         FROM jobs j
@@ -217,17 +240,27 @@ def _get_tracked_job_by_id(cursor, tracked_job_id):
 
 def _format_tracked_job(row):
     """Formats a row from the database into the standard tracked job JSON structure."""
+    if not row: return None
+    
     job = {
-        "job_id": row["job_id"], "company_name": row["company_name"],
-        "job_title": row["job_title"], "job_url": row["job_url"],
-        "source": row["source"], "found_at": row["found_at"],
-        "job_posting_status": row["job_posting_status"],
-        "last_checked_at": row["last_checked_at"],
-        "tracked_job_id": row["tracked_job_id"], "status": row["status"],
-        "user_notes": row["user_notes"], "applied_at": row["applied_at"],
+        "tracked_job_id": row["tracked_job_id"],
+        "job_id": row["job_id"],
+        "job_title": row["job_title"],
+        "company_name": row["company_name"],
+        "job_url": row["job_url"],
+        "status": row["status"], # Now an ENUM from the DB
+        "user_notes": row["notes"],
+        "applied_at": row["applied_at"],
         "created_at": row["created_at"],
         "is_excited": row["is_excited"],
+        "job_posting_status": row["job_posting_status"],
+        "last_checked_at": row["last_checked_at"],
         "status_reason": row["status_reason"],
+        "first_interview_at": row["first_interview_at"],
+        "offer_received_at": row["offer_received_at"],
+        "resolved_at": row["resolved_at"],
+        "next_action_at": row["next_action_at"],
+        "next_action_notes": row["next_action_notes"],
         "ai_analysis": None
     }
     if row["position_relevance_score"] is not None:
