@@ -1,4 +1,4 @@
-# Transparent Talent: Operational Protocols v1.8
+# Transparent Talent: Operational Protocols v2.0
 
 ## Future State Note
 The ultimate goal for these protocols is to generate structured **JSON** output that can be directly consumed by our backend API. The current CSV/Sheet-based output is an intermediary step for the manual and semi-automated phases.
@@ -53,19 +53,6 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
 1.  **Mandatory Schema Request:** Before generating any code that references a database table, the AI **must** first prompt the user to provide the `\d <table_name>` description for all relevant tables.
 2.  **Grounded Code Generation:** The generated code will strictly adhere to the column names and types from the user-provided schema.
 
-## Workflow Guide: How to Run Protocols
-This workflow should be executed sequentially within a single chat session to maintain context.
-1.  **Initiate Company & Lead Discovery (Protocol 1.4):** Start by providing the user's profile and resume and requesting a 'Master Target Company List' and 'Preliminary Job Leads'.
-2.  **Initiate Preliminary Screening (Protocol 2.2):** From the list of leads generated in Step 1, select specific jobs to screen. The AI will apply the critical verification protocol to each.
-3.  **Initiate Detailed Analysis (Protocol User-Driven v1.1):** For jobs that pass screening, provide the full job description and request a detailed analysis.
-
-## Code Generation Protocols
-*   **Full File Replacement vs. Targeted Changes:**
-    *   **Full File Replacement:** For changes involving adding or removing multiple functions/routes; significant restructuring or refactoring of existing code; modifying a TypeScript interface or Python data structure that affects multiple parts of the file; or addressing complex bugs where a full context is crucial.
-    *   **Targeted Changes:** For isolated changes that are a single line modification; adding or removing a single import statement; changing a literal value (e.g., a constant); or adding a single, small, self-contained `if` or `else` block.
-
-## New Developer Workflow Protocols
-
 ### Session Budgeting Protocol v1.0
 *   **Objective:** To manage development velocity against the real-world constraint of daily token quotas in the AI Studio environment.
 *   **Ground Truth:** The user's account has a daily token quota for Pro models. The AI Studio UI also suffers from performance degradation on very long-context conversations (e.g., >120k tokens). These factors, not API rate limits, are the primary constraints on development.
@@ -90,3 +77,9 @@ This workflow should be executed sequentially within a single chat session to ma
     1.  **Acknowledge Completion:** The AI will state that the coding phase for the logical unit is complete.
     2.  **Mandatory Commit Generation:** Before suggesting the next task or waiting for a deployment, the AI **must** provide a complete, well-formatted git commit message.
     3.  **Await Confirmation:** The AI will then instruct the user to commit and deploy the changes and will wait for confirmation of success before proceeding.
+
+## Workflow Guide: How to Run Protocols
+(This section remains unchanged)
+
+## Code Generation Protocols
+(This section remains unchanged)

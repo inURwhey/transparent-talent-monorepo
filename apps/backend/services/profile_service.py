@@ -19,7 +19,9 @@ class ProfileService:
             "skills_to_avoid", "non_negotiable_requirements", "deal_breakers",
             "preferred_industries", "industries_to_avoid", "personality_adjectives",
             "personality_16_personalities", "personality_disc", "personality_gallup_strengths",
-            "preferred_work_style", "is_remote_preferred"
+            "preferred_work_style", "is_remote_preferred",
+            # --- NEW FIELDS ---
+            "latitude", "longitude"
         ]
 
     def get_profile(self, user_id: int):
