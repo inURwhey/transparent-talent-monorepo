@@ -57,22 +57,6 @@ export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleEx
     enableHiding: false,
   },
   {
-    accessorKey: "is_excited", // NEW: Excitement column
-    header: "Excited?",
-    cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={row.original.is_excited}
-          onCheckedChange={(checked: boolean) => {
-            handleToggleExcited(row.original.tracked_job_id, checked);
-          }}
-        />
-      </div>
-    ),
-    enableSorting: true,
-    enableHiding: true,
-  },
-  {
     accessorKey: "job_title",
     header: "Job",
     cell: ({ row }) => (<div className="font-medium">{row.original.job_title}<div className="text-sm text-muted-foreground">{row.original.company_name}</div></div>),
