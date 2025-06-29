@@ -17,6 +17,22 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
 2.  **Mandatory `package.json` Request:** Before generating the command, the AI **must** prompt the user to provide the full contents of the `package.json` file from the relevant application directory (e.g., `apps/frontend/package.json`).
 3.  **Grounded Command Generation:** The AI will use the `name` property from the provided `package.json` to construct the correct `--filter` flag and then present the full command to the user.
 
+### Frontend Development & Deployment Protocol v1.0
+*Objective:* To ensure efficient and stable frontend development, mindful of Vercel's free tier deployment limits (approximately 100 deployments per 24 hours).
+*Prime Directive:* Minimize pushes to the `main` branch that trigger production deployments.
+
+*Workflow:*
+1.  **Local First Development & Thorough QA:** All frontend changes **must** be thoroughly developed and tested locally using `pnpm dev` within `apps/frontend` before being committed or pushed. Ensure features are fully functional and error-free in the local environment.
+2.  **Utilize Feature Branches & Preview Deployments:**
+    *   Develop on dedicated feature branches (e.g., `git checkout -b feature/my-new-feature`).
+    *   Push feature branches to GitHub to trigger Vercel's **preview deployments**. These deployments are intended for testing and review and typically have a separate or more lenient limit.
+    *   **Only merge to `main` (triggering a production deployment) once a feature is complete, thoroughly tested in a preview deployment, and confirmed stable.**
+3.  **Group Logical Changes:** When pushing to a feature branch, group related changes into logical commits. Avoid committing and pushing every tiny change individually.
+4.  **Shadcn UI Component Installation:** When a new Shadcn UI component is required:
+    *   Navigate to the `apps/frontend` directory.
+    *   Run `npx shadcn@latest add <component-name>` (e.g., `npx shadcn@latest add collapsible`). The `shadcn-ui` CLI is deprecated.
+    *   **Confirm successful installation locally** before proceeding with code that uses the new component or pushing changes.
+
 ### Clerk Interaction Protocol v1.0
 *Objective:* To prevent debugging cycles and ensure correctness when modifying authentication code related to the `@clerk/nextjs` library.
 

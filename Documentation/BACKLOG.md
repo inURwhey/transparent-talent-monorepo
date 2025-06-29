@@ -1,8 +1,13 @@
---- START OF FILE BACKLOG.md ---
 # Transparent Talent: Product Backlog & Roadmap v1.11
 
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
+
+- Feature: Bulk Actions for Tracked Jobs (e.g., Bulk Status Update, Bulk Delete)
+- Platform: Standard Business Email Addresses
+- Marketing: LinkedIn Company Profile
+- Backend: Build out job profiles and the import process to store important information
+- Backend: Build out user, company, and job lifecycles
 
 ---
 
@@ -28,8 +33,6 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | **To Do** |
-| **UI/UX: Add "Excited?" Favorite Column to Job Tracker** | 1000 | 2 | 90% | 0.25 | **7200** | Flash | **To Do** |
-| **UI/UX: Group Profile Fields into Collapsible Subsections** | 1000 | 2 | 90% | 0.25 | **7200** | Flash | **To Do** |
 | **UI/UX: User-Controlled Job Archiving & Expiration Notifications** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | **To Do** |
 | **UI/UX: 'Jobs for You' Module Restoration** | 1000 | 3 | 90% | 0.75 | **3600** | Flash | **To Do** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | Flash | **To Do** |
@@ -79,6 +82,14 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 
 ## Completed Features & Bugfixes
 *This section lists all completed features and bugfixes, categorized by the release version they were delivered in, in reverse chronological order.*
+
+### [v0.18.0] - 2025-06-30 - Job Tracker Enhancement & Profile UX Improvements
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Feature: Add "Excited?" Favorite Column to Job Tracker** | T2 | 7200 |
+| **UI/UX: Group Profile Fields into Collapsible Subsections** | T2 | 7200 |
+| **UI/UX Polish: Status Dropdown Shadcn UI Migration** | UI/UX Polish | N/A |
+| **UI/UX Polish: Reorder 'Excited?' Column** | UI/UX Polish | N/A |
 
 ### [v0.17.0] - 2025-06-30 - User Onboarding Redirection
 | Feature/Bugfix | Original Tier | RICE Score |

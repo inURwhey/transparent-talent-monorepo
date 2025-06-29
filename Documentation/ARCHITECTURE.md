@@ -1,4 +1,3 @@
---- START OF FILE ARCHITECTURE.md ---
 # Transparent Talent - System Architecture
 
 Transparent Talent is architected as a modern, decoupled, three-tier full-stack application, augmented by external services for authentication and generative AI. This is a professional and highly scalable design.
@@ -7,7 +6,7 @@ Transparent Talent is architected as a modern, decoupled, three-tier full-stack 
 
 ## Tier 1: The Frontend (Client)
 
-*   **Technology:** Next.js (built on React).
+*   **Technology:** Next.js (React).
 *   **Purpose:** This is the user-facing part of the application. It is responsible for rendering the User Interface (UI), managing visual state, and handling user interactions.
 *   **How it Works:** It operates as a Single Page Application (SPA). When it needs data or needs to perform an action, it makes asynchronous, token-authenticated HTTP requests (API calls) to the Backend API.
 *   **Deployment:** Deployed as a Next.js application on **Vercel**. Its deployment is automatically triggered by a git push to the main branch of the monorepo.

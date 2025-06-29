@@ -3,6 +3,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.18.0] - 2025-06-30 - Job Tracker Enhancement & Profile UX Improvements
+
+This release focuses on enhancing the job tracker's usability by introducing a "favorite" feature and improving the user profile management experience with collapsible sections for better navigation.
+
+### Added
+-   **Feature:** Implemented an `is_excited` boolean field and a corresponding interactive checkbox column in the "My Job Tracker" table to allow users to mark jobs as favorites.
+-   **UI/UX:** Organized the User Profile management page (`/dashboard/profile`) into logical, collapsible subsections (e.g., "Contact & Basic Information", "Career Aspirations", "Work Environment & Requirements", "Skills & Industry Focus", "Personality & Self-Assessment") using Shadcn UI's `Collapsible` component. These sections are expanded by default upon page load.
+
+### Changed
+-   **Frontend UI:** Reordered columns in the "My Job Tracker" table to move the "Excited?" column after the "Relevance" score, improving visual separation and clarity.
+-   **Frontend UI:** Replaced the native HTML `<select>` element with the Shadcn UI `Select` component in the "Status" column of the "My Job Tracker" table for improved UI consistency.
+-   **Documentation:** Identified and added "Feature: Bulk Actions for Tracked Jobs" to the unrefined backlog, acknowledging the need for bulk operations following the implementation of row selection.
+-   **Documentation:** Identified and added "Platform: Standard Business Email Addresses" and "Marketing: LinkedIn Company Profile" to the unrefined backlog for future consideration.
+-   **Documentation:** Updated `PROTOCOLS.md` to reflect the current `shadcn` CLI command (`npx shadcn@latest add <component>`) instead of the deprecated `shadcn-ui`, and added a comprehensive frontend development and deployment protocol.
+-   **Documentation:** Added "Backend: Build out job profiles and the import process to store important information" and "Backend: Build out user, company, and job lifecycles" to the unrefined backlog.
+
+### Fixed
+-   **Frontend Build:** Resolved a syntax error (`Expected 'from', got '=>'`) in `apps/frontend/app/dashboard/profile/page.tsx` related to the `useRouter` import.
+-   **Frontend Build:** Resolved a syntax error (`Expected 'from', got 's'`) in `apps/frontend/app/dashboard/profile/page.tsx` related to the `Input` component import.
+-   **Frontend Build:** Resolved "Module not found" error for `@/components/ui/collapsible` by adding `npx shadcn@latest add collapsible` to the deployment steps.
+-   **Frontend UI:** Corrected an issue where the "Excited?" column appeared twice in the "My Job Tracker" table due to a duplicate column definition.
+-   **Frontend UI:** Ensured all newly implemented collapsible sections on the user profile page are expanded by default.
+
 ## [v0.17.0] - 2025-06-30 - User Onboarding Redirection
 
 This release improves the new user onboarding experience by automatically redirecting new sign-ups to their profile page.

@@ -1,4 +1,3 @@
---- START OF FILE SYSTEM_BRIEF.md ---
 # Transparent Talent: System Brief v1.8
 
 ## 1. Core Vision & Business Model
@@ -28,14 +27,20 @@
 *   **User Profile Management:** A comprehensive user profile management page has been implemented, allowing users to input and update their detailed career preferences, essential for personalized AI analysis. Associated backend API and navigation have been established. Frontend build stability for this page has been significantly improved by resolving module import errors.
 *   **Work Style & Remote Preferences:** Users can now specify their `preferred_work_style` (e.g., On-site, Remote, Hybrid) and a general `is_remote_preferred` flag within their profile. The UI for these fields intelligently adapts to prevent conflicting inputs, and this information is now fed to the AI for improved job analysis relevance.
 *   **Shadcn UI Integration:** Key UI components (labels, text areas, and select dropdowns) have been fully migrated to use Shadcn UI components across the profile and dashboard pages, enhancing visual consistency and project maintainability.
+*   **New Feature: Job Tracker Enhancements:** The "My Job Tracker" now includes an "Excited?" column with a checkbox, allowing users to easily flag jobs they are enthusiastic about.
+*   **UI/UX Improvement: Collapsible Profile Sections:** The User Profile page has been redesigned with collapsible sections for "Contact & Basic Information", "Career Aspirations", "Work Environment & Requirements", "Skills & Industry Focus", and "Personality & Self-Assessment", significantly improving the user experience for managing detailed profile data.
 
 ## 4. Immediate Backlog & Next Steps
-1.  **Backend: Enhance Job Data for AI Matching:** Build out jobs profile to include location, remote status, and other pertinent details to assist with user:job matching. (RICE: 12000)
-2.  **UI/UX: Add "Excited?" Favorite Column to Job Tracker:** Implement a true/false check column on the job tracker to allow users to favorite applications. (RICE: 7200)
-3.  **UI/UX: Group Profile Fields into Collapsible Subsections:** Group profile fields into collapsable subsections. (RICE: 7200)
-4.  **Feature: Define & Verify New User Account Flow:** Define and implement a comprehensive and verified onboarding flow for new user accounts beyond basic profile creation. (RICE: 6000)
-5.  **Backend: Automated App Expiration:** Create a mechanism to automatically flag or hide job postings that are likely no longer valid after a certain period. (RICE: 4000)
-6.  **UI/UX: User-Controlled Job Archiving & Expiration Notifications:** Implement a 2-step process to expire and hide tracked jobs, including user notifications for "ghosted" applications. (RICE: 3600)
-7.  **UI/UX: 'Jobs for You' Module Restoration:** Ensure the "Jobs for You" module is present, visible, and sorted by relevancy on the user dashboard. (RICE: 3600)
-8.  **UI: Transparent Relevance Scorecard:** Design and build the collapsible UI component that displays the detailed factors behind a job's score. (RICE: 3000)
-9.  **Feature: Automated Application Status Expiration & Notifications:** Implement a mechanism to automatically flag or hide job postings that are likely no longer valid after a certain period, specifically for application statuses. (RICE: 2400)
+1.  **Backend: Scheduled Job URL Validity Checks & Status Updates:** This feature will improve data hygiene and user experience by automatically identifying and updating the status of job postings that are no longer accessible. (RICE: 4.0)
+2.  **Feature: Define & Verify New User Account Flow:** Define and implement a comprehensive and verified onboarding flow for new user accounts beyond basic profile creation. (RICE: 6000)
+3.  **UI/UX: User-Controlled Job Archiving & Expiration Notifications:** Implement a 2-step process to expire and hide tracked jobs, including user notifications for "ghosted" applications. (RICE: 3600)
+4.  **UI/UX: 'Jobs for You' Module Restoration:** Ensure the "Jobs for You" module is present, visible, and sorted by relevancy on the user dashboard. (RICE: 3600)
+5.  **UI: Transparent Relevance Scorecard:** Design and build the collapsible UI component that displays the detailed factors behind a job's score. (RICE: 3000)
+6.  **Feature: Automated Application Status Expiration & Notifications:** Implement a mechanism to automatically flag or hide job postings that are likely no longer valid after a certain period, specifically for application statuses. (RICE: 2400)
+7.  **Feature: Geo-location for User's Current Location:** Implement geo-location for user's current location. (RICE: 2400)
+8.  **Backend: Automated App Expiration:** Create a mechanism to automatically flag or hide job postings that are likely no longer valid after a certain period. (RICE: 4000)
+9.  **Feature: Bulk Job Submission (CSV/URLs):** Allow users to submit multiple job URLs or a CSV of jobs for analysis and tracking. (RICE: 1350)
+10. **Feature: User Feedback Loop:** Implement a robust feedback mechanism for users to rate AI analyses and refine preferences. (RICE: 1200)
+11. **Backend: Enhance Job Data for AI Matching:** Build out jobs profile to include location, remote status, and other pertinent details to assist with user:job matching. (RICE: 12000)
+12. **Feature: Instant Analysis for Known Jobs:** Provide quick analysis for jobs already in the system. (RICE: 4000)
+13. **Refactor: Modularize Large Frontend/Backend Files (e.g., `dashboard/page.tsx`, `app.py`):** Break down monolithic files into smaller, more manageable modules. (RICE: 300)
