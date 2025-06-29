@@ -6,11 +6,12 @@ import { useAuth, useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-// Removed imports for Textarea, Label, Select as they are not found in components/ui
+import { Checkbox } from '@/components/ui/checkbox'; // Added Checkbox import
 
 // --- COMPONENT & UTILITY IMPORTS ---
-import { DataTable } from '../data-table'; 
-import { getColumns } from '../components/columns'; 
+// Removed DataTable and getColumns imports as they are not used on the profile page
+// import { DataTable } from '../data-table'; 
+// import { getColumns } from '../components/columns'; 
 
 // --- TYPE DEFINITIONS ---
 interface Profile {
@@ -38,6 +39,8 @@ interface Profile {
     personality_16_personalities: string | null;
     personality_disc: string | null;
     personality_gallup_strengths: string | null;
+    preferred_work_style: string | null; // NEW FIELD
+    is_remote_preferred: boolean | null; // NEW FIELD
 }
 
 // Define the shape of the data that can be sent to the PUT endpoint
@@ -94,17 +97,18 @@ export default function UserProfilePage() {
         const { id, value } = e.target;
         setProfile(prev => {
             if (!prev) return null;
-            return { ...prev, [id]: value === '' ? null : value }; // Store empty strings as null in state
+            // For text/select fields, empty string means null
+            return { ...prev, [id]: value === '' ? null : value };
         });
     }, []);
 
-    // Simplified handleSelectChange as it's now covered by handleChange
-    // const handleSelectChange = useCallback((id: keyof Profile, value: string) => {
-    //     setProfile(prev => {
-    //         if (!prev) return null;
-    //         return { ...prev, [id]: value === 'null' ? null : value }; // 'null' string from select becomes actual null
-    //     });
-    // }, []);
+    // NEW: Handle checkbox changes
+    const handleCheckboxChange = useCallback((id: keyof Profile, checked: boolean) => {
+        setProfile(prev => {
+            if (!prev) return null;
+            return { ...prev, [id]: checked }; // Checkbox value is a boolean
+        });
+    }, []);
 
     const handleSubmit = useCallback(async (e: FormEvent) => {
         e.preventDefault();
@@ -362,6 +366,37 @@ export default function UserProfilePage() {
                             <option value="Large (1001-10000 employees)">Large (1001-10000 employees)</option>
                             <option value="Enterprise (10000+ employees)">Enterprise (10000+ employees)</option>
                         </select>
+                    </div>
+
+                    {/* NEW: Preferred Work Style (Using native select) */}
+                    <div>
+                        <label htmlFor="preferred_work_style" className="block text-sm font-medium text-gray-700">Preferred Work Style</label>
+                        <select
+                            id="preferred_work_style"
+                            value={profile.preferred_work_style || 'null'} // Use 'null' string for actual null value
+                            onChange={handleChange}
+                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                        >
+                            <option value="null">No Preference</option>
+                            <option value="On-site">On-site</option>
+                            <option value="Remote">Remote</option>
+                            <option value="Hybrid">Hybrid</option>
+                        </select>
+                    </div>
+
+                    {/* NEW: Is Remote Preferred (Using Shadcn Checkbox) */}
+                    <div className="flex items-center space-x-2">
+                        <Checkbox
+                            id="is_remote_preferred"
+                            checked={profile.is_remote_preferred || false} // Default to false if null
+                            onCheckedChange={(checked: boolean) => handleCheckboxChange('is_remote_preferred', checked)}
+                        />
+                        <label
+                            htmlFor="is_remote_preferred"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                            I prefer remote work generally.
+                        </label>
                     </div>
 
                     {/* Ideal Work Culture */}
