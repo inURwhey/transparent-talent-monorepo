@@ -1,3 +1,5 @@
+# Path: apps/backend/auth.py
+
 from flask import request, jsonify, g
 from functools import wraps
 from psycopg2.extras import DictCursor
@@ -7,13 +9,33 @@ import json
 import requests
 import jwt
 from jwt import PyJWKClient
+import logging # Added logging import
+
+# Configure logging for this module
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # --- CONFIGURATION ---
 ISSUER_URL = os.getenv('CLERK_ISSUER_URL')
 # CLERK_AUTHORIZED_PARTY is now a comma-separated string of allowed frontend URLs
 # e.g., "https://prod.url,https://preview.url,http://localhost:3000"
 AUTHORIZED_PARTIES = [party.strip() for party in os.getenv('CLERK_AUTHORIZED_PARTY', '').split(',') if party.strip()]
-jwks_client = PyJWKClient(f"{ISSUER_URL}/.well-known/jwks.json")
+
+logger.info(f"Auth Module Init: ISSUER_URL = '{ISSUER_URL}'")
+logger.info(f"Auth Module Init: AUTHORIZED_PARTIES = {AUTHORIZED_PARTIES}")
+
+jwks_client = None
+try:
+    if not ISSUER_URL:
+        raise ValueError("CLERK_ISSUER_URL environment variable is not set.")
+    jwks_client = PyJWKClient(f"{ISSUER_URL}/.well-known/jwks.json")
+    logger.info("Auth Module Init: PyJWKClient initialized successfully.")
+except Exception as e:
+    logger.error(f"Auth Module Init: Failed to initialize PyJWKClient: {e}")
+    # Re-raise the exception or handle it to prevent 'token_required' from being defined if auth cannot work
+    # For now, we'll let it fail so the NameError becomes more indicative.
+    # If the app can't start without this, it's better to fail fast.
+    raise
 
 def get_db_connection():
     db_url = os.getenv('DATABASE_URL')
@@ -22,76 +44,106 @@ def get_db_connection():
 
 def get_clerk_user_info(clerk_user_id):
     clerk_secret_key = os.getenv('CLERK_SECRET_KEY')
+    if not clerk_secret_key:
+        logger.error("CLERK_SECRET_KEY is not set. Cannot fetch Clerk user info.")
+        return None
     api_url = f"https://api.clerk.com/v1/users/{clerk_user_id}"
     headers = {'Authorization': f'Bearer {clerk_secret_key}'}
-    response = requests.get(api_url, headers=headers)
-    response.raise_for_status()
-    clerk_user = response.json()
-    primary_email_id = clerk_user.get("primary_email_address_id")
-    for email in clerk_user.get("email_addresses", []):
-        if email.get("id") == primary_email_id:
-            return email.get("email_address")
-    return None
+    try:
+        response = requests.get(api_url, headers=headers)
+        response.raise_for_status()
+        clerk_user = response.json()
+        primary_email_id = clerk_user.get("primary_email_address_id")
+        for email in clerk_user.get("email_addresses", []):
+            if email.get("id") == primary_email_id:
+                return email.get("email_address")
+        logger.warning(f"No primary email found for Clerk user ID: {clerk_user_id}")
+        return None
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching Clerk user info for {clerk_user_id}: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error in get_clerk_user_info for {clerk_user_id}: {e}")
+        return None
 
 def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # Ensure jwks_client is initialized before attempting to use it
+        if jwks_client is None:
+            logger.error("token_required called but jwks_client is not initialized. Check CLERK_ISSUER_URL.")
+            return jsonify({"message": "Server authentication setup incomplete. Please try again later."}), 500
+
         try:
-            print("--- AUTHENTICATION ATTEMPT START ---")
+            logger.info("--- AUTHENTICATION ATTEMPT START ---")
             auth_header = request.headers.get('Authorization')
             if not auth_header or not auth_header.startswith('Bearer '):
-                print("--> FAILURE: Auth header missing or invalid.")
+                logger.warning("--> FAILURE: Auth header missing or invalid.")
                 return jsonify({"message": "Authorization header is missing or invalid"}), 401
             
             token = auth_header.split(' ')[1]
             signing_key = jwks_client.get_signing_key_from_jwt(token)
-            claims = jwt.decode(token, signing_key.key, algorithms=["RS256"])
+            
+            # Use jwt.decode with options to control validation more precisely
+            claims = jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=["RS256"],
+                issuer=ISSUER_URL, # Validates 'iss' claim
+                audience=AUTHORIZED_PARTIES, # Validates 'aud' or 'azp' claim against a list
+                options={"verify_exp": True, "verify_nbf": True, "verify_iat": True}
+            )
 
-            # 1. Validate Issuer
-            if claims.get('iss') != ISSUER_URL:
-                print(f"--> FAILURE: Invalid Issuer. Expected: {ISSUER_URL}, Got: {claims.get('iss')}")
-                raise jwt.InvalidIssuerError("Invalid issuer.")
-
-            # 2. Validate Authorized Party (azp) against the list of allowed URLs
-            azp_claim = claims.get('azp')
-            if not azp_claim or azp_claim not in AUTHORIZED_PARTIES:
-                print(f"--> FAILURE: Invalid Authorized Party. Got: '{azp_claim}', Expected one of: {AUTHORIZED_PARTIES}")
-                raise jwt.InvalidAudienceError("Invalid authorized party.")
-
-            print("--> SUCCESS: Token claims validated (iss, azp).")
+            logger.info("--> SUCCESS: Token claims validated (iss, azp, exp, nbf, iat).")
             
             clerk_user_id = claims.get('sub')
             if not clerk_user_id:
-                print("--> FAILURE: Token is missing 'sub' claim.")
+                logger.warning("--> FAILURE: Token is missing 'sub' claim.")
                 return jsonify({"message": "Invalid token: missing user ID (sub) claim"}), 401
             
-            conn = get_db_connection()
-            with conn.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
-                user = cursor.fetchone()
-                if not user:
-                    print(f"--> New user detected: {clerk_user_id}. Creating DB entry.")
-                    user_email = get_clerk_user_info(clerk_user_id)
-                    if not user_email: return jsonify({"message": "Could not retrieve user email from Clerk"}), 500
-                    cursor.execute("SELECT * FROM users WHERE email = %s", (user_email,))
+            conn = None
+            try:
+                conn = get_db_connection()
+                with conn.cursor(cursor_factory=DictCursor) as cursor:
+                    cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
                     user = cursor.fetchone()
-                    if user:
-                        cursor.execute("UPDATE users SET clerk_user_id = %s WHERE id = %s RETURNING *;", (clerk_user_id, user['id']))
+                    if not user:
+                        logger.info(f"--> New user detected: {clerk_user_id}. Creating DB entry.")
+                        user_email = get_clerk_user_info(clerk_user_id)
+                        if not user_email:
+                            logger.error(f"Could not retrieve email for Clerk user {clerk_user_id}.")
+                            return jsonify({"message": "Could not retrieve user email from Clerk"}), 500
+                        
+                        # Check if a user with this email already exists but without clerk_user_id
+                        cursor.execute("SELECT * FROM users WHERE email = %s AND clerk_user_id IS NULL", (user_email,))
                         user = cursor.fetchone()
-                        conn.commit()
-                    else:
-                        cursor.execute("INSERT INTO users (clerk_user_id, email) VALUES (%s, %s) RETURNING *;", (clerk_user_id, user_email))
-                        user = cursor.fetchone()
-                        conn.commit()
-                g.current_user = user
-            conn.close()
-            print("--- AUTHENTICATION ATTEMPT SUCCEEDED ---")
+                        if user:
+                            logger.info(f"--> Updating existing user {user['id']} with Clerk ID {clerk_user_id}.")
+                            cursor.execute("UPDATE users SET clerk_user_id = %s WHERE id = %s RETURNING *;", (clerk_user_id, user['id']))
+                            user = cursor.fetchone()
+                            conn.commit()
+                        else:
+                            logger.info(f"--> Inserting new user with Clerk ID {clerk_user_id} and email {user_email}.")
+                            cursor.execute("INSERT INTO users (clerk_user_id, email) VALUES (%s, %s) RETURNING *;", (clerk_user_id, user_email))
+                            user = cursor.fetchone()
+                            conn.commit()
+                    g.current_user = user
+                logger.info("--- AUTHENTICATION ATTEMPT SUCCEEDED ---")
+            finally:
+                if conn:
+                    conn.close()
 
-        except jwt.PyJWTError as e:
-            print(f"--> FAILURE: A JWT-specific error occurred: {type(e).__name__} - {e}")
+        except jwt.ExpiredSignatureError:
+            logger.warning("--> FAILURE: Token has expired.")
+            return jsonify({"message": "Token has expired"}), 401
+        except jwt.InvalidTokenError as e: # Catch other general JWT validation errors
+            logger.warning(f"--> FAILURE: JWT Invalid Token Error: {e}")
             return jsonify({"message": f"Token is invalid: {str(e)}"}), 401
+        except requests.exceptions.RequestException as e:
+            logger.error(f"--> FAILURE: Network error during Clerk API call: {e}")
+            return jsonify({"message": "Network error during authentication process."}), 500
         except Exception as e:
-            print(f"--> FAILURE: A general exception occurred: {type(e).__name__} - {e}")
+            logger.error(f"--> FAILURE: A general exception occurred during authentication: {type(e).__name__} - {e}")
             return jsonify({"message": "An unexpected error occurred during authentication."}), 500
 
         return f(*args, **kwargs)

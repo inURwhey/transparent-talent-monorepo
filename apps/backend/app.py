@@ -12,6 +12,8 @@ import google.generativeai as genai
 import json
 import re
 
+from auth import token_required
+
 # --- Initialization ---
 load_dotenv()
 app = Flask(__name__)
@@ -21,8 +23,11 @@ CORS(app, supports_credentials=True, expose_headers=["Authorization"])
 ANALYSIS_PROTOCOL_VERSION = '2.0'
 JOB_POSTING_MAX_AGE_DAYS = 60 # Job posting considered expired if found_at is older than this
 TRACKED_JOB_STALE_DAYS = 30 # Tracked job considered stale if no action (updated_at) in this many days
-# NEW: Regex for identifying known legacy malformed URLs
-LEGACY_URL_MALFORMED_PATTERN = re.compile(r"\s*\(.+\)|\(https?://.+?\)")
+# Regex for identifying known legacy malformed URLs (e.g., "url (description)" or "(url)")
+# This pattern looks for parentheses containing content at the end of the URL string or wrapping the entire URL.
+# It helps identify URLs that were likely part of a copy-paste with extra text.
+LEGACY_URL_MALFORMED_PATTERN = re.compile(r".+\s+\(.+\)|\(.+?\)$") # Matches "text (more text)" or "(text)" at string end
+
 
 # --- AI Configuration ---
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
@@ -40,14 +45,14 @@ def get_db_connection():
 def check_job_url_validity(full_url_string: str) -> bool:
     """
     Extracts a clean URL from a string and performs an HTTP HEAD request to check if it's reachable (2xx or 3xx status).
-    Handles cases where the string contains extra text or parentheses.
+    Handles cases where the string might contain extra text.
     """
-    # Regex to find a URL starting with http/https and ending before whitespace or common closing characters
-    # This regex is more robust for general cases, but the explicit legacy check is for specific patterns.
+    # This regex is for extracting a *potentially* valid URL to test from a given string.
+    # It attempts to find an http/https URL that is not followed by whitespace or common closing brackets.
     url_match = re.search(r"https?://[^\s)\]]+", full_url_string)
     if not url_match:
         app.logger.warning(f"No valid URL pattern found for HTTP request in string: {full_url_string}")
-        return False # No valid URL pattern that can be used for an HTTP request
+        return False
 
     clean_url = url_match.group(0) # Extract the matched URL part
 
@@ -262,8 +267,8 @@ def get_user_profile():
                                     'short_term_career_goal', 'long_term_career_goals', 'desired_annual_compensation',
                                     'desired_title', 'ideal_role_description', 'preferred_company_size',
                                     'ideal_work_culture', 'disliked_work_culture', 'core_strengths',
-                                    'skills_to_avoid', 'non_negotiable_requirements', 'deal_breakers',
-                                    'preferred_industries', 'industries_to_avoid', 'personality_adjectives',
+                                    'skills_to_avoid', 'preferred_industries', 'industries_to_avoid',
+                                    'personality_adjectives',
                                     'personality_16_personalities', 'personality_disc', 'personality_gallup_strengths',
                                     'preferred_work_style'] and value is None:
                         profile_dict[col_name] = ""
@@ -548,17 +553,16 @@ def check_job_urls():
         twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
         sixty_days_ago = datetime.now(timezone.utc) - timedelta(days=JOB_POSTING_MAX_AGE_DAYS)
         
-        # Select jobs that need checking based on last_checked_at or age
-        # Include all relevant statuses for re-evaluation
+        # Select jobs that need checking based on last_checked_at, age, or if they match legacy patterns.
         cur.execute("""
             SELECT id, job_url, status, found_at
             FROM jobs
             WHERE last_checked_at IS NULL
                OR last_checked_at < %s
                OR (status = 'Active' AND found_at < %s)
-               OR (job_url IS NOT NULL AND job_url != '' AND status = 'Active' AND %s ~ job_url) -- Look for legacy patterns in active jobs
+               OR (job_url IS NOT NULL AND job_url != '' AND job_url ~ %s) -- Corrected: pattern on right side
             LIMIT 1000;
-        """, (twenty_four_hours_ago, sixty_days_ago, LEGACY_URL_MALFORMED_PATTERN.pattern)) # Pass the pattern for WHERE clause
+        """, (twenty_four_hours_ago, sixty_days_ago, LEGACY_URL_MALFORMED_PATTERN.pattern))
         
         jobs_to_check = cur.fetchall()
 
@@ -577,7 +581,7 @@ def check_job_urls():
                 else:
                     app.logger.info(f"Job ID {job['id']} already 'Expired - Missing URL'. Just updating check time.")
                 
-            # Priority 2: Handle known legacy malformed URLs
+            # Priority 2: Handle known legacy malformed URLs based on pattern
             elif LEGACY_URL_MALFORMED_PATTERN.search(job['job_url']):
                 if job['status'] != 'Expired - Legacy Format':
                     new_status = 'Expired - Legacy Format'
