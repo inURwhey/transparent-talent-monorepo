@@ -3,15 +3,15 @@
 
 import { useState, useEffect, useCallback, FormEvent, useMemo } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
-import { PaginationState } from '@tanstack/react-table'; // Import PaginationState
-import Link from 'next/link'; // Import Link
+import { PaginationState } from '@tanstack/react-table';
+import Link from 'next/link';
 
 // --- COMPONENT & UTILITY IMPORTS ---
 import { DataTable } from './data-table';
-import { getColumns } from './components/columns'; // NEW: Import columns from their own file
-import { Button } from '@/components/ui/button'; // Ensure Button is imported
-import { Input } from '@/components/ui/input'; // Ensure Input is imported
-import { Label } from '@/components/ui/label'; // NEW: Import Label component
+import { getColumns } from './components/columns';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 // --- TYPE DEFINITIONS ---
 interface Profile {
@@ -42,14 +42,16 @@ interface TrackedJob {
   status: string;
   user_notes: string | null;
   applied_at: string | null;
-  created_at: string; // NEW: The date the job was saved
+  created_at: string; // The date the job was saved
+  is_excited: boolean; // ADDED: New field for 'Excited?' column
   ai_analysis: AIAnalysis | null;
 }
-// Corrected UpdatePayload to allow null for notes
+// Corrected UpdatePayload to allow null for notes and include is_excited
 type UpdatePayload = {
-  notes?: string | null; // Allow notes to be null for clearing, or string for updating
+  notes?: string | null;
   applied_at?: string | null;
   status?: string;
+  is_excited?: boolean; // ADDED: Allow updating is_excited
 };
 
 export default function UserDashboard() {
@@ -105,7 +107,7 @@ export default function UserDashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [apiBaseUrl, authedFetch, pagination]); // Depend on pagination state
+  }, [apiBaseUrl, authedFetch, pagination]);
 
   // Effect for initial profile and general jobs (not paginated)
   useEffect(() => {
@@ -139,15 +141,16 @@ export default function UserDashboard() {
     if (isUserLoaded) {
       fetchTrackedJobsData();
     }
-  }, [isUserLoaded, fetchTrackedJobsData]); // Only re-run when pagination or authedFetch (due to getToken) changes
+  }, [isUserLoaded, fetchTrackedJobsData]);
 
   const handleUpdate = useCallback(async (trackedJobId: number, payload: UpdatePayload) => {
     try {
-      // Optimistic UI update logic remains the same
+      // Optimistic UI update
       const optimisticUpdate: Partial<TrackedJob> = {};
       if (payload.status !== undefined) optimisticUpdate.status = payload.status;
       if (payload.notes !== undefined) optimisticUpdate.user_notes = payload.notes;
       if (payload.applied_at !== undefined) optimisticUpdate.applied_at = payload.applied_at;
+      if (payload.is_excited !== undefined) optimisticUpdate.is_excited = payload.is_excited; // ADDED: Optimistic update for is_excited
 
       setTrackedJobs(prev => prev.map(job =>
         job.tracked_job_id === trackedJobId
@@ -170,7 +173,7 @@ export default function UserDashboard() {
       console.error("Update Error:", error);
       setDebugError(error instanceof Error ? error.message : "An unknown error occurred during update.");
     }
-  }, [apiBaseUrl, authedFetch, fetchTrackedJobsData]); // Add fetchTrackedJobsData to dependencies
+  }, [apiBaseUrl, authedFetch, fetchTrackedJobsData]);
 
   const handleRemoveJob = useCallback(async (trackedJobId: number) => {
     if (!window.confirm("Are you sure?")) return;
@@ -202,6 +205,11 @@ export default function UserDashboard() {
     await handleUpdate(trackedJobId, payload);
   }, [handleUpdate, trackedJobs]);
 
+  // ADDED: New handler for toggling 'is_excited'
+  const handleToggleExcited = useCallback(async (trackedJobId: number, isExcited: boolean) => {
+    await handleUpdate(trackedJobId, { is_excited: isExcited });
+  }, [handleUpdate]);
+
   const handleJobSubmit = useCallback(async (event: FormEvent) => {
     event.preventDefault();
     if (!jobUrl.trim() || isSubmitting) return;
@@ -218,15 +226,13 @@ export default function UserDashboard() {
 
     } catch (error) { setSubmissionError(error instanceof Error ? error.message : 'An unknown error.'); }
     finally { setIsSubmitting(false); }
-  }, [apiBaseUrl, authedFetch, jobUrl, isSubmitting, setPagination]); // Add setPagination to dependencies
+  }, [apiBaseUrl, authedFetch, jobUrl, isSubmitting, setPagination]);
 
   // --- COLUMN DEFINITIONS (NOW CLEANLY HANDLED) ---
-  const columns = useMemo(() => getColumns({ handleStatusChange, handleRemoveJob }), [handleStatusChange, handleRemoveJob]);
+  const columns = useMemo(() => getColumns({ handleStatusChange, handleRemoveJob, handleToggleExcited }), [handleStatusChange, handleRemoveJob, handleToggleExcited]); // ADDED: Pass handleToggleExcited
 
   // --- RENDER LOGIC ---
   if (!isUserLoaded) return <div className="min-h-screen flex items-center justify-center">Initializing session...</div>
-  // isLoading only blocks if trackedJobs are loading (after initial profile/jobs fetch)
-  // or initial fetch is happening
   if (isLoading && trackedJobs.length === 0 && totalTrackedJobsCount === 0) return <div className="min-h-screen flex items-center justify-center">Loading Dashboard Data...</div>
   if (debugError) return (<div className="min-h-screen flex items-center justify-center text-center"><div><h2 className="text-xl font-semibold text-red-600">An Error Occurred</h2><p className="text-gray-600 mt-2">There was an issue loading your dashboard data.</p><p className="text-sm mt-4 text-red-700 font-mono bg-red-50 p-4 rounded-md"><strong>Error Details:</strong> {debugError}</p></div></div>);
 
@@ -234,7 +240,7 @@ export default function UserDashboard() {
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
       {profile && (
         <div className="max-w-7xl mx-auto">
-          <div className="bg-white p-6 rounded-lg shadow-md mb-8 flex justify-between items-center"> {/* Added flex layout */}
+          <div className="bg-white p-6 rounded-lg shadow-md mb-8 flex justify-between items-center">
               <div>
                 <h1 className="text-3xl font-bold text-gray-800">{profile.full_name || 'Your Dashboard'}</h1>
                 <p className="text-lg text-gray-600 mt-2">Short Term Goal:</p>

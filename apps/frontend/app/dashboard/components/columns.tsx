@@ -13,6 +13,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 // --- TYPE DEFINITIONS ---
 // Keep types in sync with page.tsx
@@ -28,6 +35,7 @@ interface TrackedJob {
   status: string;
   applied_at: string | null;
   created_at: string; // The date the job was saved
+  is_excited: boolean; // New field for 'Excited?' column
   ai_analysis: AIAnalysis | null;
 }
 
@@ -35,11 +43,12 @@ interface TrackedJob {
 interface GetColumnsProps {
   handleStatusChange: (trackedJobId: number, newStatus: string) => void;
   handleRemoveJob: (trackedJobId: number) => void;
+  handleToggleExcited: (trackedJobId: number, isExcited: boolean) => void;
 }
 
 // This function generates the column definitions.
 // It takes callbacks as arguments to keep the column logic separate from the page logic.
-export const getColumns = ({ handleStatusChange, handleRemoveJob }: GetColumnsProps): ColumnDef<TrackedJob>[] => [
+export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleExcited }: GetColumnsProps): ColumnDef<TrackedJob>[] => [
   {
     id: "select",
     header: ({ table }) => (<Checkbox checked={table.getIsAllPageRowsSelected()} onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)} />),
@@ -56,18 +65,21 @@ export const getColumns = ({ handleStatusChange, handleRemoveJob }: GetColumnsPr
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => (
-      <select
+      <Select
         value={row.original.status}
-        onChange={(e) => handleStatusChange(row.original.tracked_job_id, e.target.value)}
-        onClick={(e) => e.stopPropagation()}
-        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2"
+        onValueChange={(newValue) => handleStatusChange(row.original.tracked_job_id, newValue)}
       >
-        <option>Saved</option>
-        <option>Applied</option>
-        <option>Interviewing</option>
-        <option>Offer</option>
-        <option>Rejected</option>
-      </select>
+        <SelectTrigger className="w-[180px] bg-gray-50">
+          <SelectValue placeholder="Select Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="Saved">Saved</SelectItem>
+          <SelectItem value="Applied">Applied</SelectItem>
+          <SelectItem value="Interviewing">Interviewing</SelectItem>
+          <SelectItem value="Offer">Offer</SelectItem>
+          <SelectItem value="Rejected">Rejected</SelectItem>
+        </SelectContent>
+      </Select>
     ),
   },
   {
@@ -86,6 +98,22 @@ export const getColumns = ({ handleStatusChange, handleRemoveJob }: GetColumnsPr
       const scoreB = rowB.original.ai_analysis ? rowB.original.ai_analysis.position_relevance_score + rowB.original.ai_analysis.environment_fit_score : -1;
       return scoreA - scoreB;
     }
+  },
+  {
+    accessorKey: "is_excited", // MOVED: Excitement column is now after Relevance
+    header: "Excited?",
+    cell: ({ row }) => (
+      <div className="flex items-center justify-center">
+        <Checkbox
+          checked={row.original.is_excited}
+          onCheckedChange={(checked: boolean) => {
+            handleToggleExcited(row.original.tracked_job_id, checked);
+          }}
+        />
+      </div>
+    ),
+    enableSorting: true,
+    enableHiding: true,
   },
   {
     accessorKey: "created_at",
