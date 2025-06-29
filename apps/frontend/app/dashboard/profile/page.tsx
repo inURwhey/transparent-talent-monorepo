@@ -3,9 +3,9 @@
 
 import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation'; // CORRECTED: Removed '=>' from import
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Input }s from '@/components/ui/input';
+import { Input } from '@/components/ui/input'; // CORRECTED: Removed 's' after Input
 import { Checkbox } from '@/components/ui/checkbox';
 // --- SHADCN UI IMPORTS ---
 import { Label } from '@/components/ui/label';
