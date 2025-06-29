@@ -27,9 +27,7 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | **To Do** |
-| **Feature: User Profile Onboarding & Data Input** | 1000 | 3 | 100% | 0.75 | **4000** | Flash | **Done** |
-| **Refine UI Components: Implement Shadcn UI for Textarea, Label, and Select** | 1000 | 1 | 100% | 0.25 | **4000** | Flash | **To Do** |
-| **Feature: Preferred Work Style & Remote Preference** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | **To Do** |
+| **Refine UI Components: Implement Shadcn UI for Textarea, Label, and Select** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | **To Do** |
 | **UI/UX: User-Controlled Job Archiving & Expiration Notifications** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | **To Do** |
 | **UI/UX: 'Jobs for You' Module Restoration** | 1000 | 3 | 90% | 0.75 | **3600** | Flash | **To Do** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | Flash | **To Do** |
@@ -43,6 +41,7 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 ## Tier 3: AI & System Intelligence (Mid-Term)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Backend: Enhance Job Data for AI Matching** | 1000 | 3 | 100% | 0.5 | **12000** | Pro | **To Do** |
 | **Feature: Instant Analysis for Known Jobs**| 1000 | 2 | 100% | 0.5 | **4000** | Pro | **To Do** |
 | **Automation: Tiered Job Analysis (Lightweight Pre-Screening + Detailed AI)** | 1000 | 3 | 90% | 1.5 | **1800** | Pro | **To Do** |
 | **Feature: LinkedIn Profile/Resume Content Extraction & AI Parsing** | 1000 | 3 | 80% | 1.5 | **1600** | Pro | **To Do** |
@@ -78,6 +77,11 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 
 ## Completed Features & Bugfixes
 *This section lists all completed features and bugfixes, categorized by the release version they were delivered in, in reverse chronological order.*
+
+### [v0.15.0] - 2025-06-30 - User Profile Work Style & Remote Preferences
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Feature: Preferred Work Style & Remote Preference** | T2 | 8000 |
 
 ### [v0.14.0] - 2025-06-29 - User Profile Management & UI Bugfixes
 | Feature/Bugfix | Original Tier | RICE Score |

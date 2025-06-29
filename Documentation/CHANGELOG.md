@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.15.0] - 2025-06-30 - User Profile Work Style & Remote Preferences
+
+This release introduces new user profile fields to capture preferred work style and remote preferences, enhancing the context for future AI job matching. It also refines the user interface for these new fields to prevent logical inconsistencies.
+
+### Added
+-   **Feature:** Implemented `preferred_work_style` (On-site, Remote, Hybrid) and `is_remote_preferred` (boolean) fields to the user profile management page.
+-   **Database Schema:** Added `preferred_work_style` (VARCHAR) and `is_remote_preferred` (BOOLEAN) columns to the `user_profiles` table.
+-   **Backend API:** Enhanced `/api/profile` (GET and PUT) to handle the new profile fields.
+-   **AI Context:** Updated the job analysis prompt within `/api/jobs/submit` to include `preferred_work_style` and `is_remote_preferred` in the user profile context for AI processing.
+
+### Changed
+-   **Frontend UI/UX:** Implemented conditional rendering for the "I prefer remote work generally." checkbox, making it only visible if "Preferred Work Style" is not set to "On-site" to prevent conflicting user input. Automatically unchecks and hides `is_remote_preferred` if "On-site" is selected.
+-   **Documentation:** Increased the priority (RICE score) of the backlog item "Refine UI Components: Implement Shadcn UI for Textarea, Label, and Select" due to observed technical debt and UI consistency needs.
+
+### Fixed
+-   No specific bugs were identified or fixed in this release; changes were feature-driven.
+
 ## [v0.14.0] - 2025-06-29 - User Profile Management & UI Bugfixes
 
 This release introduces the foundational user profile management feature, allowing users to input and update their detailed career preferences. Critical frontend build and import errors were also resolved, ensuring application stability.

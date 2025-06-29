@@ -22,7 +22,7 @@ Transparent Talent is architected as a modern, decoupled, three-tier full-stack 
 
 *   **Technology:** PostgreSQL.
 *   **Purpose:** This is the application's permanent memory. It is responsible for storing all structured data in a reliable, organized, and efficient manner.
-*   **How it Works:** It contains a relational schema with tables like `users`, `jobs`, `companies`, and `tracked_jobs`. The Backend is the only component that communicates directly with the database.
+*   **How it Works:** It contains a relational schema with tables like `users`, `jobs`, `companies`, `tracked_jobs`, and `user_profiles`. The Backend is the only component that communicates directly with the database.
 *   **Deployment:** Hosted as a managed PostgreSQL instance on **Render**.
 
 ## External Service: Authentication
@@ -35,4 +35,4 @@ Transparent Talent is architected as a modern, decoupled, three-tier full-stack 
 
 *   **Technology:** Google Gemini API.
 *   **Purpose:** This service acts as a specialized "co-processor" for complex, creative, or analytical tasks.
-*   **How it Works:** The Backend API securely calls the Gemini API using a secret API key. The frontend never communicates directly with the AI service. The backend sends a carefully crafted prompt and integrates the response data into the application's normal flow.
+*   **How it Works:** The Backend API securely calls the Gemini API using a secret API key. The frontend never communicates directly with the AI service. The backend sends a carefully crafted prompt (which now includes richer user profile context like work style and remote preferences) and integrates the response data into the application's normal flow.
