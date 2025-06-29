@@ -9,7 +9,7 @@ import json
 import requests
 import jwt
 from jwt import PyJWKClient
-import logging # Added logging import
+import logging
 
 # Configure logging for this module
 logging.basicConfig(level=logging.INFO)
@@ -33,9 +33,7 @@ try:
 except Exception as e:
     logger.error(f"Auth Module Init: Failed to initialize PyJWKClient: {e}")
     # Re-raise the exception or handle it to prevent 'token_required' from being defined if auth cannot work
-    # For now, we'll let it fail so the NameError becomes more indicative.
-    # If the app can't start without this, it's better to fail fast.
-    raise
+    raise # It's best to fail fast if the auth system cannot be initialized
 
 def get_db_connection():
     db_url = os.getenv('DATABASE_URL')
@@ -69,7 +67,6 @@ def get_clerk_user_info(clerk_user_id):
 def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Ensure jwks_client is initialized before attempting to use it
         if jwks_client is None:
             logger.error("token_required called but jwks_client is not initialized. Check CLERK_ISSUER_URL.")
             return jsonify({"message": "Server authentication setup incomplete. Please try again later."}), 500
@@ -84,15 +81,21 @@ def token_required(f):
             token = auth_header.split(' ')[1]
             signing_key = jwks_client.get_signing_key_from_jwt(token)
             
-            # Use jwt.decode with options to control validation more precisely
+            # --- MODIFIED: Removed 'audience' parameter from jwt.decode ---
+            # Manually validate 'azp' claim as Clerk issues 'azp' not 'aud'
             claims = jwt.decode(
                 token,
                 signing_key.key,
                 algorithms=["RS256"],
                 issuer=ISSUER_URL, # Validates 'iss' claim
-                audience=AUTHORIZED_PARTIES, # Validates 'aud' or 'azp' claim against a list
                 options={"verify_exp": True, "verify_nbf": True, "verify_iat": True}
             )
+
+            # 1. Validate Authorized Party (azp) manually
+            azp_claim = claims.get('azp')
+            if not azp_claim or azp_claim not in AUTHORIZED_PARTIES:
+                logger.warning(f"--> FAILURE: Invalid Authorized Party. Got: '{azp_claim}', Expected one of: {AUTHORIZED_PARTIES}")
+                raise jwt.InvalidAudienceError("Invalid authorized party.") # Using InvalidAudienceError for consistency
 
             logger.info("--> SUCCESS: Token claims validated (iss, azp, exp, nbf, iat).")
             
@@ -114,7 +117,6 @@ def token_required(f):
                             logger.error(f"Could not retrieve email for Clerk user {clerk_user_id}.")
                             return jsonify({"message": "Could not retrieve user email from Clerk"}), 500
                         
-                        # Check if a user with this email already exists but without clerk_user_id
                         cursor.execute("SELECT * FROM users WHERE email = %s AND clerk_user_id IS NULL", (user_email,))
                         user = cursor.fetchone()
                         if user:
