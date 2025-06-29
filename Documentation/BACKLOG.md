@@ -19,6 +19,7 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Refactor: Separate `tracked_jobs.status` into `status` and `status_reason` columns (with ENUMs)** | 1 | 3 | 100% | 0.75 | **4.0** | Flash | **To Do** |
 | **Backend: Scheduled Job URL Validity Checks & Status Updates** | 1 | 2 | 100% | 0.5 | **4.0** | Flash | **To Do** |
+| **Refactor: Modularize Large Frontend/Backend Files (e.g., `dashboard/page.tsx`, `app.py`)** | 1 | 3 | 100% | 1.0 | **300** | Pro | **To Do** |
 | **Backend: Define & Implement Comprehensive Data Lifecycle Management** | 1 | 3 | 90% | 1.0 | **2.7** | Pro | **To Do** |
 
 
@@ -26,11 +27,14 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | **To Do** |
-| **Feature: User Profile Onboarding & Data Input** | 1000 | 3 | 100% | 0.75 | **4000** | Flash | **To Do** |
+| **Feature: User Profile Onboarding & Data Input** | 1000 | 3 | 100% | 0.75 | **4000** | Flash | **Done** |
+| **Refine UI Components: Implement Shadcn UI for Textarea, Label, and Select** | 1000 | 1 | 100% | 0.25 | **4000** | Flash | **To Do** |
+| **Feature: Preferred Work Style & Remote Preference** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | **To Do** |
 | **UI/UX: User-Controlled Job Archiving & Expiration Notifications** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | **To Do** |
 | **UI/UX: 'Jobs for You' Module Restoration** | 1000 | 3 | 90% | 0.75 | **3600** | Flash | **To Do** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | Flash | **To Do** |
 | **Feature: Automated Application Status Expiration & Notifications** | 1000 | 2 | 90% | 0.75 | **2400** | Flash | **To Do** |
+| **Feature: Geo-location for User's Current Location** | 1000 | 2 | 90% | 0.75 | **2400** | Pro | **To Do** |
 | **Backend: Automated App Expiration** | 1000 | 1 | 100% | 0.25 | **4000** | Flash | **To Do** |
 | **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | Pro | **To Do** |
 | **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | Pro | **To Do** |
@@ -41,6 +45,7 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Feature: Instant Analysis for Known Jobs**| 1000 | 2 | 100% | 0.5 | **4000** | Pro | **To Do** |
 | **Automation: Tiered Job Analysis (Lightweight Pre-Screening + Detailed AI)** | 1000 | 3 | 90% | 1.5 | **1800** | Pro | **To Do** |
+| **Feature: LinkedIn Profile/Resume Content Extraction & AI Parsing** | 1000 | 3 | 80% | 1.5 | **1600** | Pro | **To Do** |
 | **Automation: Full API Job Analysis**| 1000 | 3 | 90% | 2.0 | **1350** | Pro | **To Do** |
 | **Feature: Proactive Anomaly Detection**| 1000 | 3 | 90% | 2.5 | **1080** | Pro | **To Do** |
 | **Feature: Automated Job Sourcing (Email/Platform Integration)** | 1000 | 2 | 90% | 0.75 | **900** | Pro | **To Do** |
@@ -66,13 +71,18 @@ The "AI Model" column indicates the estimated complexity and nuance required fro
 | **Platform: System-Wide Analysis from User Submissions**| 1000 | 3 | 80% | 4.0 | **600** | Pro | **To Do** |
 | **Platform: System-Wide Relevance Calc**| 1000 | 3 | 90% | 6.0 | **450** | Pro | **To Do** |
 | **Revenue: "Bring Your Own Key" (BYOK) Model** | 200 | 1 | 70% | 0.5 | **280** | Pro | **To Do** |
-| **Platform: Data Access for Biz** | 1000 | 3 | 50% | 6.0 | **250** | Pro | **To Do** |
+| **Platform: Data Access for Biz** | 1000 | 3 | 50% | 6.0 | **250** | N/A | **To Do** |
 | **BI: ML User/Company Clustering** | 10 | 3 | 80% | 4.0 | **6.0** | Pro | **To Do** |
 
 ---
 
 ## Completed Features & Bugfixes
 *This section lists all completed features and bugfixes, categorized by the release version they were delivered in, in reverse chronological order.*
+
+### [v0.14.0] - 2025-06-29 - User Profile Management & UI Bugfixes
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Feature: User Profile Onboarding & Data Input** | T2 | 4000 |
 
 ### [v0.13.0] - 2025-06-29 - Data Integrity & Analysis Hardening
 | Feature/Bugfix | Original Tier | RICE Score |

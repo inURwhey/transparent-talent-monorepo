@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.14.0] - 2025-06-29 - User Profile Management & UI Bugfixes
+
+This release introduces the foundational user profile management feature, allowing users to input and update their detailed career preferences. Critical frontend build and import errors were also resolved, ensuring application stability.
+
+### Added
+-   **Feature:** Implemented a dedicated User Profile Management page (`/dashboard/profile`) allowing users to input and update detailed profile information.
+-   **Backend API:** Added `PUT /api/profile` endpoint to support comprehensive updates to user profiles, including dynamic field handling.
+-   **Frontend UI:** Added navigation from the main dashboard to the new user profile page via an "Edit Profile" button.
+-   **Documentation:** Added new unrefined ideas to the product backlog for future consideration (Geo-location for current location, LinkedIn content parsing for resume, preferred work style/remote preference, and modularization of large frontend/backend files).
+
+### Changed
+-   **Backend API:** Enhanced `GET /api/profile` to ensure all profile fields are consistently returned, converting `None` values to empty strings for frontend convenience.
+-   **Documentation:** Refined the definition of the "AI Model" column in `BACKLOG.md` to clarify its purpose for AI assistant (my) level of effort in code generation.
+
+### Fixed
+-   **Frontend Build:** Resolved syntax errors in `apps/frontend/app/dashboard/profile/page.tsx` caused by accidental inclusion of markdown formatting.
+-   **Frontend Build:** Corrected relative import paths (`./data-table`, `./components/columns`) in `apps/frontend/app/dashboard/profile/page.tsx` to resolve "Module not found" errors.
+-   **Frontend UI:** Replaced missing Shadcn UI components (`Textarea`, `Label`, `Select`) with native HTML elements and basic Tailwind CSS styling in `apps/frontend/app/dashboard/profile/page.tsx` to ensure successful build and functionality.
+
 ## [v0.13.0] - 2025-06-29 - Data Integrity & Analysis Hardening
 
 This release significantly improves the backend's data integrity, particularly for AI-driven job analyses. It ensures that analyses are correctly associated with specific users and includes versioning for future compatibility. Historical data was also cleaned up to improve dashboard clarity.
