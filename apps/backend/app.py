@@ -13,9 +13,9 @@ def create_app():
     # The config is already validated upon import, so we just use it.
     from . import config
     app.config.from_object(config.Config)
-    
+
     # --- Extensions ---
-    CORS(app, supports_credentials=True, expose_headers=["Authorization"])
+    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True, expose_headers=["Authorization"])
 
     # --- Database Initialization ---
     from . import database
