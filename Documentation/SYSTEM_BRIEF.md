@@ -15,6 +15,12 @@
 *   **Architecture Style:** Decoupled three-tier application, managed in a **monorepo**. The backend now follows a service-oriented architecture with an application factory pattern.
 
 ## 3. Current Project Status
+*   **Backend Service Layer Complete:** A dedicated service layer for business logic is now fully implemented in the backend. The new `TrackedJobService` encapsulates all logic for updating tracked jobs, completing the backend's service-oriented architecture refactor.
+*   **Data Lifecycle Activated:** The foundational database migration for the new `tracked_jobs` data lifecycle has been successfully executed. The backend and frontend have been updated to be fully compatible with the new schema.
+*   **Frontend Architecture Refactored:** The main user dashboard component (`page.tsx`) has been completely refactored. All data-fetching logic has been extracted into a reusable custom hook (`useTrackedJobsApi`).
+*   **Backend Architecture Refactored:** The backend has been completely refactored from a monolithic `app.py` into a scalable, service-oriented architecture.
+*   **Frontend Stability Restored:** A critical infinite loop bug on the user dashboard has been resolved, fixing core performance issues and related UI bugs.
+*   **Application is stable and functional on its production domain.**
 *   **Data Lifecycle Activated:** The foundational database migration for the new `tracked_jobs` data lifecycle has been successfully executed. The backend and frontend have been updated to be fully compatible with the new schema, including the new status `ENUM`s and milestone timestamp fields.
 *   **Frontend Architecture Refactored:** The main user dashboard component (`page.tsx`) has been completely refactored. All data-fetching logic has been extracted into a reusable custom hook (`useTrackedJobsApi`), and UI sections have been broken into smaller, dedicated components, significantly improving maintainability.
 *   **Backend Architecture Refactored:** The backend has been completely refactored from a monolithic `app.py` into a scalable, service-oriented architecture. This new structure separates concerns into dedicated layers for configuration, services, routes, and database management, significantly improving maintainability and testability.
@@ -36,7 +42,7 @@
 *   **UI/UX Improvement: Collapsible Profile Sections:** The User Profile page has been redesigned with collapsible sections for "Contact & Basic Information", "Career Aspirations", "Work Environment & Requirements", "Skills & Industry Focus", and "Personality & Self-Assessment", significantly improving the user experience for managing detailed profile data.
 
 ## 4. Immediate Backlog & Next Steps
-1.  **Backend: Implement `TrackedJobService` Layer:** Now that the database migration is complete, create a dedicated service layer in the backend to encapsulate the state transition logic defined in `DATA_LIFECYCLE.md`, moving it out of the route handlers. (RICE: 6.0)
-2.  **Marketing: LinkedIn Company Profile:** Create and populate a company profile on LinkedIn to establish a professional presence and begin brand building. (RICE: 10000)
+1.  **Feature: User-set Reminders & Next Action Notifications:** Implement the UI and backend logic to allow users to set reminders for their tracked jobs, utilizing the new `next_action_at` and `next_action_notes` fields. (RICE: 4000)
+2.  **Marketing: LinkedIn Company Profile:** Create and populate a company profile on LinkedIn to establish a professional presence. (RICE: 10000)
 3.  **UI/UX: Refine "Inactive Applications" Filter and Status Display:** Now that the new statuses are in place, refine the "Inactive Applications" filter to accurately reflect status categories like "Expired," "Rejected," "Withdrawn," and "Accepted." (RICE: 8000)
 4.  **Feature: Define & Verify New User Account Flow:** Define and implement a comprehensive and verified onboarding flow for new user accounts beyond basic profile creation. (RICE: 6000)

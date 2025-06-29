@@ -3,6 +3,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.23.0] - 2025-07-01 - Backend Service Layer Implementation
+
+This release completes the backend refactoring effort by introducing a dedicated service layer for business logic, further enhancing the application's architecture and maintainability.
+
+### Added
+-   **`apps/backend/services/tracked_job_service.py`**: A new service class was created to encapsulate all business logic related to updating tracked job records, in accordance with the `DATA_LIFECYCLE.md` plan.
+
+### Changed
+-   **`apps/backend/routes/jobs.py`**: The `update_tracked_job` route handler was refactored to delegate all update logic to the new `TrackedJobService`, making the route a clean API-facing wrapper.
+-   **Documentation**: Updated `BACKLOG.md` and `PROTOCOLS.md` to include a new "Session Cost" estimation system for better planning and management of AI Studio token quotas.
+
 ## [v0.22.0] - 2025-07-01 - Data Lifecycle Migration & Frontend Refactor
 
 This release implements the foundational database schema for the new Data Lifecycle model and completes the frontend component refactoring for the main user dashboard.

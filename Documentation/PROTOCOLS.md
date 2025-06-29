@@ -66,20 +66,27 @@ This workflow should be executed sequentially within a single chat session to ma
 
 ## New Developer Workflow Protocols
 
+### Session Budgeting Protocol v1.0
+*   **Objective:** To manage development velocity against the real-world constraint of daily token quotas in the AI Studio environment.
+*   **Ground Truth:** The user's account has a daily token quota for Pro models. The AI Studio UI also suffers from performance degradation on very long-context conversations (e.g., >120k tokens). These factors, not API rate limits, are the primary constraints on development.
+*   **Protocol:**
+    1.  **Backlog Costing:** All items in `BACKLOG.md` will be assigned a `Session Cost` (S/M/L) that estimates the token budget required.
+    2.  **Session Planning:** At the start of a session, the AI will reference the task's `Session Cost` to set expectations for what can be accomplished within the daily quota.
+    3.  **Checkpointing:** For `L` (Large) cost tasks, the AI will proactively suggest using an `END_PROMPT` cycle to serve as a logical checkpoint, committing the work and resetting the session's token count to avoid UI lag.
+
 ### Context Management & Session Scoping v1.0
-*   **Objective:** To optimize development efficiency by matching the session's context length to the nature of the task, balancing deep context against token and performance costs.
+*   **Objective:** To optimize development efficiency by matching the session's context length to the nature of the task.
 *   **Prime Directive:** The AI will explicitly recommend a context strategy at the beginning of a work session.
-*   **Context:** The `START_PROMPT` and `END_PROMPT` cycle costs approximately 20k tokens combined, and this cost grows with the changelog. The AI Studio web UI begins to lag noticeably around the 120k token mark for a session.
 *   **Workflow & Heuristics:**
     1.  **Task Assessment:** At the start of a new task, the AI will assess its nature based on the backlog and user request.
     2.  **Strategy Recommendation:**
-        *   For **"Pro-level"** tasks (e.g., architecture, multi-step refactoring, complex feature epics), the AI will state: *"This is a complex task. I recommend we maintain a single, continuous context until it is complete. The value of our shared understanding will exceed the token cost, but we should aim to use an `END_PROMPT` cycle to checkpoint our work before the ~120k token performance limit is reached."*
-        *   For a batch of unrelated **"Flash-level"** tasks, the AI will state: *"These are discrete tasks. To optimize for cost and performance, I will treat each as a nearly independent request, minimizing the context carried over between them. The `END_PROMPT` process is likely cost-prohibitive for this type of session."*
+        *   For **"Pro-level"** tasks, the AI will state: *"This is a complex task. I recommend we maintain a single, continuous context until it is complete. The value of our shared understanding will exceed the token cost."*
+        *   For a batch of unrelated **"Flash-level"** tasks, the AI will state: *"These are discrete tasks. To optimize for cost and performance, I will treat each as a nearly independent request."*
 
 ### Development Cycle Protocol v1.0
 *   **Objective:** To ensure that logical units of work are committed with clear, comprehensive messages at the appropriate time.
 *   **Trigger:** The AI completes a series of file creation or modification steps that constitute a self-contained feature, refactor, or bugfix.
 *   **Workflow:**
     1.  **Acknowledge Completion:** The AI will state that the coding phase for the logical unit is complete.
-    2.  **Mandatory Commit Generation:** Before suggesting the next task or waiting for a deployment, the AI **must** provide a complete, well-formatted git commit message that summarizes the work just performed.
+    2.  **Mandatory Commit Generation:** Before suggesting the next task or waiting for a deployment, the AI **must** provide a complete, well-formatted git commit message.
     3.  **Await Confirmation:** The AI will then instruct the user to commit and deploy the changes and will wait for confirmation of success before proceeding.
