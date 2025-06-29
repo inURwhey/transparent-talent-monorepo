@@ -3,6 +3,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.21.0] - 2025-07-01 - Backend Modularization & Frontend Stability
+
+This release marks a major architectural refactoring of the backend, transforming it from a single monolithic file into a scalable, service-oriented application. Additionally, a critical performance bug on the frontend dashboard has been resolved, which also fixed related UI component-state issues.
+
+### Added
+-   **Backend Architecture:** Introduced a new service-oriented architecture with an application factory (`create_app`).
+-   **Backend Modules:** Created new, dedicated modules for `config`, `database`, `services` (job, profile, admin), and `routes` (using Flask Blueprints) to organize code by domain.
+
+### Changed
+-   **Backend:** Refactored the entire `apps/backend/app.py` file. It is now a lean application factory that assembles the application from modular components. All business logic, database connections, and route definitions have been moved to their respective modules.
+-   **Deployment:** Updated the Render **Build Command** and **Start Command** to work with the new package-aware, modular architecture, resolving deployment failures.
+
+### Fixed
+-   **Backend:** Resolved `ImportError: attempted relative import with no known parent package` which caused deployment failures after the initial refactor.
+-   **Frontend:** Fixed a critical infinite loop in the dashboard's `useEffect` hooks in `page.tsx` that was causing repeated, unnecessary API calls and preventing the dashboard from loading correctly.
+-   **Frontend:** Frontend: As a beneficial side effect of fixing the render loop, resolved a bug where the status dropdown in the "My Job Tracker" table would not persist its state or would collapse unexpectedly.
+
+
 ## [v0.20.0] - 2025-07-01 - Architectural Definition
 
 This release marks a significant architectural milestone. A comprehensive data lifecycle for the core `tracked_jobs` entity has been formally defined and documented, establishing a robust state machine that will govern all future application pipeline features. This work serves as the foundation for enhanced data integrity, advanced analytics, and new user-facing functionality.
