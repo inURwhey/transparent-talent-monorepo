@@ -63,3 +63,23 @@ This workflow should be executed sequentially within a single chat session to ma
 *   **Full File Replacement vs. Targeted Changes:**
     *   **Full File Replacement:** For changes involving adding or removing multiple functions/routes; significant restructuring or refactoring of existing code; modifying a TypeScript interface or Python data structure that affects multiple parts of the file; or addressing complex bugs where a full context is crucial.
     *   **Targeted Changes:** For isolated changes that are a single line modification; adding or removing a single import statement; changing a literal value (e.g., a constant); or adding a single, small, self-contained `if` or `else` block.
+
+## New Developer Workflow Protocols
+
+### Context Management & Session Scoping v1.0
+*   **Objective:** To optimize development efficiency by matching the session's context length to the nature of the task, balancing deep context against token and performance costs.
+*   **Prime Directive:** The AI will explicitly recommend a context strategy at the beginning of a work session.
+*   **Context:** The `START_PROMPT` and `END_PROMPT` cycle costs approximately 20k tokens combined, and this cost grows with the changelog. The AI Studio web UI begins to lag noticeably around the 120k token mark for a session.
+*   **Workflow & Heuristics:**
+    1.  **Task Assessment:** At the start of a new task, the AI will assess its nature based on the backlog and user request.
+    2.  **Strategy Recommendation:**
+        *   For **"Pro-level"** tasks (e.g., architecture, multi-step refactoring, complex feature epics), the AI will state: *"This is a complex task. I recommend we maintain a single, continuous context until it is complete. The value of our shared understanding will exceed the token cost, but we should aim to use an `END_PROMPT` cycle to checkpoint our work before the ~120k token performance limit is reached."*
+        *   For a batch of unrelated **"Flash-level"** tasks, the AI will state: *"These are discrete tasks. To optimize for cost and performance, I will treat each as a nearly independent request, minimizing the context carried over between them. The `END_PROMPT` process is likely cost-prohibitive for this type of session."*
+
+### Development Cycle Protocol v1.0
+*   **Objective:** To ensure that logical units of work are committed with clear, comprehensive messages at the appropriate time.
+*   **Trigger:** The AI completes a series of file creation or modification steps that constitute a self-contained feature, refactor, or bugfix.
+*   **Workflow:**
+    1.  **Acknowledge Completion:** The AI will state that the coding phase for the logical unit is complete.
+    2.  **Mandatory Commit Generation:** Before suggesting the next task or waiting for a deployment, the AI **must** provide a complete, well-formatted git commit message that summarizes the work just performed.
+    3.  **Await Confirmation:** The AI will then instruct the user to commit and deploy the changes and will wait for confirmation of success before proceeding.

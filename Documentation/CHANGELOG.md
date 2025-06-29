@@ -3,6 +3,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.22.0] - 2025-07-01 - Data Lifecycle Migration & Frontend Refactor
+
+This release implements the foundational database schema for the new Data Lifecycle model and completes the frontend component refactoring for the main user dashboard.
+
+### Changed
+-   **Database:** Executed a major migration on the `tracked_jobs` table to align with `DATA_LIFECYCLE.md`. This replaced the `status` text field with a robust `ENUM` and added several new `TIMESTAMPTZ` columns for tracking milestones (e.g., `applied_at`, `first_interview_at`, `resolved_at`).
+-   **Backend:** Updated all backend services and routes (`jobs.py`, `admin_service.py`) to be compatible with the new `tracked_jobs` schema.
+-   **Frontend:** Refactored the monolithic `dashboard/page.tsx` by extracting all data fetching and state management for tracked jobs into a new custom hook (`useTrackedJobsApi.ts`).
+-   **Frontend:** Decoupled type definitions into a dedicated `types.ts` file and the job submission form into its own `JobSubmissionForm.tsx` component.
+-   **Frontend:** Updated the dashboard UI's filtering logic and status-change handlers to use the new data model and ENUMs from the backend.
+
+### Fixed
+-   Resolved a `git` divergence and merge conflict caused by amending a pushed commit, successfully recovering the local branch and pushing the required fix.
+-   Corrected a TypeScript error in `page.tsx` where an invalid property (`updated_at`) was being passed in a payload, which was causing Vercel build failures.
+
 ## [v0.21.0] - 2025-07-01 - Backend Modularization & Frontend Stability
 
 This release marks a major architectural refactoring of the backend, transforming it from a single monolithic file into a scalable, service-oriented application. Additionally, a critical performance bug on the frontend dashboard has been resolved, which also fixed related UI component-state issues.
