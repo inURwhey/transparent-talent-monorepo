@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 import google.generativeai as genai
 import json
 import re
+from functools import wraps # NEW: Import wraps for the new decorator
 
 from auth import token_required
 
@@ -21,12 +22,28 @@ CORS(app, supports_credentials=True, expose_headers=["Authorization"])
 
 # --- Constants ---
 ANALYSIS_PROTOCOL_VERSION = '2.0'
-JOB_POSTING_MAX_AGE_DAYS = 60 # Job posting considered expired if found_at is older than this
-TRACKED_JOB_STALE_DAYS = 30 # Tracked job considered stale if no action (updated_at) in this many days
-# Regex for identifying known legacy malformed URLs (e.g., "url (description)" or "(url)")
-# This pattern looks for parentheses containing content at the end of the URL string or wrapping the entire URL.
-# It helps identify URLs that were likely part of a copy-paste with extra text.
-LEGACY_URL_MALFORMED_PATTERN = re.compile(r".+\s+\(.+\)|\(.+?\)$") # Matches "text (more text)" or "(text)" at string end
+JOB_POSTING_MAX_AGE_DAYS = 60
+TRACKED_JOB_STALE_DAYS = 30
+LEGACY_URL_MALFORMED_PATTERN = re.compile(r".+\s+\(.+\)|\(.+?\)$")
+
+# NEW: Retrieve the API Key for integrity checks
+INTEGRITY_CHECK_API_KEY = os.getenv('INTEGRITY_CHECK_API_KEY')
+if not INTEGRITY_CHECK_API_KEY:
+    print("Warning: INTEGRITY_CHECK_API_KEY is not set. Admin endpoints might be unprotected or inaccessible.")
+
+# --- NEW: Simple API Key Authentication Decorator for Testing ---
+def api_key_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not INTEGRITY_CHECK_API_KEY:
+            return jsonify({"message": "API Key not configured on server."}), 500
+
+        api_key_header = request.headers.get('X-Api-Key') # Use a custom header like X-Api-Key
+        if not api_key_header or api_key_header != INTEGRITY_CHECK_API_KEY:
+            app.logger.warning("Attempted access to API key protected endpoint with missing or invalid key.")
+            return jsonify({"message": "Unauthorized: Invalid or missing API Key."}), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 # --- AI Configuration ---
@@ -47,19 +64,16 @@ def check_job_url_validity(full_url_string: str) -> bool:
     Extracts a clean URL from a string and performs an HTTP HEAD request to check if it's reachable (2xx or 3xx status).
     Handles cases where the string might contain extra text.
     """
-    # This regex is for extracting a *potentially* valid URL to test from a given string.
-    # It attempts to find an http/https URL that is not followed by whitespace or common closing brackets.
     url_match = re.search(r"https?://[^\s)\]]+", full_url_string)
     if not url_match:
         app.logger.warning(f"No valid URL pattern found for HTTP request in string: {full_url_string}")
         return False
 
-    clean_url = url_match.group(0) # Extract the matched URL part
+    clean_url = url_match.group(0)
 
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
         response = requests.head(clean_url, timeout=5, headers=headers, allow_redirects=True)
-        # Consider 2xx and 3xx (redirects) status codes as valid/reachable
         return 200 <= response.status_code < 400
     except requests.exceptions.RequestException as e:
         app.logger.warning(f"Error checking URL '{clean_url}' extracted from '{full_url_string}': {e}")
@@ -535,7 +549,8 @@ def remove_tracked_job(tracked_job_id):
 
 # --- Endpoint to trigger job URL validity and age check ---
 @app.route('/api/admin/jobs/check-url-validity', methods=['POST'])
-@token_required
+# @token_required # TEMPORARILY COMMENTED OUT FOR API KEY TESTING
+@api_key_required # NEW: Use API key for testing
 def check_job_urls():
     """
     Checks the validity and age of job URLs and updates their status in the 'jobs' table.
@@ -560,7 +575,7 @@ def check_job_urls():
             WHERE last_checked_at IS NULL
                OR last_checked_at < %s
                OR (status = 'Active' AND found_at < %s)
-               OR (job_url IS NOT NULL AND job_url != '' AND job_url ~ %s) -- Corrected: pattern on right side
+               OR (job_url IS NOT NULL AND job_url != '' AND job_url ~ %s)
             LIMIT 1000;
         """, (twenty_four_hours_ago, sixty_days_ago, LEGACY_URL_MALFORMED_PATTERN.pattern))
         
@@ -571,9 +586,8 @@ def check_job_urls():
         for job in jobs_to_check:
             checked_count += 1
             current_time_utc = datetime.now(timezone.utc)
-            new_status = job['status'] # Start with current status
+            new_status = job['status']
             
-            # Priority 1: Handle missing URL (NULL or empty string)
             if not job['job_url'] or not job['job_url'].strip():
                 if job['status'] != 'Expired - Missing URL':
                     new_status = 'Expired - Missing URL'
@@ -581,7 +595,6 @@ def check_job_urls():
                 else:
                     app.logger.info(f"Job ID {job['id']} already 'Expired - Missing URL'. Just updating check time.")
                 
-            # Priority 2: Handle known legacy malformed URLs based on pattern
             elif LEGACY_URL_MALFORMED_PATTERN.search(job['job_url']):
                 if job['status'] != 'Expired - Legacy Format':
                     new_status = 'Expired - Legacy Format'
@@ -589,7 +602,6 @@ def check_job_urls():
                 else:
                     app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' still 'Expired - Legacy Format'. Just updating check time.")
             
-            # Priority 3: Standard URL validation for all other cases
             else:
                 is_valid_url = check_job_url_validity(job['job_url'])
 
@@ -600,7 +612,6 @@ def check_job_urls():
                     else:
                         app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' still unreachable. Just updating check time.")
                 else:
-                    # URL is reachable, now check age
                     if job['found_at'] and job['found_at'] < sixty_days_ago:
                         if job['status'] != 'Expired - Time Based':
                             new_status = 'Expired - Time Based'
@@ -608,7 +619,6 @@ def check_job_urls():
                         else:
                             app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' still 'Expired - Time Based'. Just updating check time.")
                     else:
-                        # URL is reachable AND not too old, mark as active
                         if job['status'] != 'Active':
                             new_status = 'Active'
                             app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' is active. Marking as '{new_status}'.")
@@ -643,7 +653,8 @@ def check_job_urls():
 
 # --- NEW: Endpoint to trigger tracked job application expiration ---
 @app.route('/api/admin/tracked-jobs/check-expiration', methods=['POST'])
-@token_required
+# @token_required # TEMPORARILY COMMENTED OUT FOR API KEY TESTING
+@api_key_required # NEW: Use API key for testing
 def check_tracked_job_expiration():
     """
     Checks tracked jobs for staleness based on last action (updated_at) and marks them expired.
