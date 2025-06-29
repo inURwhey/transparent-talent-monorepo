@@ -9,7 +9,7 @@ export function useTrackedJobsApi() {
   const { getToken, isLoaded: isUserLoaded } = useAuth();
 
   // Use BACKEND_PREVIEW_URL if available, otherwise default to NEXT_PUBLIC_API_BASE_URL
-  const apiBaseUrl = process.env.BACKEND_PREVIEW_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
+  const apiBaseUrl = process.env.NEXT_PUBLIC_BACKEND_PREVIEW_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
 
   // State managed by the hook
   const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
