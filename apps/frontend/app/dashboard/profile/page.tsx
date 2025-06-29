@@ -7,9 +7,11 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+// --- NEW SHADCN UI IMPORTS ---
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// --- COMPONENT & UTILITY IMPORTS ---
-// No changes here, still not using DataTable on profile page
 
 // --- TYPE DEFINITIONS ---
 interface Profile {
@@ -37,7 +39,7 @@ interface Profile {
     personality_16_personalities: string | null;
     personality_disc: string | null;
     personality_gallup_strengths: string | null;
-    preferred_work_style: string | null;
+    preferred_work_style: 'On-site' | 'Remote' | 'Hybrid' | null; // Explicitly define union type for Select
     is_remote_preferred: boolean | null;
 }
 
@@ -92,25 +94,23 @@ export default function UserProfilePage() {
     }, [isUserLoaded, isAuthLoaded, apiBaseUrl, authedFetch]);
 
     // MODIFIED: Handle changes for all input types, including conditional logic for preferred_work_style
-    const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { id, value } = e.target;
+    // This now also handles values directly from Shadcn Select's onValueChange
+    const handleChange = useCallback((id: keyof Profile, value: any) => {
         setProfile(prev => {
             if (!prev) return null;
             let updatedProfile = { ...prev };
 
             // Handle value for text/select fields: empty string means null
-            updatedProfile = { ...updatedProfile, [id]: value === '' ? null : value };
+            // For selects, "null" string needs to be converted back to actual null
+            const finalValue = value === '' || value === 'null' ? null : value;
+            updatedProfile = { ...updatedProfile, [id]: finalValue };
 
             // NEW LOGIC: If preferred_work_style is set to 'On-site', force is_remote_preferred to false
             if (id === 'preferred_work_style') {
-                if (value === 'On-site') {
+                if (finalValue === 'On-site') {
                     updatedProfile.is_remote_preferred = false;
                 }
-                // If it changes *from* 'On-site' to something else,
-                // we don't implicitly change is_remote_preferred.
-                // The user can then manually set it back if they wish.
             }
-
             return updatedProfile;
         });
     }, []);
@@ -203,108 +203,108 @@ export default function UserProfilePage() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Full Name */}
                     <div>
-                        <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">Full Name</label>
+                        <Label htmlFor="full_name" className="block text-sm font-medium text-gray-700">Full Name</Label>
                         <Input
                             id="full_name"
                             type="text"
                             value={profile.full_name || ''}
-                            onChange={handleChange}
+                            onChange={(e) => handleChange('full_name', e.target.value)}
                             className="mt-1"
                         />
                     </div>
 
                     {/* Short Term Career Goal */}
                     <div>
-                        <label htmlFor="short_term_career_goal" className="block text-sm font-medium text-gray-700">Short-Term Career Goal</label>
-                        <textarea
+                        <Label htmlFor="short_term_career_goal" className="block text-sm font-medium text-gray-700">Short-Term Career Goal</Label>
+                        <Textarea
                             id="short_term_career_goal"
                             value={profile.short_term_career_goal || ''}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onChange={(e) => handleChange('short_term_career_goal', e.target.value)}
+                            className="mt-1 block w-full"
                             rows={3}
                         />
                     </div>
 
                     {/* Ideal Role Description */}
                     <div>
-                        <label htmlFor="ideal_role_description" className="block text-sm font-medium text-gray-700">Ideal Role Description</label>
-                        <textarea
+                        <Label htmlFor="ideal_role_description" className="block text-sm font-medium text-gray-700">Ideal Role Description</Label>
+                        <Textarea
                             id="ideal_role_description"
                             value={profile.ideal_role_description || ''}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onChange={(e) => handleChange('ideal_role_description', e.target.value)}
+                            className="mt-1 block w-full"
                             rows={5}
                         />
                     </div>
 
                     {/* Core Strengths */}
                     <div>
-                        <label htmlFor="core_strengths" className="block text-sm font-medium text-gray-700">Core Strengths (comma-separated)</label>
-                        <textarea
+                        <Label htmlFor="core_strengths" className="block text-sm font-medium text-gray-700">Core Strengths (comma-separated)</Label>
+                        <Textarea
                             id="core_strengths"
                             value={profile.core_strengths || ''}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onChange={(e) => handleChange('core_strengths', e.target.value)}
+                            className="mt-1 block w-full"
                             rows={3}
                         />
                     </div>
 
                     {/* Skills to Avoid */}
                     <div>
-                        <label htmlFor="skills_to_avoid" className="block text-sm font-medium text-gray-700">Skills / Technologies to Avoid (comma-separated)</label>
-                        <textarea
+                        <Label htmlFor="skills_to_avoid" className="block text-sm font-medium text-gray-700">Skills / Technologies to Avoid (comma-separated)</Label>
+                        <Textarea
                             id="skills_to_avoid"
                             value={profile.skills_to_avoid || ''}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onChange={(e) => handleChange('skills_to_avoid', e.target.value)}
+                            className="mt-1 block w-full"
                             rows={3}
                         />
                     </div>
-                    
+
                     {/* Preferred Industries */}
                     <div>
-                        <label htmlFor="preferred_industries" className="block text-sm font-medium text-gray-700">Preferred Industries (comma-separated)</label>
-                        <textarea
+                        <Label htmlFor="preferred_industries" className="block text-sm font-medium text-gray-700">Preferred Industries (comma-separated)</Label>
+                        <Textarea
                             id="preferred_industries"
                             value={profile.preferred_industries || ''}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onChange={(e) => handleChange('preferred_industries', e.target.value)}
+                            className="mt-1 block w-full"
                             rows={2}
                         />
                     </div>
 
                     {/* Industries to Avoid */}
                     <div>
-                        <label htmlFor="industries_to_avoid" className="block text-sm font-medium text-gray-700">Industries to Avoid (comma-separated)</label>
-                        <textarea
+                        <Label htmlFor="industries_to_avoid" className="block text-sm font-medium text-gray-700">Industries to Avoid (comma-separated)</Label>
+                        <Textarea
                             id="industries_to_avoid"
                             value={profile.industries_to_avoid || ''}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onChange={(e) => handleChange('industries_to_avoid', e.target.value)}
+                            className="mt-1 block w-full"
                             rows={2}
                         />
                     </div>
 
                     {/* Current Location - Using Input, which is available */}
                     <div>
-                        <label htmlFor="current_location" className="block text-sm font-medium text-gray-700">Current Location</label>
+                        <Label htmlFor="current_location" className="block text-sm font-medium text-gray-700">Current Location</Label>
                         <Input
                             id="current_location"
                             type="text"
                             value={profile.current_location || ''}
-                            onChange={handleChange}
+                            onChange={(e) => handleChange('current_location', e.target.value)}
                             className="mt-1"
                         />
                     </div>
 
                     {/* LinkedIn Profile URL - Using Input */}
                     <div>
-                        <label htmlFor="linkedin_profile_url" className="block text-sm font-medium text-gray-700">LinkedIn Profile URL</label>
+                        <Label htmlFor="linkedin_profile_url" className="block text-sm font-medium text-gray-700">LinkedIn Profile URL</Label>
                         <Input
                             id="linkedin_profile_url"
                             type="url"
                             value={profile.linkedin_profile_url || ''}
-                            onChange={handleChange}
+                            onChange={(e) => handleChange('linkedin_profile_url', e.target.value)}
                             className="mt-1"
                             placeholder="https://www.linkedin.com/in/yourprofile/"
                         />
@@ -312,24 +312,24 @@ export default function UserProfilePage() {
 
                     {/* Desired Title - Using Input */}
                     <div>
-                        <label htmlFor="desired_title" className="block text-sm font-medium text-gray-700">Desired Job Title</label>
+                        <Label htmlFor="desired_title" className="block text-sm font-medium text-gray-700">Desired Job Title</Label>
                         <Input
                             id="desired_title"
                             type="text"
                             value={profile.desired_title || ''}
-                            onChange={handleChange}
+                            onChange={(e) => handleChange('desired_title', e.target.value)}
                             className="mt-1"
                         />
                     </div>
 
                     {/* Desired Annual Compensation - Using Input */}
                     <div>
-                        <label htmlFor="desired_annual_compensation" className="block text-sm font-medium text-gray-700">Desired Annual Compensation</label>
+                        <Label htmlFor="desired_annual_compensation" className="block text-sm font-medium text-gray-700">Desired Annual Compensation</Label>
                         <Input
                             id="desired_annual_compensation"
                             type="text"
                             value={profile.desired_annual_compensation || ''}
-                            onChange={handleChange}
+                            onChange={(e) => handleChange('desired_annual_compensation', e.target.value)}
                             className="mt-1"
                             placeholder="$150,000 - $180,000"
                         />
@@ -337,60 +337,66 @@ export default function UserProfilePage() {
 
                     {/* Non-Negotiable Requirements */}
                     <div>
-                        <label htmlFor="non_negotiable_requirements" className="block text-sm font-medium text-gray-700">Non-Negotiable Requirements</label>
-                        <textarea
+                        <Label htmlFor="non_negotiable_requirements" className="block text-sm font-medium text-gray-700">Non-Negotiable Requirements</Label>
+                        <Textarea
                             id="non_negotiable_requirements"
                             value={profile.non_negotiable_requirements || ''}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onChange={(e) => handleChange('non_negotiable_requirements', e.target.value)}
+                            className="mt-1 block w-full"
                             rows={3}
                         />
                     </div>
 
                     {/* Deal Breakers */}
                     <div>
-                        <label htmlFor="deal_breakers" className="block text-sm font-medium text-gray-700">Deal Breakers (e.g., "On-call rotation", "Strictly in-office")</label>
-                        <textarea
+                        <Label htmlFor="deal_breakers" className="block text-sm font-medium text-gray-700">Deal Breakers (e.g., "On-call rotation", "Strictly in-office")</Label>
+                        <Textarea
                             id="deal_breakers"
                             value={profile.deal_breakers || ''}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onChange={(e) => handleChange('deal_breakers', e.target.value)}
+                            className="mt-1 block w-full"
                             rows={3}
                         />
                     </div>
 
-                    {/* Preferred Company Size (Using native select) */}
+                    {/* Preferred Company Size (Using Shadcn Select) */}
                     <div>
-                        <label htmlFor="preferred_company_size" className="block text-sm font-medium text-gray-700">Preferred Company Size</label>
-                        <select
-                            id="preferred_company_size"
+                        <Label htmlFor="preferred_company_size" className="block text-sm font-medium text-gray-700">Preferred Company Size</Label>
+                        <Select
                             value={profile.preferred_company_size || 'null'}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onValueChange={(value) => handleChange('preferred_company_size', value)}
                         >
-                            <option value="null">No Preference</option>
-                            <option value="Startup (1-50 employees)">Startup (1-50 employees)</option>
-                            <option value="Small (51-200 employees)">Small (51-200 employees)</option>
-                            <option value="Medium (201-1000 employees)">Medium (201-1000 employees)</option>
-                            <option value="Large (1001-10000 employees)">Large (1001-10000 employees)</option>
-                            <option value="Enterprise (10000+ employees)">Enterprise (10000+ employees)</option>
-                        </select>
+                            <SelectTrigger className="w-full mt-1">
+                                <SelectValue placeholder="No Preference" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="null">No Preference</SelectItem>
+                                <SelectItem value="Startup (1-50 employees)">Startup (1-50 employees)</SelectItem>
+                                <SelectItem value="Small (51-200 employees)">Small (51-200 employees)</SelectItem>
+                                <SelectItem value="Medium (201-1000 employees)">Medium (201-1000 employees)</SelectItem>
+                                <SelectItem value="Large (1001-10000 employees)">Large (1001-10000 employees)</SelectItem>
+                                <SelectItem value="Enterprise (10000+ employees)">Enterprise (10000+ employees)</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
-                    {/* Preferred Work Style (Using native select) */}
+                    {/* Preferred Work Style (Using Shadcn Select) */}
                     <div>
-                        <label htmlFor="preferred_work_style" className="block text-sm font-medium text-gray-700">Preferred Work Style</label>
-                        <select
-                            id="preferred_work_style"
+                        <Label htmlFor="preferred_work_style" className="block text-sm font-medium text-gray-700">Preferred Work Style</Label>
+                        <Select
                             value={profile.preferred_work_style || 'null'}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onValueChange={(value) => handleChange('preferred_work_style', value)}
                         >
-                            <option value="null">No Preference</option>
-                            <option value="On-site">On-site</option>
-                            <option value="Remote">Remote</option>
-                            <option value="Hybrid">Hybrid</option>
-                        </select>
+                            <SelectTrigger className="w-full mt-1">
+                                <SelectValue placeholder="No Preference" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="null">No Preference</SelectItem>
+                                <SelectItem value="On-site">On-site</SelectItem>
+                                <SelectItem value="Remote">Remote</SelectItem>
+                                <SelectItem value="Hybrid">Hybrid</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     {/* NEW: Is Remote Preferred (Using Shadcn Checkbox) - CONDITIONAL RENDERING */}
@@ -402,71 +408,71 @@ export default function UserProfilePage() {
                                 checked={profile.is_remote_preferred || false}
                                 onCheckedChange={(checked: boolean) => handleCheckboxChange('is_remote_preferred', checked)}
                             />
-                            <label
+                            <Label
                                 htmlFor="is_remote_preferred"
                                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                             >
                                 I prefer remote work generally.
-                            </label>
+                            </Label>
                         </div>
                     )}
 
                     {/* Ideal Work Culture */}
                     <div>
-                        <label htmlFor="ideal_work_culture" className="block text-sm font-medium text-gray-700">Ideal Work Culture (e.g., "Collaborative", "Autonomous", "Fast-paced")</label>
-                        <textarea
+                        <Label htmlFor="ideal_work_culture" className="block text-sm font-medium text-gray-700">Ideal Work Culture (e.g., "Collaborative", "Autonomous", "Fast-paced")</Label>
+                        <Textarea
                             id="ideal_work_culture"
                             value={profile.ideal_work_culture || ''}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onChange={(e) => handleChange('ideal_work_culture', e.target.value)}
+                            className="mt-1 block w-full"
                             rows={3}
                         />
                     </div>
 
                     {/* Disliked Work Culture */}
                     <div>
-                        <label htmlFor="disliked_work_culture" className="block text-sm font-medium text-gray-700">Disliked Work Culture</label>
-                        <textarea
+                        <Label htmlFor="disliked_work_culture" className="block text-sm font-medium text-gray-700">Disliked Work Culture</Label>
+                        <Textarea
                             id="disliked_work_culture"
                             value={profile.disliked_work_culture || ''}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onChange={(e) => handleChange('disliked_work_culture', e.target.value)}
+                            className="mt-1 block w-full"
                             rows={3}
                         />
                     </div>
 
                     {/* Long Term Career Goals */}
                     <div>
-                        <label htmlFor="long_term_career_goals" className="block text-sm font-medium text-gray-700">Long-Term Career Goals</label>
-                        <textarea
+                        <Label htmlFor="long_term_career_goals" className="block text-sm font-medium text-gray-700">Long-Term Career Goals</Label>
+                        <Textarea
                             id="long_term_career_goals"
                             value={profile.long_term_career_goals || ''}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onChange={(e) => handleChange('long_term_career_goals', e.target.value)}
+                            className="mt-1 block w-full"
                             rows={3}
                         />
                     </div>
 
                     {/* Personality Adjectives */}
                     <div>
-                        <label htmlFor="personality_adjectives" className="block text-sm font-medium text-gray-700">Personality Adjectives (e.g., "Curious", "Analytical", "Adaptable")</label>
-                        <textarea
+                        <Label htmlFor="personality_adjectives" className="block text-sm font-medium text-gray-700">Personality Adjectives (e.g., "Curious", "Analytical", "Adaptable")</Label>
+                        <Textarea
                             id="personality_adjectives"
                             value={profile.personality_adjectives || ''}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onChange={(e) => handleChange('personality_adjectives', e.target.value)}
+                            className="mt-1 block w-full"
                             rows={2}
                         />
                     </div>
 
                     {/* Personality 16 Personalities - Using Input */}
                     <div>
-                        <label htmlFor="personality_16_personalities" className="block text-sm font-medium text-gray-700">16 Personalities Type</label>
+                        <Label htmlFor="personality_16_personalities" className="block text-sm font-medium text-gray-700">16 Personalities Type</Label>
                         <Input
                             id="personality_16_personalities"
                             type="text"
                             value={profile.personality_16_personalities || ''}
-                            onChange={handleChange}
+                            onChange={(e) => handleChange('personality_16_personalities', e.target.value)}
                             className="mt-1"
                             placeholder="e.g., INTJ-T"
                         />
@@ -474,12 +480,12 @@ export default function UserProfilePage() {
 
                     {/* Personality DISC - Using Input */}
                     <div>
-                        <label htmlFor="personality_disc" className="block text-sm font-medium text-gray-700">DISC Profile</label>
+                        <Label htmlFor="personality_disc" className="block text-sm font-medium text-gray-700">DISC Profile</Label>
                         <Input
                             id="personality_disc"
                             type="text"
                             value={profile.personality_disc || ''}
-                            onChange={handleChange}
+                            onChange={(e) => handleChange('personality_disc', e.target.value)}
                             className="mt-1"
                             placeholder="e.g., D-I"
                         />
@@ -487,12 +493,12 @@ export default function UserProfilePage() {
 
                     {/* Personality Gallup Strengths */}
                     <div>
-                        <label htmlFor="personality_gallup_strengths" className="block text-sm font-medium text-gray-700">Gallup Strengths (comma-separated)</label>
-                        <textarea
+                        <Label htmlFor="personality_gallup_strengths" className="block text-sm font-medium text-gray-700">Gallup Strengths (comma-separated)</Label>
+                        <Textarea
                             id="personality_gallup_strengths"
                             value={profile.personality_gallup_strengths || ''}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm"
+                            onChange={(e) => handleChange('personality_gallup_strengths', e.target.value)}
+                            className="mt-1 block w-full"
                             rows={2}
                         />
                     </div>

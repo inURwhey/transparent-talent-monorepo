@@ -10,6 +10,8 @@ import Link from 'next/link'; // Import Link
 import { DataTable } from './data-table';
 import { getColumns } from './components/columns'; // NEW: Import columns from their own file
 import { Button } from '@/components/ui/button'; // Ensure Button is imported
+import { Input } from '@/components/ui/input'; // Ensure Input is imported
+import { Label } from '@/components/ui/label'; // NEW: Import Label component
 
 // --- TYPE DEFINITIONS ---
 interface Profile {
@@ -57,7 +59,7 @@ export default function UserDashboard() {
   const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [debugError, setDebugError] = useState<string | null>(null);
-  
+
   const [jobUrl, setJobUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -90,7 +92,7 @@ export default function UserDashboard() {
       setIsLoading(true);
       const { pageIndex, pageSize } = pagination;
       // Convert 0-indexed pageIndex to 1-indexed 'page' for the backend
-      const url = `${apiBaseUrl}/api/tracked-jobs?page=${pageIndex + 1}&limit=${pageSize}`; 
+      const url = `${apiBaseUrl}/api/tracked-jobs?page=${pageIndex + 1}&limit=${pageSize}`;
       const trackedJobsRes = await authedFetch(url);
       if (!trackedJobsRes.ok) throw new Error(`Tracked jobs fetch failed`);
 
@@ -123,7 +125,7 @@ export default function UserDashboard() {
 
       } catch (error: unknown) {
         setDebugError(error instanceof Error ? error.message : "An unknown error occurred during initial data fetch.");
-      } 
+      }
       // Do not set isLoading to false here; it will be handled by fetchTrackedJobsData
     };
     if (isUserLoaded) {
@@ -147,8 +149,8 @@ export default function UserDashboard() {
       if (payload.notes !== undefined) optimisticUpdate.user_notes = payload.notes;
       if (payload.applied_at !== undefined) optimisticUpdate.applied_at = payload.applied_at;
 
-      setTrackedJobs(prev => prev.map(job => 
-        job.tracked_job_id === trackedJobId 
+      setTrackedJobs(prev => prev.map(job =>
+        job.tracked_job_id === trackedJobId
           ? { ...job, ...optimisticUpdate }
           : job
       ));
@@ -164,8 +166,8 @@ export default function UserDashboard() {
         throw new Error(`Failed to update job: ${response.statusText}`);
       }
 
-    } catch (error) { 
-      console.error("Update Error:", error); 
+    } catch (error) {
+      console.error("Update Error:", error);
       setDebugError(error instanceof Error ? error.message : "An unknown error occurred during update.");
     }
   }, [apiBaseUrl, authedFetch, fetchTrackedJobsData]); // Add fetchTrackedJobsData to dependencies
@@ -194,7 +196,7 @@ export default function UserDashboard() {
       payload.applied_at = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
     } else if (newStatus !== "Applied" && currentJob.applied_at) {
       // Optional: If status changes from "Applied" to something else and applied_at is set, clear applied_at
-      payload.applied_at = null; 
+      payload.applied_at = null;
     }
 
     await handleUpdate(trackedJobId, payload);
@@ -209,12 +211,12 @@ export default function UserDashboard() {
       const response = await authedFetch(`${apiBaseUrl}/api/jobs/submit`, { method: 'POST', body: JSON.stringify({ job_url: jobUrl }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to submit job.');
-      
+
       // Reset pagination to first page and re-fetch to show the new job
       setPagination(prev => ({ ...prev, pageIndex: 0 }));
       setJobUrl(''); // Clear the input field
 
-    } catch (error) { setSubmissionError(error instanceof Error ? error.message : 'An unknown error.'); } 
+    } catch (error) { setSubmissionError(error instanceof Error ? error.message : 'An unknown error.'); }
     finally { setIsSubmitting(false); }
   }, [apiBaseUrl, authedFetch, jobUrl, isSubmitting, setPagination]); // Add setPagination to dependencies
 
@@ -227,7 +229,7 @@ export default function UserDashboard() {
   // or initial fetch is happening
   if (isLoading && trackedJobs.length === 0 && totalTrackedJobsCount === 0) return <div className="min-h-screen flex items-center justify-center">Loading Dashboard Data...</div>
   if (debugError) return (<div className="min-h-screen flex items-center justify-center text-center"><div><h2 className="text-xl font-semibold text-red-600">An Error Occurred</h2><p className="text-gray-600 mt-2">There was an issue loading your dashboard data.</p><p className="text-sm mt-4 text-red-700 font-mono bg-red-50 p-4 rounded-md"><strong>Error Details:</strong> {debugError}</p></div></div>);
-  
+
   return (
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
       {profile && (
@@ -244,16 +246,16 @@ export default function UserDashboard() {
                 </Button>
               </Link>
           </div>
-          
+
           <div className="bg-white p-6 rounded-lg shadow-md mb-8">
             <h2 className="text-2xl font-semibold text-gray-800 mb-4">Analyze a New Job</h2>
             <form onSubmit={handleJobSubmit}>
-              <label htmlFor="jobUrl" className="block text-sm font-medium text-gray-700">Paste Job Posting URL</label>
+              <Label htmlFor="jobUrl" className="block text-sm font-medium text-gray-700">Paste Job Posting URL</Label>
               <div className="mt-1 flex rounded-md shadow-sm">
-                <input type="url" name="jobUrl" id="jobUrl" className="block w-full flex-1 rounded-none rounded-l-md border-gray-300 p-2" placeholder="https://www.linkedin.com/jobs/view/..." value={jobUrl} onChange={(e) => setJobUrl(e.target.value)} required />
-                <button type="submit" className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:bg-indigo-300" disabled={isSubmitting}>
+                <Input type="url" name="jobUrl" id="jobUrl" className="block w-full flex-1 rounded-none rounded-l-md border-gray-300 p-2" placeholder="https://www.linkedin.com/jobs/view/..." value={jobUrl} onChange={(e) => setJobUrl(e.target.value)} required />
+                <Button type="submit" className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:bg-indigo-300" disabled={isSubmitting}>
                   {isSubmitting ? 'Analyzing...' : 'Analyze'}
-                </button>
+                </Button>
               </div>
               {submissionError && <p className="mt-2 text-sm text-red-600">{submissionError}</p>}
             </form>
