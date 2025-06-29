@@ -96,10 +96,12 @@ def submit_job():
             if cursor.fetchone():
                 return jsonify({"error": "You are already tracking this job."}), 409
 
+            # --- MODIFIED: Added new profile columns to AI context ---
             profile_columns = [
                 "short_term_career_goal", "ideal_role_description", "core_strengths",
                 "skills_to_avoid", "preferred_industries", "industries_to_avoid",
-                "desired_title", "non_negotiable_requirements", "deal_breakers"
+                "desired_title", "non_negotiable_requirements", "deal_breakers",
+                "preferred_work_style", "is_remote_preferred" # NEW COLUMNS
             ]
             sql = f"SELECT {', '.join(profile_columns)} FROM user_profiles WHERE user_id = %s"
             cursor.execute(sql, (user_id,))
@@ -114,11 +116,20 @@ def submit_job():
                 "core_strengths": "Core Strengths", "skills_to_avoid": "Skills To Avoid",
                 "preferred_industries": "Preferred Industries", "industries_to_avoid": "Industries To Avoid",
                 "desired_title": "Desired Title", "non_negotiable_requirements": "Non-Negotiables",
-                "deal_breakers": "Deal Breakers"
+                "deal_breakers": "Deal Breakers",
+                "preferred_work_style": "Preferred Work Style", # NEW LABEL
+                "is_remote_preferred": "Remote Preference" # NEW LABEL
             }
             for col in profile_columns:
                 value = user_profile_row[col]
-                if value and str(value).strip():
+                # Special handling for boolean 'is_remote_preferred' for AI context
+                if col == 'is_remote_preferred':
+                    if value is True:
+                        user_profile_parts.append(f"- {profile_labels[col]}: Yes, remote is preferred.")
+                    elif value is False:
+                        user_profile_parts.append(f"- {profile_labels[col]}: No, remote is not preferred.")
+                    # If None, don't add anything for this field
+                elif value and str(value).strip():
                     user_profile_parts.append(f"- {profile_labels[col]}: {value}")
 
             if not user_profile_parts:
@@ -256,15 +267,20 @@ def get_user_profile():
                 for col in cursor.description:
                     col_name = col.name
                     value = profile[col_name]
-                    # Convert None to empty string for text fields for frontend convenience
+                    # Convert None to empty string for text/varchar fields for frontend convenience
+                    # --- MODIFIED: Added new profile fields to conversion logic ---
                     if col_name in ['full_name', 'current_location', 'linkedin_profile_url', 'resume_url',
                                     'short_term_career_goal', 'long_term_career_goals', 'desired_annual_compensation',
                                     'desired_title', 'ideal_role_description', 'preferred_company_size',
                                     'ideal_work_culture', 'disliked_work_culture', 'core_strengths',
                                     'skills_to_avoid', 'non_negotiable_requirements', 'deal_breakers',
                                     'preferred_industries', 'industries_to_avoid', 'personality_adjectives',
-                                    'personality_16_personalities', 'personality_disc', 'personality_gallup_strengths'] and value is None:
+                                    'personality_16_personalities', 'personality_disc', 'personality_gallup_strengths',
+                                    'preferred_work_style'] and value is None: # ADD preferred_work_style HERE
                         profile_dict[col_name] = ""
+                    # Handle boolean 'is_remote_preferred' explicitly
+                    elif col_name == 'is_remote_preferred': # ADD is_remote_preferred HERE
+                        profile_dict[col_name] = value if value is not None else False # Default to False if None
                     else:
                         profile_dict[col_name] = value
             
@@ -299,6 +315,7 @@ def update_user_profile():
             params = []
             
             # Define allowed fields that can be updated for security and schema alignment
+            # --- MODIFIED: Added new profile fields to allowed list ---
             allowed_profile_fields = [
                 "full_name", "current_location", "linkedin_profile_url", "resume_url",
                 "short_term_career_goal", "long_term_career_goals", "desired_annual_compensation",
@@ -306,13 +323,21 @@ def update_user_profile():
                 "ideal_work_culture", "disliked_work_culture", "core_strengths",
                 "skills_to_avoid", "non_negotiable_requirements", "deal_breakers",
                 "preferred_industries", "industries_to_avoid", "personality_adjectives",
-                "personality_16_personalities", "personality_disc", "personality_gallup_strengths"
+                "personality_16_personalities", "personality_disc", "personality_gallup_strengths",
+                "preferred_work_style", "is_remote_preferred" # NEW ALLOWED FIELDS
             ]
 
             for field, value in data.items():
                 if field in allowed_profile_fields:
                     fields_to_update.append(f"{field} = %s")
-                    params.append(value)
+                    # Handle boolean field: convert 0/1 or "true"/"false" to actual boolean
+                    if field == 'is_remote_preferred':
+                        if isinstance(value, str):
+                            params.append(value.lower() == 'true')
+                        else:
+                            params.append(bool(value)) # Ensure it's a boolean
+                    else:
+                        params.append(value)
             
             if not fields_to_update:
                 return jsonify({"message": "No valid profile fields to update"}), 200 # No changes needed
