@@ -5,8 +5,8 @@ from psycopg2.extras import DictCursor, Json
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 from dotenv import load_dotenv
-from datetime import date, datetime, timezone, timedelta # Added datetime, timezone, timedelta
-import requests # Already present, ensuring it's available for the new function
+from datetime import date, datetime, timezone, timedelta
+import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 import json
@@ -20,6 +20,8 @@ CORS(app, supports_credentials=True, expose_headers=["Authorization"])
 
 # --- Constants ---
 ANALYSIS_PROTOCOL_VERSION = '2.0'
+JOB_POSTING_MAX_AGE_DAYS = 60 # Job posting considered expired if found_at is older than this
+TRACKED_JOB_STALE_DAYS = 30 # Tracked job considered stale if no action (updated_at) in this many days
 
 # --- AI Configuration ---
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
@@ -69,18 +71,16 @@ def run_job_analysis(job_description_text, user_profile_text):
     cleaned_response_text = response.text.strip().replace('```json', '').replace('```', '').strip()
     return json.loads(cleaned_response_text)
 
-# --- NEW: Helper function to check URL validity ---
+# --- Helper function to check URL validity ---
 def check_job_url_validity(url: str) -> bool:
     """
-    Performs an HTTP HEAD request to check if a URL is reachable and returns a 2xx status.
+    Performs an HTTP HEAD request to check if a URL is reachable and returns a 2xx or 3xx status.
     Uses a short timeout and handles common request exceptions.
     """
     try:
-        # Use a short timeout to quickly identify unreachable URLs
-        # User-Agent is often required to avoid 403 Forbidden errors from some servers
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
         response = requests.head(url, timeout=5, headers=headers, allow_redirects=True)
-        # Consider 2xx status codes as valid, and also 3xx redirects as initially reachable
+        # Consider 2xx and 3xx (redirects) status codes as valid/reachable
         return 200 <= response.status_code < 400
     except requests.exceptions.RequestException as e:
         app.logger.warning(f"Error checking URL {url}: {e}")
@@ -121,7 +121,7 @@ def submit_job():
                 "short_term_career_goal", "ideal_role_description", "core_strengths",
                 "skills_to_avoid", "preferred_industries", "industries_to_avoid",
                 "desired_title", "non_negotiable_requirements", "deal_breakers",
-                "preferred_work_style", "is_remote_preferred" # NEW COLUMNS
+                "preferred_work_style", "is_remote_preferred"
             ]
             sql = f"SELECT {', '.join(profile_columns)} FROM user_profiles WHERE user_id = %s"
             cursor.execute(sql, (user_id,))
@@ -137,8 +137,8 @@ def submit_job():
                 "preferred_industries": "Preferred Industries", "industries_to_avoid": "Industries To Avoid",
                 "desired_title": "Desired Title", "non_negotiable_requirements": "Non-Negotiables",
                 "deal_breakers": "Deal Breakers",
-                "preferred_work_style": "Preferred Work Style", # NEW LABEL
-                "is_remote_preferred": "Remote Preference" # NEW LABEL
+                "preferred_work_style": "Preferred Work Style",
+                "is_remote_preferred": "Remote Preference"
             }
             for col in profile_columns:
                 value = user_profile_row[col]
@@ -210,7 +210,8 @@ def submit_job():
                 Json(analysis_result.get('recommended_testimonials', []))
             ))
             
-            cursor.execute("INSERT INTO tracked_jobs (user_id, job_id, status) VALUES (%s, %s, %s) RETURNING id;", (user_id, job_id, 'Saved'))
+            # MODIFIED: Set status_reason to NULL for new tracked jobs
+            cursor.execute("INSERT INTO tracked_jobs (user_id, job_id, status, status_reason) VALUES (%s, %s, %s, %s) RETURNING id;", (user_id, job_id, 'Saved', None))
             tracked_job_id = cursor.fetchone()['id']
             
             conn.commit()
@@ -219,8 +220,8 @@ def submit_job():
             # Also fetch is_excited field for response, and new job status fields
             cursor.execute("""
                 SELECT j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
-                       j.status as job_posting_status, j.last_checked_at, -- NEW FIELDS
-                       t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at, t.is_excited,
+                       j.status as job_posting_status, j.last_checked_at,
+                       t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at, t.is_excited, t.status_reason,
                        ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
                        ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
                 FROM jobs j 
@@ -234,12 +235,13 @@ def submit_job():
                 "job_id": new_job_row["job_id"], "company_name": new_job_row["company_name"],
                 "job_title": new_job_row["job_title"], "job_url": new_job_row["job_url"],
                 "source": new_job_row["source"], "found_at": new_job_row["found_at"],
-                "job_posting_status": new_job_row["job_posting_status"], # NEW
-                "last_checked_at": new_job_row["last_checked_at"],       # NEW
+                "job_posting_status": new_job_row["job_posting_status"],
+                "last_checked_at": new_job_row["last_checked_at"],
                 "tracked_job_id": new_job_row["tracked_job_id"], "status": new_job_row["status"],
                 "user_notes": new_job_row["user_notes"], "applied_at": new_job_row["applied_at"],
                 "created_at": new_job_row["created_at"],
-                "is_excited": new_job_row["is_excited"], # ADDED: is_excited to response
+                "is_excited": new_job_row["is_excited"],
+                "status_reason": new_job_row["status_reason"], # ADDED: status_reason to response
                 "ai_analysis": {
                     "position_relevance_score": new_job_row["position_relevance_score"],
                     "environment_fit_score": new_job_row["environment_fit_score"],
@@ -259,11 +261,11 @@ def submit_job():
         return jsonify({"error": f"Failed to parse AI response: {str(e)}"}), 500
     except psycopg2.Error as e:
         if conn: conn.rollback()
-        print(f"DATABASE ERROR in submit_job: {e}")
+        app.logger.error(f"DATABASE ERROR in submit_job: {e}")
         return jsonify({"error": "A database error occurred."}), 500
     except Exception as e:
         if conn: conn.rollback()
-        print(f"An unexpected error occurred in submit_job: {e}") 
+        app.logger.error(f"An unexpected error occurred in submit_job: {e}") 
         return jsonify({"error": "An internal server error occurred."}), 500
     finally:
         if conn: conn.close()
@@ -275,32 +277,25 @@ def get_user_profile():
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
-            # Attempt to fetch the user profile
             sql = "SELECT * FROM user_profiles WHERE user_id = %s"
             cursor.execute(sql, (user_id,))
             profile = cursor.fetchone()
             
-            # If no profile exists, create a new default one
             if not profile:
-                print(f"No profile found for user_id {user_id}. Creating default profile.")
+                app.logger.info(f"No profile found for user_id {user_id}. Creating default profile.")
                 insert_sql = """
                     INSERT INTO user_profiles (user_id) VALUES (%s)
                     RETURNING *;
                 """
                 cursor.execute(insert_sql, (user_id,))
-                profile = cursor.fetchone() # Fetch the newly created profile
-                conn.commit() # Commit the insert operation
+                profile = cursor.fetchone()
+                conn.commit()
             
-            # Ensure all profile fields are returned, even if null, so frontend doesn't break expecting keys
-            # Convert DictRow to a plain dictionary, replacing None with empty string for text fields
-            # (or keeping None for other types if that's preferred by frontend)
             profile_dict = {}
             if profile:
                 for col in cursor.description:
                     col_name = col.name
                     value = profile[col_name]
-                    # Convert None to empty string for text/varchar fields for frontend convenience
-                    # --- MODIFIED: Added new profile fields to conversion logic ---
                     if col_name in ['full_name', 'current_location', 'linkedin_profile_url', 'resume_url',
                                     'short_term_career_goal', 'long_term_career_goals', 'desired_annual_compensation',
                                     'desired_title', 'ideal_role_description', 'preferred_company_size',
@@ -308,17 +303,16 @@ def get_user_profile():
                                     'skills_to_avoid', 'non_negotiable_requirements', 'deal_breakers',
                                     'preferred_industries', 'industries_to_avoid', 'personality_adjectives',
                                     'personality_16_personalities', 'personality_disc', 'personality_gallup_strengths',
-                                    'preferred_work_style'] and value is None: # ADD preferred_work_style HERE
+                                    'preferred_work_style'] and value is None:
                         profile_dict[col_name] = ""
-                    # Handle boolean 'is_remote_preferred' explicitly
-                    elif col_name == 'is_remote_preferred': # ADD is_remote_preferred HERE
-                        profile_dict[col_name] = value if value is not None else False # Default to False if None
+                    elif col_name == 'is_remote_preferred':
+                        profile_dict[col_name] = value if value is not None else False
                     else:
                         profile_dict[col_name] = value
             
             return jsonify(profile_dict)
     except Exception as e:
-        print(f"ERROR in get_user_profile: {str(e)}")
+        app.logger.error(f"ERROR in get_user_profile: {str(e)}")
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
@@ -334,20 +328,15 @@ def update_user_profile():
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
-            # Check if profile exists, if not, create it first (though GET /api/profile should ensure this)
             cursor.execute("SELECT id FROM user_profiles WHERE user_id = %s", (user_id,))
             existing_profile = cursor.fetchone()
             if not existing_profile:
-                # This should ideally not happen if GET /api/profile is called first for new users
                 cursor.execute("INSERT INTO user_profiles (user_id) VALUES (%s) RETURNING id;", (user_id,))
-                conn.commit() # Commit the insert to ensure it exists for the update
+                conn.commit()
             
-            # Build dynamic UPDATE query
             fields_to_update = []
             params = []
             
-            # Define allowed fields that can be updated for security and schema alignment
-            # --- MODIFIED: Added new profile fields to allowed list ---
             allowed_profile_fields = [
                 "full_name", "current_location", "linkedin_profile_url", "resume_url",
                 "short_term_career_goal", "long_term_career_goals", "desired_annual_compensation",
@@ -356,23 +345,22 @@ def update_user_profile():
                 "skills_to_avoid", "non_negotiable_requirements", "deal_breakers",
                 "preferred_industries", "industries_to_avoid", "personality_adjectives",
                 "personality_16_personalities", "personality_disc", "personality_gallup_strengths",
-                "preferred_work_style", "is_remote_preferred" # NEW ALLOWED FIELDS
+                "preferred_work_style", "is_remote_preferred"
             ]
 
             for field, value in data.items():
                 if field in allowed_profile_fields:
                     fields_to_update.append(f"{field} = %s")
-                    # Handle boolean field: convert 0/1 or "true"/"false" to actual boolean
                     if field == 'is_remote_preferred':
                         if isinstance(value, str):
                             params.append(value.lower() == 'true')
                         else:
-                            params.append(bool(value)) # Ensure it's a boolean
+                            params.append(bool(value))
                     else:
                         params.append(value)
             
             if not fields_to_update:
-                return jsonify({"message": "No valid profile fields to update"}), 200 # No changes needed
+                return jsonify({"message": "No valid profile fields to update"}), 200
 
             sql = f"UPDATE user_profiles SET {', '.join(fields_to_update)} WHERE user_id = %s RETURNING *;"
             params.append(user_id)
@@ -391,11 +379,11 @@ def update_user_profile():
 
     except psycopg2.Error as e:
         conn.rollback()
-        print(f"DATABASE ERROR in update_user_profile: {e}")
+        app.logger.error(f"DATABASE ERROR in update_user_profile: {e}")
         return jsonify({"error": "A database error occurred."}), 500
     except Exception as e:
         conn.rollback()
-        print(f"An unexpected error occurred in update_user_profile: {e}")
+        app.logger.error(f"An unexpected error occurred in update_user_profile: {e}")
         return jsonify({"error": "An internal server error occurred."}), 500
     finally:
         conn.close()
@@ -407,13 +395,13 @@ def get_user_jobs():
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
             excluded_companies = ['various', 'various companies', 'confidential']
-            # --- MODIFIED: Filter by job posting status ---
+            # MODIFIED: Filter by job posting status to only show 'Active' ones by default
             sql = "SELECT id, company_name, job_title, job_url, source, status, last_checked_at FROM jobs WHERE LOWER(company_name) NOT IN %s AND status = 'Active' ORDER BY found_at DESC LIMIT 50"
             cursor.execute(sql, (tuple(excluded_companies),))
             jobs = [dict(row) for row in cursor.fetchall()]
             return jsonify(jobs)
     except Exception as e:
-        print(f"ERROR in get_user_jobs: {str(e)}")
+        app.logger.error(f"ERROR in get_user_jobs: {str(e)}")
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
@@ -426,7 +414,7 @@ def get_tracked_jobs():
     # Pagination parameters
     try:
         page = int(request.args.get('page', 1))
-        limit = int(request.args.get('limit', 10)) # Default limit to 10 items per page
+        limit = int(request.args.get('limit', 10))
         if page < 1: page = 1
         if limit < 1: limit = 1
     except ValueError:
@@ -437,17 +425,15 @@ def get_tracked_jobs():
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
-            # First, get the total count of jobs for the user
             cursor.execute("SELECT COUNT(*) FROM tracked_jobs WHERE user_id = %s;", (user_id,))
             total_count = cursor.fetchone()[0]
 
-            # *** MODIFIED: Corrected JOIN to fetch analysis for the specific user ***
-            # Also fetch is_excited field for response, and new job status fields
+            # MODIFIED: Include status_reason in the select statement
             sql = """
                 SELECT 
                     j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
-                    j.status as job_posting_status, j.last_checked_at, -- NEW FIELDS
-                    t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at, t.is_excited, -- ADDED: t.is_excited
+                    j.status as job_posting_status, j.last_checked_at,
+                    t.id as tracked_job_id, t.status, t.notes as user_notes, t.applied_at, t.created_at, t.is_excited, t.status_reason,
                     ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
                     ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
                 FROM jobs j
@@ -464,12 +450,13 @@ def get_tracked_jobs():
                     "job_id": row["job_id"], "company_name": row["company_name"],
                     "job_title": row["job_title"], "job_url": row["job_url"],
                     "source": row["source"], "found_at": row["found_at"],
-                    "job_posting_status": row["job_posting_status"], # NEW
-                    "last_checked_at": row["last_checked_at"],       # NEW
+                    "job_posting_status": row["job_posting_status"],
+                    "last_checked_at": row["last_checked_at"],
                     "tracked_job_id": row["tracked_job_id"], "status": row["status"],
                     "user_notes": row["user_notes"], "applied_at": row["applied_at"],
                     "created_at": row["created_at"],
-                    "is_excited": row["is_excited"], # ADDED: is_excited to response
+                    "is_excited": row["is_excited"],
+                    "status_reason": row["status_reason"], # ADDED: status_reason to response
                     "ai_analysis": None
                 }
                 if row["position_relevance_score"] is not None:
@@ -486,11 +473,11 @@ def get_tracked_jobs():
             return jsonify({
                 "tracked_jobs": tracked_jobs,
                 "total_count": total_count,
-                "page": page, # Current page (1-indexed)
-                "limit": limit # Items per page
+                "page": page,
+                "limit": limit
             })
     except Exception as e:
-        print(f"ERROR in get_tracked_jobs: {str(e)}")
+        app.logger.error(f"ERROR in get_tracked_jobs: {str(e)}")
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
@@ -504,14 +491,16 @@ def add_tracked_job():
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
+            # MODIFIED: Include status_reason with NULL default
             cursor.execute(
-                "INSERT INTO tracked_jobs (user_id, job_id, status) VALUES (%s, %s, %s) RETURNING id;",
-                (user_id, job_id, 'Saved')
+                "INSERT INTO tracked_jobs (user_id, job_id, status, status_reason) VALUES (%s, %s, %s, %s) RETURNING id;",
+                (user_id, job_id, 'Saved', None)
             )
             tracked_job_id = cursor.fetchone()[0]
             conn.commit()
         return jsonify({"message": "Job tracked successfully", "tracked_job_id": tracked_job_id}), 201
     except Exception as e:
+        app.logger.error(f"ERROR in add_tracked_job: {str(e)}")
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
@@ -521,8 +510,8 @@ def add_tracked_job():
 def update_tracked_job(tracked_job_id):
     user_id = g.current_user['id']
     data = request.get_json()
-    # MODIFIED: Added 'is_excited' to the list of fields to check for update data
-    if not data or not any(key in data for key in ['status', 'notes', 'applied_at', 'is_excited']):
+    # MODIFIED: Added 'status_reason' to the list of fields to check for update data
+    if not data or not any(key in data for key in ['status', 'notes', 'applied_at', 'is_excited', 'status_reason']):
         return jsonify({"error": "No update data provided"}), 400
     conn = get_db_connection()
     try:
@@ -540,10 +529,14 @@ def update_tracked_job(tracked_job_id):
             if 'applied_at' in data:
                 fields.append("applied_at = %s")
                 params.append(data['applied_at'])
-            # ADDED: Handle is_excited update
             if 'is_excited' in data:
                 fields.append("is_excited = %s")
-                params.append(bool(data['is_excited'])) # Ensure it's a boolean
+                params.append(bool(data['is_excited']))
+            # ADDED: Handle status_reason update
+            if 'status_reason' in data:
+                fields.append("status_reason = %s")
+                params.append(data['status_reason'])
+
             if not fields:
                 return jsonify({"error": "No valid fields to update"}), 400
             sql = f"UPDATE tracked_jobs SET {', '.join(fields)} WHERE id = %s RETURNING *"
@@ -553,6 +546,7 @@ def update_tracked_job(tracked_job_id):
             conn.commit()
             return jsonify(updated_job)
     except Exception as e:
+        app.logger.error(f"ERROR in update_tracked_job: {str(e)}")
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
@@ -572,17 +566,123 @@ def remove_tracked_job(tracked_job_id):
             else:
                 return jsonify({"error": "Tracked job not found or permission denied"}), 404
     except Exception as e:
+        app.logger.error(f"ERROR in remove_tracked_job: {str(e)}")
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
 
-# --- NEW: Endpoint to trigger job URL validity check ---
+# --- Endpoint to trigger job URL validity and age check ---
 @app.route('/api/admin/jobs/check-url-validity', methods=['POST'])
 @token_required
 def check_job_urls():
     """
-    Checks the validity of job URLs and updates their status in the 'jobs' table.
+    Checks the validity and age of job URLs and updates their status in the 'jobs' table.
     This endpoint is intended to be called by a scheduled task (e.g., Render Cron Job).
+    """
+    checked_count = 0
+    updated_count = 0
+    errors = []
+
+    try:
+        conn = get_db_connection()
+        conn.autocommit = False
+        cur = conn.cursor(cursor_factory=DictCursor)
+
+        # Select jobs that need checking based on last_checked_at or age
+        # Consider jobs with status 'Active', 'Expired - Unreachable', 'Expired - Time Based', 'Expired - Missing URL'
+        # to ensure they are re-evaluated.
+        # Prioritize jobs whose 'last_checked_at' is older than 24 hours.
+        twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
+        sixty_days_ago = datetime.now(timezone.utc) - timedelta(days=JOB_POSTING_MAX_AGE_DAYS)
+        
+        cur.execute("""
+            SELECT id, job_url, status, found_at
+            FROM jobs
+            WHERE last_checked_at IS NULL
+               OR last_checked_at < %s
+               OR (status = 'Active' AND found_at < %s) -- Check active jobs that are too old
+            LIMIT 1000;
+        """, (twenty_four_hours_ago, sixty_days_ago))
+        
+        jobs_to_check = cur.fetchall()
+
+        app.logger.info(f"Found {len(jobs_to_check)} jobs to check URLs and age for.")
+
+        for job in jobs_to_check:
+            checked_count += 1
+            current_time_utc = datetime.now(timezone.utc)
+            new_status = job['status'] # Start with current status
+            
+            # 1. Handle missing URL
+            if not job['job_url']:
+                if job['status'] != 'Expired - Missing URL':
+                    new_status = 'Expired - Missing URL'
+                    app.logger.warning(f"Job ID {job['id']} has no job_url. Marking as '{new_status}'.")
+                else:
+                    app.logger.info(f"Job ID {job['id']} already 'Expired - Missing URL'. Just updating check time.")
+                
+            else:
+                # 2. Check URL reachability
+                is_valid_url = check_job_url_validity(job['job_url'])
+
+                if not is_valid_url:
+                    # URL is unreachable, mark as such
+                    if job['status'] != 'Expired - Unreachable':
+                        new_status = 'Expired - Unreachable'
+                        app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' is unreachable. Marking as '{new_status}'.")
+                    else:
+                        app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' still unreachable. Just updating check time.")
+                else:
+                    # URL is reachable, now check age
+                    if job['found_at'] and job['found_at'] < sixty_days_ago:
+                        # Job is too old, mark as time-based expired
+                        if job['status'] != 'Expired - Time Based':
+                            new_status = 'Expired - Time Based'
+                            app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' is too old (found_at). Marking as '{new_status}'.")
+                        else:
+                            app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' still 'Expired - Time Based'. Just updating check time.")
+                    else:
+                        # URL is reachable AND not too old, mark as active
+                        if job['status'] != 'Active':
+                            new_status = 'Active'
+                            app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' is active. Marking as '{new_status}'.")
+                        else:
+                            app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' is still 'Active'. Just updating check time.")
+
+            # Only update if status or last_checked_at needs to change
+            if new_status != job['status'] or job['last_checked_at'] is None or job['last_checked_at'] < twenty_four_hours_ago:
+                cur.execute("""
+                    UPDATE jobs
+                    SET status = %s, last_checked_at = %s
+                    WHERE id = %s;
+                """, (new_status, current_time_utc, job['id']))
+                updated_count += 1
+        
+        conn.commit()
+        app.logger.info(f"Finished checking job URLs and age. Checked: {checked_count}, Updated status: {updated_count}")
+        return jsonify({
+            "message": "Job URL validity and age check completed.",
+            "jobs_checked": checked_count,
+            "jobs_status_updated": updated_count,
+            "errors": errors
+        }), 200
+
+    except Exception as e:
+        if conn: conn.rollback()
+        app.logger.error(f"Error during job URL validity and age check: {e}")
+        return jsonify({"message": "Internal server error during URL check.", "error": str(e)}), 500
+    finally:
+        if conn:
+            cur.close()
+            conn.close()
+
+# --- NEW: Endpoint to trigger tracked job application expiration ---
+@app.route('/api/admin/tracked-jobs/check-expiration', methods=['POST'])
+@token_required
+def check_tracked_job_expiration():
+    """
+    Checks tracked jobs for staleness based on last action (updated_at) and marks them expired.
+    This endpoint is intended to be called by a scheduled task.
     """
     checked_count = 0
     expired_count = 0
@@ -590,98 +690,55 @@ def check_job_urls():
 
     try:
         conn = get_db_connection()
-        conn.autocommit = False # Ensure transactions are managed manually
-        cur = conn.cursor(cursor_factory=DictCursor) # Use DictCursor for easier access to column names
+        conn.autocommit = False
+        cur = conn.cursor(cursor_factory=DictCursor)
 
-        # Select active jobs that haven't been checked in the last 24 hours.
-        # We also want to select jobs that were previously marked "Expired - Unreachable"
-        # but whose last_checked_at is older than 24 hours to re-verify if they've come back online.
-        twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
-        
+        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=TRACKED_JOB_STALE_DAYS)
+
+        # Select tracked jobs that are not already in an 'expired' or 'final' status
+        # and whose 'updated_at' timestamp is older than 30 days.
         cur.execute("""
-            SELECT id, job_url, status
-            FROM jobs
-            WHERE (status = 'Active' AND (last_checked_at IS NULL OR last_checked_at < %s))
-               OR (status = 'Expired - Unreachable' AND last_checked_at < %s)
-            LIMIT 1000; -- Limit to prevent overwhelming the system in one go
-        """, (twenty_four_hours_ago, twenty_four_hours_ago))
+            SELECT id, user_id, status, status_reason, applied_at, created_at, updated_at
+            FROM tracked_jobs
+            WHERE status NOT IN ('Expired', 'Rejected', 'Offer', 'Accepted', 'Withdrawn')
+              AND updated_at < %s
+            LIMIT 1000; -- Limit batch size for performance
+        """, (thirty_days_ago,))
         
         jobs_to_check = cur.fetchall()
 
-        app.logger.info(f"Found {len(jobs_to_check)} jobs to check URLs for.")
+        app.logger.info(f"Found {len(jobs_to_check)} tracked jobs to check for expiration.")
 
         for job in jobs_to_check:
             checked_count += 1
-            current_time_utc = datetime.now(timezone.utc)
-
-            if not job['job_url']:
-                # Handle cases where job_url is missing
-                if job['status'] != 'Expired - Missing URL': # Only update if status is different
-                    app.logger.warning(f"Job ID {job['id']} has no job_url. Marking as 'Expired - Missing URL'.")
-                    cur.execute("""
-                        UPDATE jobs
-                        SET status = 'Expired - Missing URL', last_checked_at = %s
-                        WHERE id = %s;
-                    """, (current_time_utc, job['id']))
-                    expired_count += 1
-                else:
-                    # Just update last_checked_at if already marked as missing URL
-                    cur.execute("""
-                        UPDATE jobs
-                        SET last_checked_at = %s
-                        WHERE id = %s;
-                    """, (current_time_utc, job['id']))
-                continue # Move to the next job
-
-            is_valid = check_job_url_validity(job['job_url'])
             
-            if not is_valid:
-                # Mark as 'Expired - Unreachable' if URL is not valid and not already marked as such
-                if job['status'] != 'Expired - Unreachable':
-                    app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' is unreachable. Marking as 'Expired - Unreachable'.")
-                    cur.execute("""
-                        UPDATE jobs
-                        SET status = 'Expired - Unreachable', last_checked_at = %s
-                        WHERE id = %s;
-                    """, (current_time_utc, job['id']))
-                    expired_count += 1
-                else:
-                    # If already 'Expired - Unreachable' and still unreachable, just update last_checked_at
-                    cur.execute("""
-                        UPDATE jobs
-                        SET last_checked_at = %s
-                        WHERE id = %s;
-                    """, (current_time_utc, job['id']))
+            # Mark as 'Expired' and set reason if it's stale
+            if job['status'] != 'Expired':
+                new_status = 'Expired'
+                new_reason = 'Stale - No action in 30 days'
+                app.logger.info(f"Tracked Job ID {job['id']} (User {job['user_id']}) is stale. Marking as '{new_status}' with reason '{new_reason}'.")
+                cur.execute("""
+                    UPDATE tracked_jobs
+                    SET status = %s, status_reason = %s
+                    WHERE id = %s;
+                """, (new_status, new_reason, job['id']))
+                expired_count += 1
             else:
-                # If it was previously 'Expired - Unreachable' or 'Expired - Missing URL' but is now reachable, set back to 'Active'
-                if job['status'] in ['Expired - Unreachable', 'Expired - Missing URL']:
-                    app.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' is now reachable. Marking as 'Active'.")
-                    cur.execute("""
-                        UPDATE jobs
-                        SET status = 'Active', last_checked_at = %s
-                        WHERE id = %s;
-                    """, (current_time_utc, job['id']))
-                else:
-                    # Just update last_checked_at for active valid URLs that were already active
-                    cur.execute("""
-                        UPDATE jobs
-                        SET last_checked_at = %s
-                        WHERE id = %s;
-                    """, (current_time_utc, job['id']))
+                app.logger.info(f"Tracked Job ID {job['id']} already expired. Skipping.")
         
         conn.commit()
-        app.logger.info(f"Finished checking job URLs. Checked: {checked_count}, Marked/Re-activated: {expired_count}")
+        app.logger.info(f"Finished checking tracked job expiration. Checked: {checked_count}, Marked Expired: {expired_count}")
         return jsonify({
-            "message": "Job URL validity check completed.",
-            "jobs_checked": checked_count,
-            "jobs_marked_expired_or_reactivated": expired_count, # More accurate count
+            "message": "Tracked job expiration check completed.",
+            "tracked_jobs_checked": checked_count,
+            "tracked_jobs_marked_expired": expired_count,
             "errors": errors
         }), 200
 
     except Exception as e:
-        if conn: conn.rollback() # Rollback in case of error
-        app.logger.error(f"Error during job URL validity check: {e}")
-        return jsonify({"message": "Internal server error during URL check.", "error": str(e)}), 500
+        if conn: conn.rollback()
+        app.logger.error(f"Error during tracked job expiration check: {e}")
+        return jsonify({"message": "Internal server error during tracked job expiration check.", "error": str(e)}), 500
     finally:
         if conn:
             cur.close()
