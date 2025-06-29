@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
+import { useRouter } => from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -61,12 +61,12 @@ export default function UserProfilePage() {
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-    // NEW: State for collapsible sections
+    // MODIFIED: State for collapsible sections - all set to true for default expanded
     const [isPersonalInfoOpen, setIsPersonalInfoOpen] = useState(true);
-    const [isCareerGoalsOpen, setIsCareerGoalsOpen] = useState(false);
-    const [isWorkEnvOpen, setIsWorkEnvOpen] = useState(false);
-    const [isSkillsOpen, setIsSkillsOpen] = useState(false);
-    const [isPersonalityOpen, setIsPersonalityOpen] = useState(false);
+    const [isCareerGoalsOpen, setIsCareerGoalsOpen] = useState(true);
+    const [isWorkEnvOpen, setIsWorkEnvOpen] = useState(true);
+    const [isSkillsOpen, setIsSkillsOpen] = useState(true);
+    const [isPersonalityOpen, setIsPersonalityOpen] = useState(true);
 
 
     const authedFetch = useCallback(async (url: string, options: RequestInit = {}) => {
