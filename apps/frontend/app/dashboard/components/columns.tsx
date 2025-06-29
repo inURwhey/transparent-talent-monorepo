@@ -35,7 +35,10 @@ interface TrackedJob {
   status: string;
   applied_at: string | null;
   created_at: string; // The date the job was saved
-  is_excited: boolean; // New field for 'Excited?' column
+  is_excited: boolean;
+  job_posting_status: string; // Added from 'jobs' table
+  last_checked_at: string | null; // Added from 'jobs' table
+  status_reason: string | null; // Added for 'tracked_jobs' table
   ai_analysis: AIAnalysis | null;
 }
 
@@ -78,9 +81,43 @@ export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleEx
           <SelectItem value="Interviewing">Interviewing</SelectItem>
           <SelectItem value="Offer">Offer</SelectItem>
           <SelectItem value="Rejected">Rejected</SelectItem>
+          <SelectItem value="Expired">Expired</SelectItem> {/* Added Expired status */}
+          <SelectItem value="Withdrawn">Withdrawn</SelectItem> {/* Added Withdrawn status */}
+          <SelectItem value="Accepted">Accepted</SelectItem> {/* Added Accepted status */}
         </SelectContent>
       </Select>
     ),
+  },
+  {
+    accessorKey: "status_reason", // NEW COLUMN: Status Reason for Tracked Job
+    header: "Status Reason",
+    cell: ({ row }) => {
+      const reason = row.original.status_reason;
+      return <div className="text-sm text-muted-foreground">{reason || "-"}</div>;
+    },
+  },
+  {
+    accessorKey: "job_posting_status", // NEW COLUMN: Job Posting Status
+    header: "Job Post Status",
+    cell: ({ row }) => {
+      const status = row.original.job_posting_status;
+      const lastChecked = row.original.last_checked_at;
+      const formattedDate = lastChecked ? new Date(lastChecked).toLocaleDateString() : 'N/A';
+      
+      let textColor = "text-gray-700";
+      if (status === "Active") {
+        textColor = "text-green-600";
+      } else if (status && status.includes("Expired")) {
+        textColor = "text-red-600";
+      }
+
+      return (
+        <div className={`font-medium ${textColor}`}>
+          {status || "Unknown"}
+          {lastChecked && <div className="text-xs text-muted-foreground mt-0.5">Checked: {formattedDate}</div>}
+        </div>
+      );
+    },
   },
   {
     accessorKey: "relevance_score",
@@ -100,7 +137,7 @@ export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleEx
     }
   },
   {
-    accessorKey: "is_excited", // MOVED: Excitement column is now after Relevance
+    accessorKey: "is_excited",
     header: "Excited?",
     cell: ({ row }) => (
       <div className="flex items-center justify-center">

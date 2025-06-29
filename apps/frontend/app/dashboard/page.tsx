@@ -12,6 +12,7 @@ import { getColumns } from './components/columns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
 
 // --- TYPE DEFINITIONS ---
 interface Profile {
@@ -23,6 +24,8 @@ interface Job {
   job_title: string;
   company_name: string;
   job_url: string;
+  job_posting_status: string; // Added
+  last_checked_at: string | null; // Added
 }
 interface AIAnalysis {
   position_relevance_score: number;
@@ -43,21 +46,24 @@ interface TrackedJob {
   user_notes: string | null;
   applied_at: string | null;
   created_at: string; // The date the job was saved
-  is_excited: boolean; // ADDED: New field for 'Excited?' column
+  is_excited: boolean;
+  job_posting_status: string; // Added from 'jobs' table
+  last_checked_at: string | null; // Added from 'jobs' table
+  status_reason: string | null; // Added for 'tracked_jobs' table
   ai_analysis: AIAnalysis | null;
 }
-// Corrected UpdatePayload to allow null for notes and include is_excited
 type UpdatePayload = {
   notes?: string | null;
   applied_at?: string | null;
   status?: string;
-  is_excited?: boolean; // ADDED: Allow updating is_excited
+  is_excited?: boolean;
+  status_reason?: string | null; // Added for updating status_reason
 };
 
 export default function UserDashboard() {
   // --- STATE MANAGEMENT ---
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]); // This state currently holds general jobs, not directly used in DataTable
   const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [debugError, setDebugError] = useState<string | null>(null);
@@ -68,10 +74,13 @@ export default function UserDashboard() {
 
   // New pagination state
   const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0, // TanStack Table uses 0-indexed pageIndex
-    pageSize: 10, // Default page size
+    pageIndex: 0,
+    pageSize: 10,
   });
-  const [totalTrackedJobsCount, setTotalTrackedJobsCount] = useState(0); // Total count for pagination controls
+  const [totalTrackedJobsCount, setTotalTrackedJobsCount] = useState(0);
+
+  // New filter state
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active_application' | 'expired_application' | 'active_posting' | 'expired_posting'>('all');
 
   const { getToken } = useAuth();
   const { user, isLoaded: isUserLoaded } = useUser();
@@ -88,12 +97,10 @@ export default function UserDashboard() {
     return fetch(url, { ...options, headers });
   }, [getToken]);
 
-  // Updated fetch function for tracked jobs to include pagination
   const fetchTrackedJobsData = useCallback(async () => {
     try {
       setIsLoading(true);
       const { pageIndex, pageSize } = pagination;
-      // Convert 0-indexed pageIndex to 1-indexed 'page' for the backend
       const url = `${apiBaseUrl}/api/tracked-jobs?page=${pageIndex + 1}&limit=${pageSize}`;
       const trackedJobsRes = await authedFetch(url);
       if (!trackedJobsRes.ok) throw new Error(`Tracked jobs fetch failed`);
@@ -109,11 +116,10 @@ export default function UserDashboard() {
     }
   }, [apiBaseUrl, authedFetch, pagination]);
 
-  // Effect for initial profile and general jobs (not paginated)
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        setIsLoading(true); // Set loading to true initially for the entire dashboard
+        setIsLoading(true);
         const [profileRes, jobsRes] = await Promise.all([
           authedFetch(`${apiBaseUrl}/api/profile`),
           authedFetch(`${apiBaseUrl}/api/jobs`)
@@ -128,15 +134,12 @@ export default function UserDashboard() {
       } catch (error: unknown) {
         setDebugError(error instanceof Error ? error.message : "An unknown error occurred during initial data fetch.");
       }
-      // Do not set isLoading to false here; it will be handled by fetchTrackedJobsData
     };
     if (isUserLoaded) {
         fetchInitialData();
     }
   }, [isUserLoaded, apiBaseUrl, authedFetch]);
 
-
-  // Effect for fetching paginated tracked jobs whenever pagination state changes
   useEffect(() => {
     if (isUserLoaded) {
       fetchTrackedJobsData();
@@ -150,7 +153,8 @@ export default function UserDashboard() {
       if (payload.status !== undefined) optimisticUpdate.status = payload.status;
       if (payload.notes !== undefined) optimisticUpdate.user_notes = payload.notes;
       if (payload.applied_at !== undefined) optimisticUpdate.applied_at = payload.applied_at;
-      if (payload.is_excited !== undefined) optimisticUpdate.is_excited = payload.is_excited; // ADDED: Optimistic update for is_excited
+      if (payload.is_excited !== undefined) optimisticUpdate.is_excited = payload.is_excited;
+      if (payload.status_reason !== undefined) optimisticUpdate.status_reason = payload.status_reason; // Added optimistic update for status_reason
 
       setTrackedJobs(prev => prev.map(job =>
         job.tracked_job_id === trackedJobId
@@ -158,14 +162,12 @@ export default function UserDashboard() {
           : job
       ));
 
-      // Send the original payload to the backend
       const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, {
         method: 'PUT', body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
-        // If update fails, revert the UI by refetching the specific job or the entire paginated list
-        await fetchTrackedJobsData(); // Re-fetch current page after failed update
+        await fetchTrackedJobsData();
         throw new Error(`Failed to update job: ${response.statusText}`);
       }
 
@@ -179,12 +181,10 @@ export default function UserDashboard() {
     if (!window.confirm("Are you sure?")) return;
     try {
         await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, { method: 'DELETE' });
-        // After deletion, re-fetch the current page to ensure correct pagination display
         await fetchTrackedJobsData();
     } catch (error) { console.error("Remove Job Error:", error); }
   }, [apiBaseUrl, authedFetch, fetchTrackedJobsData]);
 
-  // Modified handleStatusChange to include auto-setting applied_at
   const handleStatusChange = useCallback(async (trackedJobId: number, newStatus: string) => {
     const currentJob = trackedJobs.find(job => job.tracked_job_id === trackedJobId);
     if (!currentJob) {
@@ -193,19 +193,26 @@ export default function UserDashboard() {
     }
 
     const payload: UpdatePayload = { status: newStatus };
+    let newStatusReason: string | null = currentJob.status_reason;
 
-    // If status is changing to "Applied" and applied_at is not already set
     if (newStatus === "Applied" && !currentJob.applied_at) {
-      payload.applied_at = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
+      payload.applied_at = new Date().toISOString().split('T')[0];
     } else if (newStatus !== "Applied" && currentJob.applied_at) {
-      // Optional: If status changes from "Applied" to something else and applied_at is set, clear applied_at
       payload.applied_at = null;
     }
+
+    // Clear status_reason if the status is changing from 'Expired' to a new active status
+    if (currentJob.status === 'Expired' && newStatus !== 'Expired') {
+        newStatusReason = null;
+    } else if (newStatus === 'Expired' && currentJob.status !== 'Expired') {
+        // If manually setting to 'Expired', provide a default reason or keep existing if manually set
+        newStatusReason = 'Manually expired by user';
+    }
+    payload.status_reason = newStatusReason;
 
     await handleUpdate(trackedJobId, payload);
   }, [handleUpdate, trackedJobs]);
 
-  // ADDED: New handler for toggling 'is_excited'
   const handleToggleExcited = useCallback(async (trackedJobId: number, isExcited: boolean) => {
     await handleUpdate(trackedJobId, { is_excited: isExcited });
   }, [handleUpdate]);
@@ -220,16 +227,31 @@ export default function UserDashboard() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to submit job.');
 
-      // Reset pagination to first page and re-fetch to show the new job
       setPagination(prev => ({ ...prev, pageIndex: 0 }));
-      setJobUrl(''); // Clear the input field
+      setJobUrl('');
 
     } catch (error) { setSubmissionError(error instanceof Error ? error.message : 'An unknown error.'); }
     finally { setIsSubmitting(false); }
   }, [apiBaseUrl, authedFetch, jobUrl, isSubmitting, setPagination]);
 
-  // --- COLUMN DEFINITIONS (NOW CLEANLY HANDLED) ---
-  const columns = useMemo(() => getColumns({ handleStatusChange, handleRemoveJob, handleToggleExcited }), [handleStatusChange, handleRemoveJob, handleToggleExcited]); // ADDED: Pass handleToggleExcited
+  // --- FILTERING LOGIC ---
+  const filteredTrackedJobs = useMemo(() => {
+    if (filterStatus === 'all') {
+      return trackedJobs;
+    } else if (filterStatus === 'active_application') {
+      return trackedJobs.filter(job => !['Expired', 'Rejected', 'Offer', 'Accepted', 'Withdrawn'].includes(job.status));
+    } else if (filterStatus === 'expired_application') {
+      return trackedJobs.filter(job => ['Expired', 'Rejected', 'Offer', 'Accepted', 'Withdrawn'].includes(job.status));
+    } else if (filterStatus === 'active_posting') {
+      return trackedJobs.filter(job => job.job_posting_status === 'Active');
+    } else if (filterStatus === 'expired_posting') {
+      return trackedJobs.filter(job => job.job_posting_status !== 'Active');
+    }
+    return trackedJobs;
+  }, [trackedJobs, filterStatus]);
+
+  // --- COLUMN DEFINITIONS ---
+  const columns = useMemo(() => getColumns({ handleStatusChange, handleRemoveJob, handleToggleExcited }), [handleStatusChange, handleRemoveJob, handleToggleExcited]);
 
   // --- RENDER LOGIC ---
   if (!isUserLoaded) return <div className="min-h-screen flex items-center justify-center">Initializing session...</div>
@@ -269,9 +291,24 @@ export default function UserDashboard() {
 
           <div className="bg-white p-6 rounded-lg shadow-md mb-8">
             <h2 className="text-2xl font-semibold text-gray-800 mb-4">My Job Tracker</h2>
+            <div className="mb-4">
+                <Label htmlFor="filterStatus" className="block text-sm font-medium text-gray-700 mb-1">Filter by Status:</Label>
+                <Select value={filterStatus} onValueChange={(value: typeof filterStatus) => setFilterStatus(value)}>
+                    <SelectTrigger className="w-[220px]">
+                        <SelectValue placeholder="All Jobs" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Jobs</SelectItem>
+                        <SelectItem value="active_application">Active Applications</SelectItem>
+                        <SelectItem value="expired_application">Expired Applications</SelectItem>
+                        <SelectItem value="active_posting">Active Job Postings</SelectItem>
+                        <SelectItem value="expired_posting">Expired Job Postings</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
             <DataTable
               columns={columns}
-              data={trackedJobs}
+              data={filteredTrackedJobs} {/* Use filtered data */}
               pagination={pagination}
               setPagination={setPagination}
               totalCount={totalTrackedJobsCount}
