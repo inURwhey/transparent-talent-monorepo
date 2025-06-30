@@ -1,18 +1,15 @@
-from flask import Blueprint, request, jsonify, g
+# Path: apps/backend/routes/profile.py
+from flask import Blueprint, request, jsonify, g, current_app
 from ..auth import token_required
 from ..services.profile_service import ProfileService
 
-# Create a Blueprint for profile routes
 profile_bp = Blueprint('profile_bp', __name__)
-
-# Note: We get the logger from the current app context
-from flask import current_app
 
 @profile_bp.route('/profile', methods=['GET'])
 @token_required
 def get_user_profile():
-    """Handles GET requests to /api/profile."""
-    user_id = g.current_user['id']
+    # The decorator now provides our internal integer ID directly.
+    user_id = g.user_id 
     profile_service = ProfileService(current_app.logger)
     try:
         profile = profile_service.get_profile(user_id)
@@ -24,8 +21,8 @@ def get_user_profile():
 @profile_bp.route('/profile', methods=['PUT'])
 @token_required
 def update_user_profile():
-    """Handles PUT requests to /api/profile."""
-    user_id = g.current_user['id']
+    # The decorator now provides our internal integer ID directly.
+    user_id = g.user_id
     data = request.get_json()
     if not data:
         return jsonify({"error": "No update data provided"}), 400

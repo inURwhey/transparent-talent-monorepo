@@ -1,9 +1,11 @@
+# Path: apps/backend/routes/jobs.py
+
 from flask import Blueprint, request, jsonify, g, current_app
 from psycopg2.extras import Json
 from ..auth import token_required
 from ..services.job_service import JobService
 from ..services.profile_service import ProfileService
-from ..services.tracked_job_service import TrackedJobService # <-- Import new service
+from ..services.tracked_job_service import TrackedJobService
 from ..database import get_db
 from ..config import config
 import psycopg2
@@ -14,7 +16,8 @@ jobs_bp = Blueprint('jobs_bp', __name__)
 @jobs_bp.route('/jobs/submit', methods=['POST'])
 @token_required
 def submit_job():
-    user_id = g.current_user['id']
+    user_id = g.user_id # <-- Use the internal ID
+    # ... (rest of the function is unchanged)
     data = request.get_json()
     job_url = data.get('job_url')
     if not job_url:
@@ -70,15 +73,12 @@ def submit_job():
             db.commit()
 
         with db.cursor() as cursor:
-            # Re-use the get_formatted_job_by_id from the new service
             service = TrackedJobService(current_app.logger)
             new_job_data = service._get_formatted_job_by_id(cursor, tracked_job_id, user_id)
             return jsonify(new_job_data), 201
 
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except (requests.exceptions.RequestException, ConnectionError) as e:
-        return jsonify({"error": f"Service Error: {str(e)}"}), 503
+    except ValueError as e: return jsonify({"error": str(e)}), 400
+    except (requests.exceptions.RequestException, ConnectionError) as e: return jsonify({"error": f"Service Error: {str(e)}"}), 503
     except psycopg2.Error as e:
         db.rollback()
         current_app.logger.error(f"DATABASE ERROR in submit_job route: {e}")
@@ -88,52 +88,33 @@ def submit_job():
         current_app.logger.error(f"An unexpected error occurred in submit_job route: {e}")
         return jsonify({"error": "An internal server error occurred."}), 500
 
-
 @jobs_bp.route('/tracked-jobs', methods=['GET'])
 @token_required
 def get_tracked_jobs():
-    user_id = g.current_user['id']
+    user_id = g.user_id # <-- Use the internal ID
     try:
         page = int(request.args.get('page', 1))
         limit = int(request.args.get('limit', 10))
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid pagination parameters"}), 400
-
     offset = (page - 1) * limit
     db = get_db()
     service = TrackedJobService(current_app.logger)
-    
     with db.cursor() as cursor:
         cursor.execute("SELECT COUNT(*) FROM tracked_jobs WHERE user_id = %s;", (user_id,))
         total_count = cursor.fetchone()[0]
-
-        cursor.execute("""
-            SELECT id FROM tracked_jobs
-            WHERE user_id = %s
-            ORDER BY created_at DESC, id DESC
-            LIMIT %s OFFSET %s;
-        """, (user_id, limit, offset))
-        
+        cursor.execute("SELECT id FROM tracked_jobs WHERE user_id = %s ORDER BY created_at DESC, id DESC LIMIT %s OFFSET %s;", (user_id, limit, offset))
         job_ids = [row['id'] for row in cursor.fetchall()]
         tracked_jobs = [service._get_formatted_job_by_id(cursor, job_id, user_id) for job_id in job_ids]
-        
-        return jsonify({
-            "tracked_jobs": [job for job in tracked_jobs if job is not None],
-            "total_count": total_count,
-            "page": page,
-            "limit": limit
-        })
+        return jsonify({"tracked_jobs": [job for job in tracked_jobs if job is not None], "total_count": total_count, "page": page, "limit": limit})
 
 @jobs_bp.route('/tracked-jobs/<int:tracked_job_id>', methods=['PUT'])
 @token_required
 def update_tracked_job(tracked_job_id):
-    user_id = g.current_user['id']
+    user_id = g.user_id # <-- Use the internal ID
     data = request.get_json()
     if not data:
         return jsonify({"error": "No update data provided"}), 400
-    
-    # --- The route is now much cleaner ---
-    # It only validates input and calls the service.
     service = TrackedJobService(current_app.logger)
     try:
         updated_job = service.update_job(user_id, tracked_job_id, data)
@@ -147,11 +128,10 @@ def update_tracked_job(tracked_job_id):
         current_app.logger.error(f"Error in update_tracked_job route: {e}")
         return jsonify({"error": "An internal server error occurred."}), 500
 
-
 @jobs_bp.route('/tracked-jobs/<int:tracked_job_id>', methods=['DELETE'])
 @token_required
 def remove_tracked_job(tracked_job_id):
-    user_id = g.current_user['id']
+    user_id = g.user_id # <-- Use the internal ID
     db = get_db()
     with db.cursor() as cursor:
         cursor.execute("DELETE FROM tracked_jobs WHERE id = %s AND user_id = %s RETURNING id", (tracked_job_id, user_id))
