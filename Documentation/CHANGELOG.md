@@ -3,6 +3,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.31.0 - 2025-07-02 - Profile Dropdown & UI Consistency Fixes
+
+This release resolves persistent issues with dropdown menus on the user profile page, ensuring that saved values are correctly displayed and eliminating console warnings related to component control. It also restores contextual placeholder text for a more intuitive user experience.
+
+### Fixed
+-   **Bugfix: Dropdowns in Work Style section don't show selected value:** Addressed the issue where dropdowns (e.g., "I am most productive when...") were not correctly displaying saved profile values. Implemented consistent use of Shadcn UI's controlled `Select` component behavior by binding `value` to an empty string (`""`) for unselected states and correctly mapping backend short codes (e.g., 'High') to their full descriptive sentences for display, and vice versa for saving. This also resolved "uncontrolled to controlled" React warnings.
+
 ## v0.30.0 - 2025-07-02 - Profile Redirection Bugfix
 
 This release addresses a critical bug in the user onboarding flow, ensuring that users with incomplete profiles are correctly guided to the initial setup page.

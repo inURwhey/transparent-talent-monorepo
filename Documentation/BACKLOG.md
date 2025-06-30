@@ -9,7 +9,6 @@
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Bugfix: Dropdowns in Work Style section don't show selected value** | 1000 | 1 | 100% | 0.1 | **10000** | Flash | S | **To Do** |
 | **Backend: Implement Resume Versioning on Submission** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | S | **To Do** |
 | **Feature: Re-implement "Jobs For You" Dashboard Module** | 1000 | 3 | 100% | 0.5 | **6000** | Flash | M | **To Do** |
 | **Feature: User-set Reminders & Next Action Notifications** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
@@ -21,11 +20,12 @@
 | **UI/UX: Refine "Inactive Applications" Filter and Status Display** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | S | **To Do** |
 | **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | L | **In Progress** |
 | **Feature: Resume File Upload & Parsing** | 1000 | 3 | 90% | 0.5 | **5400** | Pro | M | **To Do** |
-| **Feature: AI-Generated Application Assets (Resume/Cover Letter)** | 1000 | 3 | 90% | 1.0 | **2700** | Pro | L | **To Do** |
+| **UI/UX: Implement Autosave for Profile and Resume Pages** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **Feature: Bulk Reprocess Relevancy** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 | **UI/UX: Enhance Profile Completion UX** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI/UX: Multi-step Archiving/Hiding Workflow for Tracked Jobs** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | Flash | M | **To Do** |
+| **Feature: AI-Generated Application Assets (Resume/Cover Letter)** | 1000 | 3 | 90% | 1.0 | **2700** | Pro | L | **To Do** |
 | **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | Pro | M | **To Do** |
 | **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | Pro | L | **To Do** |
 
@@ -36,8 +36,8 @@
 | **Reverse Geocoding from Coordinates to Location Name** | 1000 | 1 | 100% | 0.1 | **10000** | N/A | S | **To Do** |
 | **AI: Refine Resume Parsing & Job Relevance Prompts** | 1000 | 2 | 90% | 0.25 | **7200** | Pro | M | **To Do** |
 | **Geocoding for Typed Location Search** | 1000 | 2 | 90% | 0.25 | **7200** | N/A | S | **To Do** |
-| **Feature: Instant Analysis for Known Jobs**| 1000 | 2 | 100% | 0.5 | **4000** | Pro | L | **To Do** |
 | **Automation: Integrate Google Jobs API for Sourcing** | 1000 | 2 | 90% | 0.5 | **3600** | N/A | M | **To Do** |
+| **Feature: Instant Analysis for Known Jobs**| 1000 | 2 | 100% | 0.5 | **4000** | Pro | L | **To Do** |
 | **AI: New Vector Prompting Cadence** | 1000 | 2 | 90% | 0.5 | **3600** | Pro | M | **To Do** |
 | **AI: Enhance Salary Inference with Industry Benchmarks** | 1000 | 3 | 80% | 0.75 | **3200** | Pro | L | **To Do** |
 | **Feature: Cascading Expiration from Job Posting to Applications** | 1000 | 3 | 80% | 1.0 | **2400** | Pro | M | **To Do** |
@@ -84,6 +84,11 @@
 ---
 
 ## Completed Features & Bugfixes
+### v0.31.0
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Bugfix: Dropdowns in Work Style section don't show selected value** | Tier 1 | 10000 |
+
 ### v0.30.0
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |

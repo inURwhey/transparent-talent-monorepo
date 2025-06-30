@@ -15,6 +15,7 @@
 *   **Architecture Style:** Decoupled three-tier application, managed in a **monorepo**. The backend now follows a service-oriented architecture with an application factory pattern.
 
 ## 3. Current Project Status
+*   **Profile Dropdown Display Fixed:** The critical bug affecting dropdowns on the user profile page, which prevented saved values from being displayed correctly, has been resolved. This also eliminated associated console warnings and restored contextual placeholders.
 *   **Profile Redirection Fixed:** The bug preventing users with incomplete profiles from being correctly redirected to the `/welcome` onboarding page has been resolved, ensuring a smoother initial user experience.
 *   **Resume Versioning Architecture in Place:** The foundational database schema for storing historical resume submissions (`resume_submissions` table) has been successfully migrated to production. This deconstructs a large feature into smaller, manageable implementation tasks.
 *   **End-to-End Onboarding Flow Stabilized:** The entire new user flow is now functional. This includes user sign-up, redirection to the `/welcome` page, successful resume parsing and profile creation, and final redirection to a complete and functional `/dashboard/profile` page.
@@ -22,5 +23,5 @@
 *   **Application is stable and functional on its production domain.**
 
 ## 4. Immediate Backlog & Next Steps
-1.  **Bugfix: Dropdowns in Work Style section don't show selected value:** The dropdowns on the profile page do not correctly display the user's saved selection upon page load. (RICE: 10000)
-2.  **Backend: Implement Resume Versioning on Submission:** Update the resume parsing endpoint to save a copy of the raw text to the new `resume_submissions` table. (RICE: 8000)
+1.  **Backend: Implement Resume Versioning on Submission:** Update the resume parsing endpoint to save a copy of the raw text to the new `resume_submissions` table. (RICE: 8000)
+2.  **Feature: Re-implement "Jobs For You" Dashboard Module:** Re-enable and refine the module that suggests jobs based on user preferences. (RICE: 6000)
