@@ -190,4 +190,22 @@ export default function UserProfilePage() {
                             <div><Label htmlFor="core_strengths">Core Strengths</Label><Textarea id="core_strengths" value={profile.core_strengths || ''} onChange={(e) => handleChange('core_strengths', e.target.value)} rows={3} /></div>
                             <div><Label htmlFor="skills_to_avoid">Skills / Technologies to Avoid</Label><Textarea id="skills_to_avoid" value={profile.skills_to_avoid || ''} onChange={(e) => handleChange('skills_to_avoid', e.target.value)} rows={3} /></div>
                             <div><Label htmlFor="preferred_industries">Preferred Industries</Label><Input id="preferred_industries" type="text" value={profile.preferred_industries || ''} onChange={(e) => handleChange('preferred_industries', e.target.value)} /></div>
-                            <div><Label htmlFor="industries_to_avoid">Industries to Avoid</Label><Input id="industries_to_avoid" type="text" value={profile.industries_to_avoid || ''} onChange={(e) => handleChange('industries_to_avoid', e.targe
+                            <div><Label htmlFor="industries_to_avoid">Industries to Avoid</Label><Input id="industries_to_avoid" type="text" value={profile.industries_to_avoid || ''} onChange={(e) => handleChange('industries_to_avoid', e.target.value)} /></div>
+                        </CollapsibleContent>
+                    </Collapsible>
+
+                    <Collapsible open={openSections.personality} onOpenChange={() => toggleSection('personality')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Personality & Self-Assessment{openSections.personality ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
+                        <CollapsibleContent className="p-4 pt-0 space-y-4">
+                            <div><Label htmlFor="personality_adjectives">Describe Yourself in a Few Adjectives</Label><Input id="personality_adjectives" type="text" value={profile.personality_adjectives || ''} onChange={(e) => handleChange('personality_adjectives', e.target.value)} /></div>
+                            <div><Label htmlFor="personality_16_personalities">16 Personalities (e.g., INTJ)</Label><Input id="personality_16_personalities" type="text" value={profile.personality_16_personalities || ''} onChange={(e) => handleChange('personality_16_personalities', e.target.value)} /></div>
+                            <div><Label htmlFor="personality_disc">DISC Profile</Label><Input id="personality_disc" type="text" value={profile.personality_disc || ''} onChange={(e) => handleChange('personality_disc', e.target.value)} /></div>
+                            <div><Label htmlFor="personality_gallup_strengths">Gallup Strengths (Top 5)</Label><Textarea id="personality_gallup_strengths" value={profile.personality_gallup_strengths || ''} onChange={(e) => handleChange('personality_gallup_strengths', e.target.value)} rows={3} /></div>
+                        </CollapsibleContent>
+                    </Collapsible>
+                    
+                    <Button type="submit" disabled={isSaving} className="w-full bg-indigo-600 hover:bg-indigo-700">{isSaving ? 'Saving...' : 'Save Profile'}</Button>
+                </form>
+            </div>
+        </main>
+    );
+}
