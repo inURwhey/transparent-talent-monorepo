@@ -3,6 +3,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.28.0 - 2025-07-01 - Production Onboarding & Profile Stabilization
+
+This release marks a major stabilization of the core user experience by resolving a series of cascading bugs in the authentication, onboarding, and profile management flows. The application is now fully functional on its production domain with a robust sign-up process.
+
+### Fixed
+-   **Critical Auth: New User Redirect & Backend Crash:** Fixed a complete failure of the new user sign-up flow. The multi-layered solution involved:
+    -   **Database:** Migrated the `users` table (`ALTER TABLE users ALTER COLUMN email DROP NOT NULL;`) to prevent backend crashes when Clerk created a user without an email.
+    -   **Clerk Instance:** Moved the application from a Development to a full Production instance in Clerk, including configuring DNS and updating all services with `live` production API keys.
+    -   **Clerk SSO:** Re-configured Google Sign-In for the new production instance to resolve OAuth `client_id` errors.
+    -   **Backend Routes:** Refactored all backend routes (`profile.py`, `jobs.py`, `onboarding.py`) to consistently use `g.current_user` for retrieving the authenticated user, resolving multiple `AttributeError` crashes.
+-   **Critical UI: Profile Page Restoration:** Restored multiple missing `<Collapsible>` sections to the User Profile page, which had been accidentally truncated.
+-   **Critical UI: Profile Page Hang:** Resolved a silent frontend error where the profile page would hang indefinitely for new users due to an attempt to call a method on null geolocation data.
+-   **Frontend Warnings:** Eliminated all Clerk SDK deprecation warnings by removing the `afterSignInUrl`/`afterSignUpUrl` props from components and the corresponding environment variables, relying instead on the modern `fallbackRedirectUrl` prop.
+
+### Added
+-   **Product Backlog:** Added several new feature and UX improvement ideas discovered during the debugging process, including resume versioning, enhanced profile completion UX, and smarter AI salary inference.
+
 ## [v0.27.0] - 2025-07-01 - Production Authentication & Profile Page Stability
 
 This release resolves two critical, high-priority bugs that were blocking core user flows. It fully stabilizes the production authentication environment, including the new user sign-up and redirect process. It also restores the user profile page to its complete, functional state, fixing both visual and stability issues.

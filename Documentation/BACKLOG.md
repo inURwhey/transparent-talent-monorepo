@@ -1,4 +1,4 @@
-# Transparent Talent: Product Backlog & Roadmap v1.19
+# Transparent Talent: Product Backlog & Roadmap v1.20
 
 ## Column Definitions
 *   **AI Model:** The complexity required from the AI. (Flash, Pro, N/A)
@@ -9,6 +9,7 @@
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Bugfix: Redirect empty profiles to /welcome** | 1000 | 1 | 100% | 0.1 | **10000** | Flash | S | **To Do** |
 | **Bugfix: Dropdowns in Work Style section don't show selected value** | 1000 | 1 | 100% | 0.1 | **10000** | Flash | S | **To Do** |
 | **Feature: Re-implement "Jobs For You" Dashboard Module** | 1000 | 3 | 100% | 0.5 | **6000** | Flash | M | **To Do** |
 | **Feature: User-set Reminders & Next Action Notifications** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
@@ -21,6 +22,7 @@
 | **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | L | **In Progress** |
 | **Feature: Resume File Upload & Parsing** | 1000 | 3 | 90% | 0.5 | **5400** | Pro | M | **To Do** |
 | **Feature: Bulk Reprocess Relevancy** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
+| **UI/UX: Enhance Profile Completion UX** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI/UX: Multi-step Archiving/Hiding Workflow for Tracked Jobs** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | Flash | M | **To Do** |
 | **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | Pro | M | **To Do** |
@@ -31,17 +33,20 @@
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Backend: Enhance Job Data for AI Matching** | 1000 | 3 | 100% | 0.5 | **12000** | Pro | M | **To Do** |
 | **Reverse Geocoding from Coordinates to Location Name** | 1000 | 1 | 100% | 0.1 | **10000** | N/A | S | **To Do** |
+| **AI: Refine Resume Parsing & Job Relevance Prompts** | 1000 | 2 | 90% | 0.25 | **7200** | Pro | M | **To Do** |
 | **Geocoding for Typed Location Search** | 1000 | 2 | 90% | 0.25 | **7200** | N/A | S | **To Do** |
 | **Feature: Instant Analysis for Known Jobs**| 1000 | 2 | 100% | 0.5 | **4000** | Pro | L | **To Do** |
 | **AI: New Vector Prompting Cadence** | 1000 | 2 | 90% | 0.5 | **3600** | Pro | M | **To Do** |
+| **AI: Enhance Salary Inference with Industry Benchmarks** | 1000 | 3 | 80% | 0.75 | **3200** | Pro | L | **To Do** |
 | **Feature: Cascading Expiration from Job Posting to Applications** | 1000 | 3 | 80% | 1.0 | **2400** | Pro | M | **To Do** |
+| **Feature: Architect Resume Versioning and Smart-Merge Logic** | 1000 | 3 | 90% | 1.5 | **1800** | Pro | L | **To Do** |
 | **Automation: Tiered Job Analysis (Lightweight Pre-Screening + Detailed AI)** | 1000 | 3 | 90% | 1.5 | **1800** | Pro | L | **To Do** |
 | **UI/UX: Complex Notification System for Job Expiration** | 1000 | 2 | 90% | 1.0 | **1800** | Pro | L | **To Do** |
 | **Feature: AI-Assisted Offer Negotiation** | 1000 | 3 | 90% | 1.5 | **1800** | Pro | L | **To Do** |
 | **Feature: LinkedIn Profile/Resume Content Extraction & AI Parsing** | 1000 | 3 | 80% | 1.5 | **1600** | Pro | L | **To Do** |
 | **Automation: Full API Job Analysis**| 1000 | 3 | 90% | 2.0 | **1350** | Pro | L | **To Do** |
-| **Feature: Proactive Anomaly Detection**| 1000 | 3 | 90% | 2.5 | **1080** | Pro | L | **To Do** |
 | **Feature: "Transparent Rejection"**| 1000 | 3 | 80% | 2.0 | **1200** | Pro | M | **To Do** |
+| **Feature: Proactive Anomaly Detection**| 1000 | 3 | 90% | 2.5 | **1080** | Pro | L | **To Do** |
 | **Feature: Detailed Interview Stage Tracking (w/ Email/Calendar)** | 1000 | 3 | 80% | 2.0 | **1200** | Pro | L | **To Do** |
 | **Academics Knowledge Base for User Vectoring** | 1000 | 1 | 90% | 1.0 | **900** | Pro | M | **To Do** |
 | **Automation: Job Sourcing (Email/Platform Integration)** | 1000 | 2 | 90% | 0.75 | **900** | Pro | M | **To Do** |
@@ -61,6 +66,7 @@
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Infra: Background Jobs w/ Redis** | 1000 | 2 | 100% | 1.5 | **1333** | Pro | L | **To Do** |
 | **Platform: Business Certification** | 5000 | 3 | 50% | 6.0 | **1250** | N/A | N/A | **To Do** |
+| **Security: Duplicate Resume Submission Detection** | 100 | 2 | 80% | 0.25 | **640** | N/A | S | **To Do** |
 | **Platform: System-Wide Analysis from User Submissions**| 1000 | 3 | 80% | 4.0 | **600** | Pro | L | **To Do** |
 | **AI: User & Job Clustering for Proactive Matching** | 1000 | 3 | 70% | 4.0 | **525** | Pro | L | **To Do** |
 | **Platform: System-Wide Relevance Calc**| 1000 | 3 | 90% | 6.0 | **450** | Pro | L | **To Do** |
@@ -75,11 +81,12 @@
 ---
 
 ## Completed Features & Bugfixes
-### v0.27.0
+### v0.28.0
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
 | **Bugfix: Restore missing sections on Profile page** | Tier 1 | 12000 |
 | **Bugfix: New user signup does not redirect to /welcome page** | Tier 1 | 12000 |
+| **Bugfix: Resume parsing flow fails due to auth errors** | Tier 1 | 12000 |
 
 ### Previous Versions
-*Items from v0.26.0 and earlier are documented in the `CHANGELOG.md`.*
+*Items from v0.27.0 and earlier are documented in the `CHANGELOG.md`.*
