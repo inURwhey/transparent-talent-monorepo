@@ -98,7 +98,8 @@ class ProfileService:
         db = get_db()
         try:
             with db.cursor() as cursor:
-                self.logger.info(f"Attempting to deactivate old resumes for user_id: {user_id}")
+                # 1. Deactivate all existing resumes for this user
+                self.logger.info(f"Deactivating old resumes for user_id: {user_id}")
                 cursor.execute(
                     """
                     UPDATE resume_submissions
@@ -108,7 +109,8 @@ class ProfileService:
                     (user_id,)
                 )
 
-                self.logger.info(f"Attempting to insert new active resume for user_id: {user_id}, source: {source}")
+                # 2. Insert the new resume submission as active
+                self.logger.info(f"Inserting new active resume for user_id: {user_id}, source: {source}")
                 cursor.execute(
                     """
                     INSERT INTO resume_submissions (user_id, raw_text, source, is_active)
@@ -118,18 +120,12 @@ class ProfileService:
                     (user_id, raw_text, source)
                 )
                 new_resume_id = cursor.fetchone()[0]
-                db.commit() # Commit here to make sure this insert is saved before the exception
-                self.logger.info(f"Successfully inserted resume submission with id: {new_resume_id} for user_id: {user_id}. NOW FORCING ROLLBACK.")
-                
-                # --- TEMPORARY: FORCE AN EXCEPTION TO DEBUG DB CONNECTION ---
-                raise Exception("DEBUG_TEST: Forced rollback after resume insert to check logs.")
-                # --- END TEMPORARY CODE ---
-
-                # This part will not be reached due to the forced exception
-                # return new_resume_id
+                db.commit()
+                self.logger.info(f"Successfully saved new resume submission with id: {new_resume_id} for user_id: {user_id}")
+                return new_resume_id
         except Exception as e:
-            db.rollback() # Ensure rollback happens for the forced exception
-            self.logger.error(f"Failed (or forced rollback) to save resume submission for user_id {user_id}: {e}")
+            db.rollback() # Rollback the transaction on error
+            self.logger.error(f"Failed to save resume submission for user_id {user_id}: {e}")
             raise # Re-raise the exception to be caught by the route handler
 
     def _format_profile(self, profile_row: DictCursor, description) -> dict:
