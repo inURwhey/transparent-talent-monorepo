@@ -48,18 +48,32 @@ export default function UserProfilePage() {
     }, [getToken]);
 
     const fetchProfile = useCallback(async () => {
-        if (!isAuthLoaded) return;
+        if (!isAuthLoaded) {
+            console.log("Auth not loaded yet, skipping profile fetch.");
+            return;
+        }
         setIsLoading(true);
+        console.log("Fetching profile data...");
         try {
             const response = await authedFetch(`${apiBaseUrl}/api/profile`);
-            if (!response.ok) throw new Error('Failed to fetch profile.');
+            if (!response.ok) {
+                throw new Error(`Failed to fetch profile. Status: ${response.status}`);
+            }
             const data: Profile = await response.json();
+            console.log("Profile data fetched successfully:", data);
             setProfile(data);
-        } catch (err: any) { setError(err.message); } 
-        finally { setIsLoading(false); }
+        } catch (err: any) {
+            console.error("Error fetching profile:", err);
+            setError(err.message);
+        } finally {
+            console.log("Finished profile fetch attempt, setting isLoading to false.");
+            setIsLoading(false);
+        }
     }, [isAuthLoaded, authedFetch, apiBaseUrl]);
 
-    useEffect(() => { fetchProfile(); }, [fetchProfile]);
+    useEffect(() => {
+        fetchProfile();
+    }, [fetchProfile]);
     
     const handleChange = useCallback((id: keyof Profile, value: any) => {
         setProfile(prev => {
@@ -80,6 +94,7 @@ export default function UserProfilePage() {
         setIsSaving(true);
         setError(null);
         setSuccessMessage(null);
+        console.log("Updating profile with payload:", payload);
         try {
             const response = await authedFetch(`${apiBaseUrl}/api/profile`, { method: 'PUT', body: JSON.stringify(payload) });
             if (!response.ok) throw new Error((await response.json()).error || 'Failed to save profile.');
@@ -87,7 +102,10 @@ export default function UserProfilePage() {
             setProfile(updatedProfile);
             setSuccessMessage("Profile updated successfully!");
             setTimeout(() => setSuccessMessage(null), 3000);
-        } catch (err: any) { setError(err.message); } 
+        } catch (err: any) { 
+            console.error("Error updating profile:", err);
+            setError(err.message); 
+        } 
         finally { setIsSaving(false); }
     }, [apiBaseUrl, authedFetch]);
     
@@ -157,7 +175,9 @@ export default function UserProfilePage() {
                     <Collapsible open={openSections.personalInfo} onOpenChange={() => toggleSection('personalInfo')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Contact & Basic Information{openSections.personalInfo ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                         <CollapsibleContent className="p-4 pt-0 space-y-4">
                             <div><Label htmlFor="full_name">Full Name</Label><Input id="full_name" type="text" value={profile.full_name || ''} onChange={(e) => handleChange('full_name', e.target.value)} /></div>
-                            <div><Label htmlFor="current_location">Current Location</Label><div className="flex items-center space-x-2"><Input id="current_location" type="text" value={profile.current_location || ''} onChange={(e) => handleChange('current_location', e.target.value)} placeholder="e.g., San Francisco, CA" className="flex-grow"/><Button type="button" onClick={handleGetLocation} disabled={isLocationLoading} variant="outline" size="icon" aria-label="Use my current location"><MapPin className="h-4 w-4" /></Button>{(profile.latitude && profile.longitude) && (<Button type="button" onClick={handleClearLocation} variant="ghost" size="icon" aria-label="Clear location"><XCircle className="h-4 w-4 text-red-500" /></Button>)}</div>{(profile.latitude && profile.longitude) && <p className="text-xs text-gray-500 mt-1">Lat: {Number(profile.latitude).toFixed(4)}, Lon: {Number(profile.longitude).toFixed(4)}</p>}</div>
+                            <div><Label htmlFor="current_location">Current Location</Label><div className="flex items-center space-x-2"><Input id="current_location" type="text" value={profile.current_location || ''} onChange={(e) => handleChange('current_location', e.target.value)} placeholder="e.g., San Francisco, CA" className="flex-grow"/><Button type="button" onClick={handleGetLocation} disabled={isLocationLoading} variant="outline" size="icon" aria-label="Use my current location"><MapPin className="h-4 w-4" /></Button>{(profile.latitude && profile.longitude) && (<Button type="button" onClick={handleClearLocation} variant="ghost" size="icon" aria-label="Clear location"><XCircle className="h-4 w-4 text-red-500" /></Button>)}</div>
+                            {(profile.latitude != null && profile.longitude != null) && <p className="text-xs text-gray-500 mt-1">Lat: {Number(profile.latitude).toFixed(4)}, Lon: {Number(profile.longitude).toFixed(4)}</p>}
+                            </div>
                             <div><Label htmlFor="linkedin_profile_url">LinkedIn Profile URL</Label><Input id="linkedin_profile_url" type="url" value={profile.linkedin_profile_url || ''} onChange={(e) => handleChange('linkedin_profile_url', e.target.value)} placeholder="https://www.linkedin.com/in/yourprofile/" /></div>
                             <div><Label htmlFor="resume_url">Resume URL</Label><Input id="resume_url" type="url" value={profile.resume_url || ''} onChange={(e) => handleChange('resume_url', e.target.value)} placeholder="https://your-resume-host.com/resume.pdf" /></div>
                         </CollapsibleContent>
