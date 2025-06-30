@@ -9,15 +9,17 @@
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **UI/UX: Refine "Inactive Applications" Filter and Status Display** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | S | **To Do** |
 | **Cost Management: AI Input/Output Size Validation** | 1000 | 3 | 100% | 0.25 | **12000** | N/A | S | **To Do** |
 | **Feature: Re-implement "Jobs For You" Dashboard Module** | 1000 | 3 | 100% | 0.5 | **6000** | Flash | M | **To Do** |
 | **Feature: User-set Reminders & Next Action Notifications** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
+| **Bugfix: Profile Save Fails Randomly (Likely Render Instance Spin-down)** | 1000 | 1 | 70% | 0.5 | **1400** | Flash | S | **To Do** |
 
 ## Tier 2: Core User Experience & Differentiation
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Marketing: LinkedIn Company Profile** | 1000 | 1 | 100% | 0.1 | **10000** | N/A | N/A | **To Do** |
+| **UI/UX: Add filler text to "preferred work location" dropdown & conditional logic for remote preference.** | 1000 | 1 | 100% | 0.1 | **10000** | Flash | S | **To Do** |
+| **UI/UX: Change "Desired Job Title" to "Desired Job Title(s)"** | 1000 | 1 | 100% | 0.05 | **20000** | N/A | S | **To Do** |
 | **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | L | **In Progress** |
 | **Feature: Resume File Upload & Parsing** | 1000 | 3 | 90% | 0.5 | **5400** | Pro | M | **To Do** |
 | **UI/UX: Modularize Profile Page Components** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
@@ -35,6 +37,7 @@
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Backend: Enhance Job Data for AI Matching** | 1000 | 3 | 100% | 0.5 | **12000** | Pro | M | **To Do** |
 | **Reverse Geocoding from Coordinates to Location Name** | 1000 | 1 | 100% | 0.1 | **10000** | N/A | S | **To Do** |
+| **AI: Refine AI Grade Prompt for `matrix_rating`** | 1000 | 3 | 90% | 0.5 | **5400** | Pro | M | **To Do** |
 | **AI: Refine Resume Parsing & Job Relevance Prompts** | 1000 | 2 | 90% | 0.25 | **7200** | Pro | M | **To Do** |
 | **Geocoding for Typed Location Search** | 1000 | 2 | 90% | 0.25 | **7200** | N/A | S | **To Do** |
 | **Automation: Integrate Google Jobs API for Sourcing** | 1000 | 2 | 90% | 0.5 | **3600** | N/A | M | **To Do** |
@@ -43,11 +46,13 @@
 | **AI: Enhance Salary Inference with Industry Benchmarks** | 1000 | 3 | 80% | 0.75 | **3200** | Pro | L | **To Do** |
 | **Feature: Cascading Expiration from Job Posting to Applications** | 1000 | 3 | 80% | 1.0 | **2400** | Pro | M | **To Do** |
 | **Feature: Architect Resume Versioning and Smart-Merge Logic** | 1000 | 3 | 90% | 1.5 | **1800** | Pro | L | **To Do** |
+| **Feature: AI Critique Profile Fields Based on User Data** | 1000 | 2 | 90% | 0.75 | **2400** | Pro | M | **To Do** |
 | **Automation: Tiered Job Analysis (Lightweight Pre-Screening + Detailed AI)** | 1000 | 3 | 90% | 1.5 | **1800** | Pro | L | **To Do** |
 | **UI/UX: Complex Notification System for Job Expiration** | 1000 | 2 | 90% | 1.0 | **1800** | Pro | L | **To Do** |
 | **Feature: AI-Assisted Offer Negotiation** | 1000 | 3 | 90% | 1.5 | **1800** | Pro | L | **To Do** |
 | **Feature: LinkedIn Profile/Resume Content Extraction & AI Parsing** | 1000 | 3 | 80% | 1.5 | **1600** | Pro | L | **To Do** |
 | **Cost Management: User/Stream Usage Monitoring & Quotas** | 1000 | 2 | 80% | 1.0 | **1600** | Pro | M | **To Do** |
+| **UI: "Relevancy Cards" Differentiated by User Tier** | 1000 | 2 | 80% | 1.0 | **1600** | Flash | M | **To Do** |
 | **Feature: AI-Powered Application Q&A & Learning System** | 1000 | 3 | 80% | 2.0 | **1200** | Pro | L | **To Do** |
 | **Feature: AI Resume Content Quality Check** | 1000 | 2 | 90% | 0.5 | **1200** | Flash | S | **To Do** |
 | **Automation: Full API Job Analysis**| 1000 | 3 | 90% | 2.0 | **1350** | Pro | L | **To Do** |
@@ -67,6 +72,7 @@
 | **AI: Full Data Leverage Mandate** | 1 | 3 | 90% | 1.0 | **2.7** | N/A | S | **To Do** |
 | **AI: Automated Prompt QA System** | 1 | 3 | 80% | 3.0 | **0.8** | Pro | L | **To Do** |
 | **Backend: DB-Driven AI Protocols** | 1 | 2 | 100% | 0.5 | **4.0** | Pro | M | **To Do** |
+| **Feature: Connect Resume Processing with Roles Data Type** | 1000 | 3 | 80% | 1.0 | **2400** | Pro | M | **To Do** |
 
 ## Tier 4: Future Vision & Long-Term bets
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
@@ -92,7 +98,9 @@
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
 | **Backend: Implement Resume Versioning on Submission** | Tier 1 | 8000 |
+| **UI/UX: Refine "Inactive Applications" Filter and Status Display** | Tier 2 | 8000 |
 | **Bugfix: Dropdowns in Work Style section don't show selected value** | Tier 1 | 10000 |
+| **Database: Fix `job_analyses.matrix_rating` `VARCHAR(2)`** | Tier 1 | 12000 |
 
 ### v0.31.0
 | Feature/Bugfix | Original Tier | RICE Score |

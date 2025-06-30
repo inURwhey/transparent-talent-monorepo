@@ -10,7 +10,14 @@ This release introduces core backend functionality for managing user resume vers
 ### Added
 -   **Backend:** Implemented resume versioning on submission (`/api/onboarding/parse-resume`). Each resume text submitted is now stored in the `resume_submissions` table, with the most recent submission automatically set as `is_active = TRUE`, and all previous submissions for that user set to `FALSE`.
 
+### Changed
+-   **Backend AI:** Updated the AI prompt for `matrix_rating` within `job_service.py` to guide Gemini into generating letter grades (e.g., A+, B-) based on relevance scores, ensuring conceptual alignment with business requirements.
+-   **Frontend UI:** Renamed the "Closed Pipeline" filter to "Inactive Applications" for improved clarity and user experience.
+-   **Frontend UI:** Implemented semantic color-coding and bolding for job statuses (e.g., green for accepted, red for rejected/expired, blue for active) directly within the "Status" column of the job tracker table.
+-   **Frontend UI:** Modified the "Relevance" column to display the AI-generated `matrix_rating` (letter grade) instead of the raw numerical sum, and renamed its header to "AI Grade."
+
 ### Fixed
+-   **Database:** Resolved `value too long for type character varying(2)` database error by identifying and guiding the user to alter the `job_analyses.matrix_rating` column to `VARCHAR(50)`, unblocking job submissions.
 -   **Frontend:** Resolved all remaining display and interaction issues with dropdowns in the "Work Style & Preferences" section of the user profile, including correct value display and removal of "uncontrolled to controlled" React warnings. Contextual placeholder text for these fields is now correctly managed.
 
 ## v0.31.0 - 2025-07-02 - Profile Dropdown & UI Consistency Fixes
