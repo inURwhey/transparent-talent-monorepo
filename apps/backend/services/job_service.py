@@ -1,3 +1,5 @@
+# Path: apps/backend/services/job_service.py
+
 import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
@@ -74,10 +76,23 @@ class JobService:
             self.logger.error("Cannot run AI analysis: Model is not configured.")
             raise ConnectionError("AI Service is not configured due to missing API key.")
 
+        # --- IMPORTANT AI PROMPT UPDATE ---
+        # Updated instructions for matrix_rating to output a letter grade
         prompt = f"""
             You are a meticulous career-focused analyst for a platform called "Transparent Talent".
             Your task is to analyze a job description in the context of a user's professional profile.
             Produce a JSON object with the exact keys specified below. Do not include any introductory text or markdown formatting.
+
+            For the 'matrix_rating', calculate the average of 'position_relevance_score' and 'environment_fit_score'.
+            Then, assign a letter grade based on this average:
+            - 90-100: A+
+            - 80-89: A
+            - 70-79: B+
+            - 60-69: B
+            - 50-59: C+
+            - 40-49: C
+            - 30-39: D
+            - 0-29: F
 
             USER PROFILE:
             ---
@@ -96,12 +111,13 @@ class JobService:
                 "position_relevance_score": "integer (1-100)",
                 "environment_fit_score": "integer (1-100)",
                 "hiring_manager_view": "string (A concise paragraph from the hiring manager's perspective on the candidate's fit)",
-                "matrix_rating": "string ('Strong Yes', 'Yes', 'Leaning Yes', 'Leaning No', 'No', 'Strong No')",
+                "matrix_rating": "string (A letter grade based on the average of position_relevance_score and environment_fit_score, e.g., 'A+', 'B', 'F')",
                 "summary": "string (A concise, professional summary of the role and its alignment with the user's goals)",
                 "qualification_gaps": "array of strings (List specific, actionable qualification gaps)",
                 "recommended_testimonials": "array of strings (List 3-5 specific skills or experiences from the user's profile to highlight)"
             }}
         """
+        # --- END IMPORTANT AI PROMPT UPDATE ---
         
         self.logger.info("Sending request to Gemini AI for job analysis.")
         try:
