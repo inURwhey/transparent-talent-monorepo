@@ -1,11 +1,42 @@
 // Path: apps/frontend/app/dashboard/types.ts
 
-// Add latitude and longitude to the Profile interface
+// The Profile interface is now significantly expanded
 export interface Profile {
-  full_name: string;
-  short_term_career_goal: string;
+  id: number;
+  user_id: number;
+  full_name: string | null;
+  current_location: string | null;
   latitude: number | null;
   longitude: number | null;
+  linkedin_profile_url: string | null;
+  resume_url: string | null;
+  short_term_career_goal: string | null;
+  long_term_career_goals: string | null;
+  desired_annual_compensation: string | null;
+  desired_title: string | null;
+  ideal_role_description: string | null;
+  preferred_company_size: string | null;
+  ideal_work_culture: string | null;
+  disliked_work_culture: string | null;
+  core_strengths: string | null;
+  skills_to_avoid: string | null;
+  non_negotiable_requirements: string | null;
+  deal_breakers: string | null;
+  preferred_industries: string | null;
+  industries_to_avoid: string | null;
+  personality_adjectives: string | null;
+  personality_16_personalities: string | null;
+  personality_disc: string | null;
+  personality_gallup_strengths: string | null;
+  preferred_work_style: 'On-site' | 'Remote' | 'Hybrid' | null;
+  is_remote_preferred: boolean | null;
+
+  // --- NEW "LAYER 3" FIELDS ---
+  has_completed_onboarding: boolean;
+  work_style_preference: string | null;
+  conflict_resolution_style: string | null;
+  communication_preference: string | null;
+  change_tolerance: string | null;
 }
 
 export interface AIAnalysis {
