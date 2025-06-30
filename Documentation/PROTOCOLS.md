@@ -1,4 +1,4 @@
-# Transparent Talent: Operational Protocols v2.3
+# Transparent Talent: Operational Protocols v2.4
 
 ## System Instructions (Core Operating Principles)
 *   **Full-File Output Mandate:** When providing file content for replacement, the AI **must** output the *entire*, complete, and untruncated code. Abbreviating with comments is a critical failure.
@@ -79,7 +79,7 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
 1.  **Mandatory Schema Request:** Before generating any code that references a database table, the AI **must** first prompt the user to provide the `\d <table_name>` description for all relevant tables.
 2.  **Grounded Code Generation:** The generated code will strictly adhere to the column names and types from the user-provided schema.
 
-### Session Budgeting Protocol v1.0
+### Session Budgeting Protocol v1.1
 *   **Objective:** To manage development velocity against the real-world constraints of token quotas and UI performance in the AI Studio environment.
 *   **Ground Truth:** The user's account has a daily token quota for Pro models, assumed as of v2.3 to be 400,000 tokens per day. The AI Studio UI also suffers from performance degradation on very long-context conversations (e.g., >120k tokens), which acts as a practical limit for Flash model sessions. These factors, not API rate limits, are the primary constraints on development.
 *   **Protocol:**
@@ -88,6 +88,7 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
     3.  **Checkpointing:** For `L` (Large) cost tasks, or as session context grows, the AI will proactively suggest using an `END_PROMPT` cycle to serve as a logical checkpoint, committing the work and resetting the session's token count.
         *   **Flash Model Stop:** Sessions using Flash models should be soft-stopped around **120,000 tokens** to avoid UI lag.
         *   **Pro Model Stop:** Sessions using Pro models should be soft-stopped as they approach the daily quota of **400,000 tokens**.
+    4.  **Retroactive Costing:** At the end of a session, the user can provide the actual token usage. This data will be used to refine future `Session Cost` (S/M/L) estimates, creating a data-driven planning loop.
 
 ### Context Management & Session Scoping v1.0
 *   **Objective:** To optimize development efficiency by matching the session's context length to the nature of the task.
@@ -132,5 +133,5 @@ This workflow should be executed sequentially within a single chat session to ma
 
 ## Code Generation Protocols
 *   **Full File Replacement vs. Targeted Changes:**
-    *   **Full File Replacement:** For changes involving adding or removing multiple functions/routes; significant restructuring or refactoring of existing code; modifying a TypeScript interface or Python data structure that affects multiple parts of the file; or addressing complex bugs where a full context is crucial.
+    *   **Full File Replacement:** For changes involving adding or removing multiple functions/routes; significant restructuring of existing code; modifying a TypeScript interface or Python data structure that affects multiple parts of the file; or addressing complex bugs where a full context is crucial.
     *   **Targeted Changes:** For isolated changes that are a single line modification; adding or removing a single import statement; changing a literal value (e.g., a constant); or adding a single, small, self-contained `if` or `else` block.

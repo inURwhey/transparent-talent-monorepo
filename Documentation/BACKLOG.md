@@ -1,4 +1,4 @@
-# Transparent Talent: Product Backlog & Roadmap v1.20
+# Transparent Talent: Product Backlog & Roadmap v1.21
 
 ## Column Definitions
 *   **AI Model:** The complexity required from the AI. (Flash, Pro, N/A)
@@ -11,6 +11,7 @@
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Bugfix: Redirect empty profiles to /welcome** | 1000 | 1 | 100% | 0.1 | **10000** | Flash | S | **To Do** |
 | **Bugfix: Dropdowns in Work Style section don't show selected value** | 1000 | 1 | 100% | 0.1 | **10000** | Flash | S | **To Do** |
+| **Backend: Implement Resume Versioning on Submission** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | S | **To Do** |
 | **Feature: Re-implement "Jobs For You" Dashboard Module** | 1000 | 3 | 100% | 0.5 | **6000** | Flash | M | **To Do** |
 | **Feature: User-set Reminders & Next Action Notifications** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 
@@ -81,12 +82,10 @@
 ---
 
 ## Completed Features & Bugfixes
-### v0.28.0
+### v0.29.0
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
-| **Bugfix: Restore missing sections on Profile page** | Tier 1 | 12000 |
-| **Bugfix: New user signup does not redirect to /welcome page** | Tier 1 | 12000 |
-| **Bugfix: Resume parsing flow fails due to auth errors** | Tier 1 | 12000 |
+| **Architect Resume Versioning DB Schema** | Tier 2 | 6000 |
 
 ### Previous Versions
-*Items from v0.27.0 and earlier are documented in the `CHANGELOG.md`.*
+*Items from v0.28.0 and earlier are documented in the `CHANGELOG.md`.*

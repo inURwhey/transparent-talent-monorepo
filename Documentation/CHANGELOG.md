@@ -3,6 +3,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.29.0 - 2025-07-01 - Resume Versioning Architecture
+
+This release lays the architectural groundwork for a robust resume versioning system. This work deconstructs a large, complex feature into smaller, manageable implementation tasks, enabling more efficient future development.
+
+### Added
+-   **Database:** Created a new `resume_submissions` table to store the full history of a user's resume submissions. The table includes columns for `raw_text`, `submitted_at`, `source`, and an `is_active` flag to identify the primary resume.
+-   **Database:** Added indexes to the new table for efficient querying and a partial unique index to ensure only one resume can be active per user at a time.
+
+### Changed
+-   **Protocols:** Updated the `Session Budgeting Protocol` to include a "Retroactive Costing" step, using completed session data to refine future task estimates.
+
+### Fixed
+-   No bugs were addressed in this release; changes were purely architectural and preparatory.
+
 ## v0.28.0 - 2025-07-01 - Production Onboarding & Profile Stabilization
 
 This release marks a major stabilization of the core user experience by resolving a series of cascading bugs in the authentication, onboarding, and profile management flows. The application is now fully functional on its production domain with a robust sign-up process.
