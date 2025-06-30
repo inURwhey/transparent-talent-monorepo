@@ -19,7 +19,7 @@ const ONBOARDING_REQUIRED_FIELDS: (keyof Profile)[] = [
     'conflict_resolution_style', 'communication_preference', 'change_tolerance'
 ];
 
-// Define mappings for change_tolerance
+// Define mappings for change_tolerance for two-way conversion
 const changeToleranceBackendToFrontendMap: Record<string, string> = {
     'Stable': 'Priorities are stable and I can focus on a long-term roadmap.',
     'High': 'The team is nimble and priorities pivot often based on new data.',
@@ -28,35 +28,6 @@ const changeToleranceFrontendToBackendMap: Record<string, string> = {
     'Priorities are stable and I can focus on a long-term roadmap.': 'Stable',
     'The team is nimble and priorities pivot often based on new data.': 'High',
 };
-
-// Define mappings for other select fields if they also use short codes on backend
-const workStyleBackendToFrontendMap: Record<string, string> = {
-    'An ambiguous environment where I can create my own structure.': 'An ambiguous environment where I can create my own structure.', // Assuming 1:1 for now
-    'A structured environment with clearly defined tasks.': 'A structured environment with clearly defined tasks.',
-};
-const workStyleFrontendToBackendMap: Record<string, string> = {
-    'An ambiguous environment where I can create my own structure.': 'An ambiguous environment where I can create my own structure.',
-    'A structured environment with clearly defined tasks.': 'A structured environment with clearly defined tasks.',
-};
-
-const conflictResolutionBackendToFrontendMap: Record<string, string> = {
-    'Have a direct, open debate to resolve the issue quickly.': 'Have a direct, open debate to resolve the issue quickly.',
-    'Build consensus with stakeholders before presenting a solution.': 'Build consensus with stakeholders before presenting a solution.',
-};
-const conflictResolutionFrontendToBackendMap: Record<string, string> = {
-    'Have a direct, open debate to resolve the issue quickly.': 'Have a direct, open debate to resolve the issue quickly.',
-    'Build consensus with stakeholders before presenting a solution.': 'Build consensus with stakeholders before presenting a solution.',
-};
-
-const communicationPreferenceBackendToFrontendMap: Record<string, string> = {
-    'Detailed written documentation (e.g., docs, wikis, Notion).': 'Detailed written documentation (e.g., docs, wikis, Notion).',
-    'Real-time synchronous meetings (e.g., Zoom, Slack huddles).': 'Real-time synchronous meetings (e.g., Zoom, Slack huddles).',
-};
-const communicationPreferenceFrontendToBackendMap: Record<string, string> = {
-    'Detailed written documentation (e.g., docs, wikis, Notion).': 'Detailed written documentation (e.g., docs, wikis, Notion).',
-    'Real-time synchronous meetings (e.g., Zoom, Slack huddles).': 'Real-time synchronous meetings (e.g., Zoom, Slack huddles).',
-};
-
 
 export default function UserProfilePage() {
     const { getToken, isLoaded: isAuthLoaded } = useAuth();
@@ -119,35 +90,23 @@ export default function UserProfilePage() {
             if (!prev) return null;
             let actualValue: any = value;
 
-            // Convert placeholder to null for backend
-            if (value === '__placeholder__') {
+            // Convert empty string from Select to null for backend if it's the placeholder value
+            if (value === '') {
                 actualValue = null;
             } 
             // Apply specific mapping for change_tolerance
             else if (id === 'change_tolerance') {
-                actualValue = changeToleranceFrontendToBackendMap[value] || null; // This maps frontend string to backend code
+                actualValue = changeToleranceFrontendToBackendMap[value] || null; 
             }
-            // Apply specific mapping for work_style_preference
-            else if (id === 'work_style_preference') {
-                actualValue = workStyleFrontendToBackendMap[value] || null;
-            }
-            // Apply specific mapping for conflict_resolution_style
-            else if (id === 'conflict_resolution_style') {
-                actualValue = conflictResolutionFrontendToBackendMap[value] || null;
-            }
-            // Apply specific mapping for communication_preference
-            else if (id === 'communication_preference') {
-                actualValue = communicationPreferenceFrontendToBackendMap[value] || null;
-            }
-            // Ensure 'null' string from select is converted to null for backend (for preferred_work_style and company_size)
-            else if (value === 'null') { 
+            // For preferred_work_style and company_size, 'null' string represents no preference
+            else if (value === 'null') {
                 actualValue = null;
             }
 
             let updatedProfile = { ...prev, [id]: actualValue };
 
             // Special logic for is_remote_preferred based on preferred_work_style
-            if (id === 'preferred_work_style' && value === 'On-site') {
+            if (id === 'preferred_work_style' && actualValue === 'On-site') { // Use actualValue here
                 updatedProfile.is_remote_preferred = false;
             }
             return updatedProfile;
@@ -209,29 +168,16 @@ export default function UserProfilePage() {
         updateProfileData({ latitude: null, longitude: null, current_location: '' });
     }, [updateProfileData]);
 
-    // Helper to get display value for Select components
-    const getSelectDisplayValue = useCallback((field: keyof Profile, defaultValue: string = '__placeholder__') => {
-        if (!profile) return defaultValue;
+    // Helper to get display value for Select components from backend value
+    const getSelectDisplayValue = useCallback((field: keyof Profile) => {
+        if (!profile) return ''; // Return empty string for controlled component if no profile
         const backendValue = profile[field];
 
         if (field === 'change_tolerance') {
-            return changeToleranceBackendToFrontendMap[backendValue as string] || defaultValue;
+            return changeToleranceBackendToFrontendMap[backendValue as string] || '';
         }
-        if (field === 'work_style_preference') {
-            return workStyleBackendToFrontendMap[backendValue as string] || defaultValue;
-        }
-        if (field === 'conflict_resolution_style') {
-            return conflictResolutionBackendToFrontendMap[backendValue as string] || defaultValue;
-        }
-        if (field === 'communication_preference') {
-            return communicationPreferenceBackendToFrontendMap[backendValue as string] || defaultValue;
-        }
-        
-        // For other fields like preferred_work_style and preferred_company_size that use 'null' as a placeholder
-        // we return 'null' if the backend value is null, so it matches the <SelectItem value="null">
-        if (backendValue === null) return 'null';
-
-        return (backendValue as string) || defaultValue;
+        // For other fields that are simple text values
+        return (backendValue as string) || '';
     }, [profile]);
 
 
@@ -261,9 +207,10 @@ export default function UserProfilePage() {
                         <CollapsibleContent className="p-4 pt-2 space-y-4">
                             <div><Label htmlFor="work_style_preference">I do my best work in...</Label>
                                 <Select name="work_style_preference" value={getSelectDisplayValue('work_style_preference')} onValueChange={(v) => handleChange('work_style_preference',v)}>
-                                    <SelectTrigger><SelectValue placeholder="Select a work style..." /></SelectTrigger>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a work style..." />
+                                    </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="__placeholder__">Select an option...</SelectItem>
                                         <SelectItem value="An ambiguous environment where I can create my own structure.">An ambiguous environment where I can create my own structure.</SelectItem>
                                         <SelectItem value="A structured environment with clearly defined tasks.">A structured environment with clearly defined tasks.</SelectItem>
                                     </SelectContent>
@@ -271,9 +218,10 @@ export default function UserProfilePage() {
                             </div>
                             <div><Label htmlFor="conflict_resolution_style">When I disagree with a colleague, I prefer to...</Label>
                                 <Select name="conflict_resolution_style" value={getSelectDisplayValue('conflict_resolution_style')} onValueChange={(v) => handleChange('conflict_resolution_style',v)}>
-                                    <SelectTrigger><SelectValue placeholder="Select a conflict style..." /></SelectTrigger>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a conflict style..." />
+                                    </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="__placeholder__">Select an option...</SelectItem>
                                         <SelectItem value="Have a direct, open debate to resolve the issue quickly.">Have a direct, open debate to resolve the issue quickly.</SelectItem>
                                         <SelectItem value="Build consensus with stakeholders before presenting a solution.">Build consensus with stakeholders before presenting a solution.</SelectItem>
                                     </SelectContent>
@@ -281,9 +229,10 @@ export default function UserProfilePage() {
                             </div>
                             <div><Label htmlFor="communication_preference">I communicate most effectively through...</Label>
                                 <Select name="communication_preference" value={getSelectDisplayValue('communication_preference')} onValueChange={(v) => handleChange('communication_preference',v)}>
-                                    <SelectTrigger><SelectValue placeholder="Select a communication style..." /></SelectTrigger>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a communication style..." />
+                                    </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="__placeholder__">Select an option...</SelectItem>
                                         <SelectItem value="Detailed written documentation (e.g., docs, wikis, Notion).">Detailed written documentation (e.g., docs, wikis, Notion).</SelectItem>
                                         <SelectItem value="Real-time synchronous meetings (e.g., Zoom, Slack huddles).">Real-time synchronous meetings (e.g., Zoom, Slack huddles).</SelectItem>
                                     </SelectContent>
@@ -291,9 +240,10 @@ export default function UserProfilePage() {
                             </div>
                             <div><Label htmlFor="change_tolerance">I am most productive when...</Label>
                                 <Select name="change_tolerance" value={getSelectDisplayValue('change_tolerance')} onValueChange={(v) => handleChange('change_tolerance',v)}>
-                                    <SelectTrigger><SelectValue placeholder="Select your preference for change..." /></SelectTrigger>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select your preference for change..." />
+                                    </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="__placeholder__">Select an option...</SelectItem>
                                         <SelectItem value="Priorities are stable and I can focus on a long-term roadmap.">Priorities are stable and I can focus on a long-term roadmap.</SelectItem>
                                         <SelectItem value="The team is nimble and priorities pivot often based on new data.">The team is nimble and priorities pivot often based on new data.</SelectItem>
                                     </SelectContent>
