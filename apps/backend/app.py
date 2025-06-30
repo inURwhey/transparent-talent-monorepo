@@ -7,21 +7,18 @@ from flask_cors import CORS
 # --- Application Factory ---
 def create_app():
     """
-    Creates and configures an instance of the Flask application.
+    Creates and infigures an instance of the Flask application.
     """
     app = Flask(__name__)
 
     # --- Configuration ---
-    # The config is already validated upon import, so we just use it.
+    # We are simplifying the CORS setup to be broad for debugging.
+    # This should be the VERY FIRST thing configured after creating the app instance.
+    CORS(app)
+
     from . import config
     app.config.from_object(config.Config)
-
-    # --- Extensions ---
-    # Read allowed origins from environment variable
-    allowed_origins_str = os.getenv('ALLOWED_ORIGINS', '')
-    allowed_origins = [origin.strip() for origin in allowed_origins_str.split(',') if origin.strip()]
-    CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True, expose_headers=["Authorization"])
-
+    
     # --- Database Initialization ---
     from . import database
     database.init_app(app)
