@@ -1,9 +1,7 @@
-# Transparent Talent: Product Backlog & Roadmap v1.16
+# Transparent Talent: Product Backlog & Roadmap v1.17
 
 ## Unrefined Ideas & Brainstorming
 *This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
-- **Geocoding for typed locations:** Convert a user's typed address (e.g., "Winter Park, FL") into coordinates.
-- **Reverse Geocoding:** Convert coordinates from the geolocation button into a human-readable city/state to pre-fill the location text field.
 
 ---
 
@@ -37,6 +35,8 @@ The "Session Cost" column estimates the AI Studio session token budget required 
 | **Marketing: LinkedIn Company Profile** | 1000 | 1 | 100% | 0.1 | **10000** | N/A | N/A | **To Do** |
 | **UI/UX: Refine "Inactive Applications" Filter and Status Display** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | S | **To Do** |
 | **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | L | **To Do** |
+| **Feature: Geocoding for typed locations** | 1000 | 1 | 100% | 0.25 | **4000** | Flash | M | **To Do** |
+| **Feature: Reverse Geocoding for selected locations** | 1000 | 1 | 100% | 0.25 | **4000** | Flash | M | **To Do** |
 | **UI/UX: Multi-step Archiving/Hiding Workflow for Tracked Jobs** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI/UX: 'Jobs for You' Module Restoration** | 1000 | 3 | 90% | 0.75 | **3600** | Flash | S | **To Do** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | Flash | M | **To Do** |
