@@ -29,8 +29,34 @@ const changeToleranceFrontendToBackendMap: Record<string, string> = {
     'The team is nimble and priorities pivot often based on new data.': 'High',
 };
 
-// Define maps for other select fields if they also use short codes on backend
-// For now, assuming only change_tolerance needs explicit mapping beyond null/placeholder
+// Define mappings for other select fields if they also use short codes on backend
+const workStyleBackendToFrontendMap: Record<string, string> = {
+    'An ambiguous environment where I can create my own structure.': 'An ambiguous environment where I can create my own structure.', // Assuming 1:1 for now
+    'A structured environment with clearly defined tasks.': 'A structured environment with clearly defined tasks.',
+};
+const workStyleFrontendToBackendMap: Record<string, string> = {
+    'An ambiguous environment where I can create my own structure.': 'An ambiguous environment where I can create my own structure.',
+    'A structured environment with clearly defined tasks.': 'A structured environment with clearly defined tasks.',
+};
+
+const conflictResolutionBackendToFrontendMap: Record<string, string> = {
+    'Have a direct, open debate to resolve the issue quickly.': 'Have a direct, open debate to resolve the issue quickly.',
+    'Build consensus with stakeholders before presenting a solution.': 'Build consensus with stakeholders before presenting a solution.',
+};
+const conflictResolutionFrontendToBackendMap: Record<string, string> = {
+    'Have a direct, open debate to resolve the issue quickly.': 'Have a direct, open debate to resolve the issue quickly.',
+    'Build consensus with stakeholders before presenting a solution.': 'Build consensus with stakeholders before presenting a solution.',
+};
+
+const communicationPreferenceBackendToFrontendMap: Record<string, string> = {
+    'Detailed written documentation (e.g., docs, wikis, Notion).': 'Detailed written documentation (e.g., docs, wikis, Notion).',
+    'Real-time synchronous meetings (e.g., Zoom, Slack huddles).': 'Real-time synchronous meetings (e.g., Zoom, Slack huddles).',
+};
+const communicationPreferenceFrontendToBackendMap: Record<string, string> = {
+    'Detailed written documentation (e.g., docs, wikis, Notion).': 'Detailed written documentation (e.g., docs, wikis, Notion).',
+    'Real-time synchronous meetings (e.g., Zoom, Slack huddles).': 'Real-time synchronous meetings (e.g., Zoom, Slack huddles).',
+};
+
 
 export default function UserProfilePage() {
     const { getToken, isLoaded: isAuthLoaded } = useAuth();
@@ -99,10 +125,22 @@ export default function UserProfilePage() {
             } 
             // Apply specific mapping for change_tolerance
             else if (id === 'change_tolerance') {
-                actualValue = changeToleranceFrontendToBackendMap[value] || null;
+                actualValue = changeToleranceFrontendToBackendMap[value] || null; // This maps frontend string to backend code
+            }
+            // Apply specific mapping for work_style_preference
+            else if (id === 'work_style_preference') {
+                actualValue = workStyleFrontendToBackendMap[value] || null;
+            }
+            // Apply specific mapping for conflict_resolution_style
+            else if (id === 'conflict_resolution_style') {
+                actualValue = conflictResolutionFrontendToBackendMap[value] || null;
+            }
+            // Apply specific mapping for communication_preference
+            else if (id === 'communication_preference') {
+                actualValue = communicationPreferenceFrontendToBackendMap[value] || null;
             }
             // Ensure 'null' string from select is converted to null for backend (for preferred_work_style and company_size)
-            else if (value === 'null') {
+            else if (value === 'null') { 
                 actualValue = null;
             }
 
@@ -171,18 +209,34 @@ export default function UserProfilePage() {
         updateProfileData({ latitude: null, longitude: null, current_location: '' });
     }, [updateProfileData]);
 
-    if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading profile...</div>;
-    if (!profile) return <div className="min-h-screen flex items-center justify-center">Could not load profile. Please try refreshing the page.</div>;
-
     // Helper to get display value for Select components
     const getSelectDisplayValue = useCallback((field: keyof Profile, defaultValue: string = '__placeholder__') => {
         if (!profile) return defaultValue;
+        const backendValue = profile[field];
+
         if (field === 'change_tolerance') {
-            return changeToleranceBackendToFrontendMap[profile.change_tolerance as string] || defaultValue;
+            return changeToleranceBackendToFrontendMap[backendValue as string] || defaultValue;
         }
-        return (profile[field] as string) || defaultValue;
+        if (field === 'work_style_preference') {
+            return workStyleBackendToFrontendMap[backendValue as string] || defaultValue;
+        }
+        if (field === 'conflict_resolution_style') {
+            return conflictResolutionBackendToFrontendMap[backendValue as string] || defaultValue;
+        }
+        if (field === 'communication_preference') {
+            return communicationPreferenceBackendToFrontendMap[backendValue as string] || defaultValue;
+        }
+        
+        // For other fields like preferred_work_style and preferred_company_size that use 'null' as a placeholder
+        // we return 'null' if the backend value is null, so it matches the <SelectItem value="null">
+        if (backendValue === null) return 'null';
+
+        return (backendValue as string) || defaultValue;
     }, [profile]);
 
+
+    if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading profile...</div>;
+    if (!profile) return <div className="min-h-screen flex items-center justify-center">Could not load profile. Please try refreshing the page.</div>;
 
     return (
         <main className="min-h-screen bg-gray-50 p-8 font-sans">
