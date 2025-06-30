@@ -10,11 +10,12 @@ def create_app():
     app = Flask(__name__)
 
     # --- Configuration ---
-    # The config is already validated upon import, so we just use it.
+    # Load configuration from our config object
     from . import config
     app.config.from_object(config.Config)
     
     # --- Extensions ---
+    # This is the correct, more specific CORS configuration that we want to keep.
     CORS(app, supports_credentials=True, expose_headers=["Authorization"])
 
     # --- Database Initialization ---
