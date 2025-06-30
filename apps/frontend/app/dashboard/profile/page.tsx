@@ -154,15 +154,16 @@ export default function UserProfilePage() {
                         </CollapsibleContent>
                     </Collapsible>
 
-                    <Collapsible open={openSections.personalInfo} onOpenChange={() => toggleSection('personalInfo')}><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Contact & Basic Information{openSections.personalInfo ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
+                    <Collapsible open={openSections.personalInfo} onOpenChange={() => toggleSection('personalInfo')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Contact & Basic Information{openSections.personalInfo ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                         <CollapsibleContent className="p-4 pt-0 space-y-4">
                             <div><Label htmlFor="full_name">Full Name</Label><Input id="full_name" type="text" value={profile.full_name || ''} onChange={(e) => handleChange('full_name', e.target.value)} /></div>
                             <div><Label htmlFor="current_location">Current Location</Label><div className="flex items-center space-x-2"><Input id="current_location" type="text" value={profile.current_location || ''} onChange={(e) => handleChange('current_location', e.target.value)} placeholder="e.g., San Francisco, CA" className="flex-grow"/><Button type="button" onClick={handleGetLocation} disabled={isLocationLoading} variant="outline" size="icon" aria-label="Use my current location"><MapPin className="h-4 w-4" /></Button>{(profile.latitude && profile.longitude) && (<Button type="button" onClick={handleClearLocation} variant="ghost" size="icon" aria-label="Clear location"><XCircle className="h-4 w-4 text-red-500" /></Button>)}</div>{(profile.latitude && profile.longitude) && <p className="text-xs text-gray-500 mt-1">Lat: {Number(profile.latitude).toFixed(4)}, Lon: {Number(profile.longitude).toFixed(4)}</p>}</div>
                             <div><Label htmlFor="linkedin_profile_url">LinkedIn Profile URL</Label><Input id="linkedin_profile_url" type="url" value={profile.linkedin_profile_url || ''} onChange={(e) => handleChange('linkedin_profile_url', e.target.value)} placeholder="https://www.linkedin.com/in/yourprofile/" /></div>
+                            <div><Label htmlFor="resume_url">Resume URL</Label><Input id="resume_url" type="url" value={profile.resume_url || ''} onChange={(e) => handleChange('resume_url', e.target.value)} placeholder="https://your-resume-host.com/resume.pdf" /></div>
                         </CollapsibleContent>
                     </Collapsible>
 
-                    <Collapsible open={openSections.careerGoals} onOpenChange={() => toggleSection('careerGoals')}><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Career Aspirations{openSections.careerGoals ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
+                    <Collapsible open={openSections.careerGoals} onOpenChange={() => toggleSection('careerGoals')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Career Aspirations{openSections.careerGoals ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                         <CollapsibleContent className="p-4 pt-0 space-y-4">
                             <div><Label htmlFor="short_term_career_goal">Short-Term Career Goal</Label><Textarea id="short_term_career_goal" value={profile.short_term_career_goal || ''} onChange={(e) => handleChange('short_term_career_goal', e.target.value)} rows={3} /></div>
                             <div><Label htmlFor="long_term_career_goals">Long-Term Career Goals</Label><Textarea id="long_term_career_goals" value={profile.long_term_career_goals || ''} onChange={(e) => handleChange('long_term_career_goals', e.target.value)} rows={3} /></div>
@@ -171,10 +172,22 @@ export default function UserProfilePage() {
                             <div><Label htmlFor="ideal_role_description">Ideal Role Description</Label><Textarea id="ideal_role_description" value={profile.ideal_role_description || ''} onChange={(e) => handleChange('ideal_role_description', e.target.value)} rows={5} /></div>
                         </CollapsibleContent>
                     </Collapsible>
-                    
-                    <Button type="submit" disabled={isSaving} className="w-full bg-indigo-600 hover:bg-indigo-700">{isSaving ? 'Saving...' : 'Save Profile'}</Button>
-                </form>
-            </div>
-        </main>
-    );
-}
+
+                    <Collapsible open={openSections.workEnv} onOpenChange={() => toggleSection('workEnv')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Work Environment & Requirements{openSections.workEnv ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
+                        <CollapsibleContent className="p-4 pt-0 space-y-4">
+                            <div><Label htmlFor="preferred_work_style_select">Preferred Work Location</Label><Select value={profile.preferred_work_style || 'null'} onValueChange={(v) => handleChange('preferred_work_style', v)}><SelectTrigger id="preferred_work_style_select"><SelectValue placeholder="No Preference"/></SelectTrigger><SelectContent><SelectItem value="null">No Preference</SelectItem><SelectItem value="On-site">On-site</SelectItem><SelectItem value="Hybrid">Hybrid</SelectItem><SelectItem value="Remote">Remote</SelectItem></SelectContent></Select></div>
+                            {profile.preferred_work_style !== 'On-site' && (<div className="flex items-center space-x-2 pl-1 pt-2"><Checkbox id="is_remote_preferred" checked={profile.is_remote_preferred || false} onCheckedChange={(checked) => handleCheckboxChange('is_remote_preferred', !!checked)} /><Label htmlFor="is_remote_preferred" className="font-normal">I prefer remote work generally.</Label></div>)}
+                            <div><Label htmlFor="preferred_company_size">Preferred Company Size</Label><Select value={profile.preferred_company_size || 'null'} onValueChange={(value) => handleChange('preferred_company_size', value)}><SelectTrigger><SelectValue placeholder="No Preference" /></SelectTrigger><SelectContent><SelectItem value="null">No Preference</SelectItem><SelectItem value="Startup (1-50 employees)">Startup (1-50 employees)</SelectItem><SelectItem value="Small (51-200 employees)">Small (51-200 employees)</SelectItem><SelectItem value="Medium (201-1000 employees)">Medium (201-1000 employees)</SelectItem><SelectItem value="Large (1001-10000 employees)">Large (1001-10000 employees)</SelectItem><SelectItem value="Enterprise (10000+ employees)">Enterprise (10000+ employees)</SelectItem></SelectContent></Select></div>
+                            <div><Label htmlFor="ideal_work_culture">Ideal Work Culture</Label><Textarea id="ideal_work_culture" value={profile.ideal_work_culture || ''} onChange={(e) => handleChange('ideal_work_culture', e.target.value)} rows={3} /></div>
+                            <div><Label htmlFor="disliked_work_culture">Disliked Work Culture</Label><Textarea id="disliked_work_culture" value={profile.disliked_work_culture || ''} onChange={(e) => handleChange('disliked_work_culture', e.target.value)} rows={3} /></div>
+                            <div><Label htmlFor="non_negotiable_requirements">Non-Negotiable Requirements</Label><Textarea id="non_negotiable_requirements" value={profile.non_negotiable_requirements || ''} onChange={(e) => handleChange('non_negotiable_requirements', e.target.value)} rows={3} /></div>
+                            <div><Label htmlFor="deal_breakers">Deal Breakers</Label><Textarea id="deal_breakers" value={profile.deal_breakers || ''} onChange={(e) => handleChange('deal_breakers', e.target.value)} rows={3} /></div>
+                        </CollapsibleContent>
+                    </Collapsible>
+
+                    <Collapsible open={openSections.skills} onOpenChange={() => toggleSection('skills')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Skills & Industry Focus{openSections.skills ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
+                        <CollapsibleContent className="p-4 pt-0 space-y-4">
+                            <div><Label htmlFor="core_strengths">Core Strengths</Label><Textarea id="core_strengths" value={profile.core_strengths || ''} onChange={(e) => handleChange('core_strengths', e.target.value)} rows={3} /></div>
+                            <div><Label htmlFor="skills_to_avoid">Skills / Technologies to Avoid</Label><Textarea id="skills_to_avoid" value={profile.skills_to_avoid || ''} onChange={(e) => handleChange('skills_to_avoid', e.target.value)} rows={3} /></div>
+                            <div><Label htmlFor="preferred_industries">Preferred Industries</Label><Input id="preferred_industries" type="text" value={profile.preferred_industries || ''} onChange={(e) => handleChange('preferred_industries', e.target.value)} /></div>
+                            <div><Label htmlFor="industries_to_avoid">Industries to Avoid</Label><Input id="industries_to_avoid" type="text" value={profile.industries_to_avoid || ''} onChange={(e) => handleChange('industries_to_avoid', e.targe
