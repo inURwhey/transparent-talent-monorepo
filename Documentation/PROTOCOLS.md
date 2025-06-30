@@ -1,9 +1,31 @@
-# Transparent Talent: Operational Protocols v2.1
+# Transparent Talent: Operational Protocols v2.2
 
 ## Future State Note
 The ultimate goal for these protocols is to generate structured **JSON** output that can be directly consumed by our backend API. The current CSV/Sheet-based output is an intermediary step for the manual and semi-automated phases.
 
 ## Developer Workflow Protocols
+
+### Git Branching & Preview Protocol v1.0
+*Objective:* To maintain a stable `main` branch and enable isolated, full-stack testing of new features.
+*Workflow:*
+1.  **Start Work:**
+    *   Ensure the local `main` branch is up-to-date (`git checkout main && git pull`).
+    *   Create a descriptive feature branch from `main` (e.g., `feature/user-onboarding-flow`, `bugfix/refine-filter`).
+    *   **For tasks requiring backend changes:** Create a new, temporary backend service on Render. Configure this service to auto-deploy from the new feature branch.
+    *   **In Vercel:** Create a new `NEXT_PUBLIC_BACKEND_PREVIEW_URL` environment variable. Scope it to the "Preview" environment and set its value to the URL of the temporary Render service.
+2.  **During Development:**
+    *   Commit work to the feature branch.
+    *   Use the Vercel preview deployment URL for testing the full-stack application.
+    *   The backend's authentication logic will automatically authorize valid Vercel preview URLs via regex pattern matching. The Flask CORS configuration is set to allow requests from any origin for preview/development flexibility.
+3.  **Complete Work:**
+    *   Upon successful testing in the preview environment, create a Pull Request on GitHub from the feature branch to `main`.
+    *   After the PR is reviewed and approved, merge it into the `main` branch.
+    *   Delete the remote feature branch from GitHub.
+    *   Locally, switch back to `main`, pull the latest changes, and delete the local feature branch (`git checkout main && git pull && git branch -d <branch-name>`).
+    *   **Decommission the temporary Render service** to avoid unnecessary costs.
+4.  **Abandon Work:**
+    *   If a feature branch will not be merged, simply leave it in the remote repository for historical context.
+    *   Delete the temporary Render service associated with the branch.
 
 ### Debugging Principle: Grounded Hypothesis
 *Prime Directive:* All hypotheses about system behavior **must** be grounded in data provided within the current session (e.g., logs, schema descriptions, user-provided code). Guesswork is to be avoided. When new data invalidates a hypothesis, the AI must explicitly state: **"Hypothesis invalidated. Resetting assumptions and re-evaluating ground truth."**
