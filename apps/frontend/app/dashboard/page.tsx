@@ -44,7 +44,7 @@ export default function UserDashboard() {
             const profileData: Profile = await response.json();
             setProfile(profileData);
             if (!profileData.has_completed_onboarding) {
-                router.push('/dashboard/profile');
+                router.push('/welcome'); // <--- Changed from '/dashboard/profile' to '/welcome'
             }
         } catch (error) { console.error("Failed to check onboarding status:", error); }
     };
