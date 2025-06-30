@@ -15,6 +15,7 @@ def parse_resume():
     """
     Receives raw resume text, parses it using an AI model, and populates
     the user's profile with the extracted data.
+    Also saves the raw resume text to the resume_submissions table.
     """
     user_id = g.current_user['id']
     data = request.get_json()
@@ -30,7 +31,7 @@ def parse_resume():
         
         # Use the ProfileService's allowed_fields to construct the desired JSON schema for the prompt
         # This keeps our prompt dynamically in sync with our service layer.
-        json_schema = {field: "string (or null)" for field in profile_service.allowed_fields if field not in ['is_remote_preferred', 'latitude', 'longitude']}
+        json_schema = {field: "string (or null)" for field in profile_service.allowed_fields if field not in ['is_remote_preferred', 'latitude', 'longitude', 'has_completed_onboarding']}
         json_schema_str = json.dumps(json_schema, indent=2)
 
         prompt = f"""
@@ -56,6 +57,20 @@ def parse_resume():
         response = model.generate_content(prompt)
         cleaned_response = re.sub(r'```json\s*|\s*```', '', response.text.strip())
         parsed_data = json.loads(cleaned_response)
+
+        # --- NEW LOGIC: Save raw resume text to resume_submissions table ---
+        resume_submission_id = profile_service.create_or_update_active_resume_submission(
+            user_id,
+            resume_text,
+            'onboarding_form' # Source of the resume submission
+        )
+
+        if not resume_submission_id:
+            current_app.logger.error(f"Failed to record resume submission for user_id: {user_id}")
+            # Decide if this should be a critical error or if profile update can proceed without resume record
+            # For now, we'll return an error, as this is a core part of resume versioning feature.
+            return jsonify({"error": "Failed to record resume submission. Please try again."}), 500
+        # --- END NEW LOGIC ---
 
         current_app.logger.info(f"Successfully parsed resume for user_id: {user_id}")
 
