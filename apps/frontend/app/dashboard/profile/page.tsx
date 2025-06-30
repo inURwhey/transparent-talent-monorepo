@@ -1,7 +1,7 @@
 // Path: apps/frontend/app/dashboard/profile/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback, FormEvent } from 'react';
+import { useState, useEffect, useCallback, FormEvent, useMemo } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,19 @@ const ONBOARDING_REQUIRED_FIELDS: (keyof Profile)[] = [
     'full_name', 'short_term_career_goal', 'work_style_preference',
     'conflict_resolution_style', 'communication_preference', 'change_tolerance'
 ];
+
+// Define mappings for change_tolerance
+const changeToleranceBackendToFrontendMap: Record<string, string> = {
+    'Stable': 'Priorities are stable and I can focus on a long-term roadmap.',
+    'High': 'The team is nimble and priorities pivot often based on new data.',
+};
+const changeToleranceFrontendToBackendMap: Record<string, string> = {
+    'Priorities are stable and I can focus on a long-term roadmap.': 'Stable',
+    'The team is nimble and priorities pivot often based on new data.': 'High',
+};
+
+// Define maps for other select fields if they also use short codes on backend
+// For now, assuming only change_tolerance needs explicit mapping beyond null/placeholder
 
 export default function UserProfilePage() {
     const { getToken, isLoaded: isAuthLoaded } = useAuth();
@@ -78,8 +91,24 @@ export default function UserProfilePage() {
     const handleChange = useCallback((id: keyof Profile, value: any) => {
         setProfile(prev => {
             if (!prev) return null;
-            // Ensure empty string from select is converted to null for backend
-            let updatedProfile = { ...prev, [id]: value === '' || value === 'null' ? null : value };
+            let actualValue: any = value;
+
+            // Convert placeholder to null for backend
+            if (value === '__placeholder__') {
+                actualValue = null;
+            } 
+            // Apply specific mapping for change_tolerance
+            else if (id === 'change_tolerance') {
+                actualValue = changeToleranceFrontendToBackendMap[value] || null;
+            }
+            // Ensure 'null' string from select is converted to null for backend (for preferred_work_style and company_size)
+            else if (value === 'null') {
+                actualValue = null;
+            }
+
+            let updatedProfile = { ...prev, [id]: actualValue };
+
+            // Special logic for is_remote_preferred based on preferred_work_style
             if (id === 'preferred_work_style' && value === 'On-site') {
                 updatedProfile.is_remote_preferred = false;
             }
@@ -143,10 +172,17 @@ export default function UserProfilePage() {
     }, [updateProfileData]);
 
     if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading profile...</div>;
-    // Removed the !profile?.has_completed_onboarding check here as it conflicts with the dashboard redirect
-    // The dashboard now handles redirecting to /welcome if onboarding is not complete.
-    // This page should assume it's reached for profile editing.
     if (!profile) return <div className="min-h-screen flex items-center justify-center">Could not load profile. Please try refreshing the page.</div>;
+
+    // Helper to get display value for Select components
+    const getSelectDisplayValue = useCallback((field: keyof Profile, defaultValue: string = '__placeholder__') => {
+        if (!profile) return defaultValue;
+        if (field === 'change_tolerance') {
+            return changeToleranceBackendToFrontendMap[profile.change_tolerance as string] || defaultValue;
+        }
+        return (profile[field] as string) || defaultValue;
+    }, [profile]);
+
 
     return (
         <main className="min-h-screen bg-gray-50 p-8 font-sans">
@@ -170,36 +206,40 @@ export default function UserProfilePage() {
                         <CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg bg-indigo-50">Work Style & Preferences (Required){openSections.workStyle ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                         <CollapsibleContent className="p-4 pt-2 space-y-4">
                             <div><Label htmlFor="work_style_preference">I do my best work in...</Label>
-                                <Select name="work_style_preference" value={profile.work_style_preference || undefined} onValueChange={(v) => handleChange('work_style_preference',v)}>
+                                <Select name="work_style_preference" value={getSelectDisplayValue('work_style_preference')} onValueChange={(v) => handleChange('work_style_preference',v)}>
                                     <SelectTrigger><SelectValue placeholder="Select a work style..." /></SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="__placeholder__">Select an option...</SelectItem>
                                         <SelectItem value="An ambiguous environment where I can create my own structure.">An ambiguous environment where I can create my own structure.</SelectItem>
                                         <SelectItem value="A structured environment with clearly defined tasks.">A structured environment with clearly defined tasks.</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div><Label htmlFor="conflict_resolution_style">When I disagree with a colleague, I prefer to...</Label>
-                                <Select name="conflict_resolution_style" value={profile.conflict_resolution_style || undefined} onValueChange={(v) => handleChange('conflict_resolution_style',v)}>
+                                <Select name="conflict_resolution_style" value={getSelectDisplayValue('conflict_resolution_style')} onValueChange={(v) => handleChange('conflict_resolution_style',v)}>
                                     <SelectTrigger><SelectValue placeholder="Select a conflict style..." /></SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="__placeholder__">Select an option...</SelectItem>
                                         <SelectItem value="Have a direct, open debate to resolve the issue quickly.">Have a direct, open debate to resolve the issue quickly.</SelectItem>
                                         <SelectItem value="Build consensus with stakeholders before presenting a solution.">Build consensus with stakeholders before presenting a solution.</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div><Label htmlFor="communication_preference">I communicate most effectively through...</Label>
-                                <Select name="communication_preference" value={profile.communication_preference || undefined} onValueChange={(v) => handleChange('communication_preference',v)}>
+                                <Select name="communication_preference" value={getSelectDisplayValue('communication_preference')} onValueChange={(v) => handleChange('communication_preference',v)}>
                                     <SelectTrigger><SelectValue placeholder="Select a communication style..." /></SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="__placeholder__">Select an option...</SelectItem>
                                         <SelectItem value="Detailed written documentation (e.g., docs, wikis, Notion).">Detailed written documentation (e.g., docs, wikis, Notion).</SelectItem>
                                         <SelectItem value="Real-time synchronous meetings (e.g., Zoom, Slack huddles).">Real-time synchronous meetings (e.g., Zoom, Slack huddles).</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div><Label htmlFor="change_tolerance">I am most productive when...</Label>
-                                <Select name="change_tolerance" value={profile.change_tolerance || undefined} onValueChange={(v) => handleChange('change_tolerance',v)}>
+                                <Select name="change_tolerance" value={getSelectDisplayValue('change_tolerance')} onValueChange={(v) => handleChange('change_tolerance',v)}>
                                     <SelectTrigger><SelectValue placeholder="Select your preference for change..." /></SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="__placeholder__">Select an option...</SelectItem>
                                         <SelectItem value="Priorities are stable and I can focus on a long-term roadmap.">Priorities are stable and I can focus on a long-term roadmap.</SelectItem>
                                         <SelectItem value="The team is nimble and priorities pivot often based on new data.">The team is nimble and priorities pivot often based on new data.</SelectItem>
                                     </SelectContent>
@@ -231,6 +271,7 @@ export default function UserProfilePage() {
 
                     <Collapsible open={openSections.workEnv} onOpenChange={() => toggleSection('workEnv')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Work Environment & Requirements{openSections.workEnv ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                         <CollapsibleContent className="p-4 pt-0 space-y-4">
+                            {/* This preferred_work_style already uses 'null' as a placeholder value, which is fine for its own context */}
                             <div><Label htmlFor="preferred_work_style_select">Preferred Work Location</Label><Select value={profile.preferred_work_style || 'null'} onValueChange={(v) => handleChange('preferred_work_style', v)}><SelectTrigger id="preferred_work_style_select"><SelectValue placeholder="No Preference"/></SelectTrigger><SelectContent><SelectItem value="null">No Preference</SelectItem><SelectItem value="On-site">On-site</SelectItem><SelectItem value="Hybrid">Hybrid</SelectItem><SelectItem value="Remote">Remote</SelectItem></SelectContent></Select></div>
                             {profile.preferred_work_style !== 'On-site' && (<div className="flex items-center space-x-2 pl-1 pt-2"><Checkbox id="is_remote_preferred" checked={profile.is_remote_preferred || false} onCheckedChange={(checked) => handleCheckboxChange('is_remote_preferred', !!checked)} /><Label htmlFor="is_remote_preferred" className="font-normal">I prefer remote work generally.</Label></div>)}
                             <div><Label htmlFor="preferred_company_size">Preferred Company Size</Label><Select value={profile.preferred_company_size || 'null'} onValueChange={(value) => handleChange('preferred_company_size', value)}><SelectTrigger><SelectValue placeholder="No Preference" /></SelectTrigger><SelectContent><SelectItem value="null">No Preference</SelectItem><SelectItem value="Startup (1-50 employees)">Startup (1-50 employees)</SelectItem><SelectItem value="Small (51-200 employees)">Small (51-200 employees)</SelectItem><SelectItem value="Medium (201-1000 employees)">Medium (201-1000 employees)</SelectItem><SelectItem value="Large (1001-10000 employees)">Large (1001-10000 employees)</SelectItem><SelectItem value="Enterprise (10000+ employees)">Enterprise (10000+ employees)</SelectItem></SelectContent></Select></div>

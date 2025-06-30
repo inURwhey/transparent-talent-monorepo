@@ -57,6 +57,7 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
 4.  **Shadcn UI Component Installation:** When a new Shadcn UI component is required:
     *   Navigate to the `apps/frontend` directory.
     *   Run `npx shadcn@latest add <component-name>` (e.g., `npx shadcn@latest add collapsible`). The `shadcn-ui` CLI is deprecated.
+    *   **Mandate: Always prefer to use official Shadcn UI components** over custom implementations or workarounds where a suitable Shadcn component exists. If a Shadcn component behaves unexpectedly, the first step is to consult its official documentation and examples for proper usage, especially regarding `value` props for controlled components (e.g., `Select` components often expect `undefined` or a specific string to show a placeholder, not an empty string `""`).
     *   **Confirm successful installation locally** before proceeding with code that uses the new component or pushing changes.
 5.  **Clarification for Ambiguity:** If a task involves an implementation choice that is not explicitly specified (e.g., UI default state, specific styling, handling of edge cases), and a "best guess" could reasonably lead to multiple revisions or deployments, the AI **must** ask the user for clarification before generating code.
 
