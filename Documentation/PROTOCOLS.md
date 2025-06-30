@@ -118,6 +118,10 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
 *   **Prime Directive:** When generating `BACKLOG.md` during an `END_PROMPT`, the AI will only include items with a "To Do" status, removing the "Completed" section.
 *   **Rationale:** The `CHANGELOG.md` is the official historical record. The completed list in the backlog is redundant and adds unnecessary token overhead.
 
+### Changelog Output Protocol v1.0
+*   **Objective:** To optimize context window usage during `END_PROMPT` for `CHANGELOG.md`.
+*   **Prime Directive:** When generating `CHANGELOG.md` during an `END_PROMPT` cycle, the AI **must** output *only the new version block* for the latest changes. It **must not** reproduce the entire file.
+
 ### Model Hand-off Protocol v1.0
 *   **Objective:** To ensure the correct AI model is used for the task at hand.
 *   **Protocol:** The AI will state when a task has become simple enough for a "Flash" model or if a "Flash" model is struggling and should escalate the task to a "Pro" model.
