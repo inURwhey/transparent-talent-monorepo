@@ -10,12 +10,10 @@ def create_app():
     app = Flask(__name__)
 
     # --- Configuration ---
-    # Load configuration from our config object
     from . import config
     app.config.from_object(config.Config)
     
     # --- Extensions ---
-    # This is the correct, more specific CORS configuration that we want to keep.
     CORS(app, supports_credentials=True, expose_headers=["Authorization"])
 
     # --- Database Initialization ---
@@ -23,11 +21,15 @@ def create_app():
     database.init_app(app)
 
     # --- Register Blueprints (API Routes) ---
-    from .routes import profile, jobs, admin
-    # The url_prefix ensures all routes from a blueprint are prepended with /api
+    # Import the new onboarding blueprint alongside the others
+    from .routes import profile, jobs, admin, onboarding
+    
+    # Register the new blueprint
     app.register_blueprint(profile.profile_bp, url_prefix='/api')
     app.register_blueprint(jobs.jobs_bp, url_prefix='/api')
     app.register_blueprint(admin.admin_bp, url_prefix='/api')
+    app.register_blueprint(onboarding.onboarding_bp, url_prefix='/api')
+
 
     # --- Basic Routes for Health/Debug ---
     @app.route('/')
@@ -46,11 +48,8 @@ def create_app():
     return app
 
 # --- Main Execution ---
-# This pattern is common for running Flask apps.
-# The app is created by calling the factory function.
 app = create_app()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
-    # Use debug=False in production environments
     app.run(debug=True, host='0.0.0.0', port=port)
