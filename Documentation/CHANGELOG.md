@@ -3,6 +3,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.33.0 - 2025-07-02 - Core Backend Stability & UI Polish
+
+This release significantly enhances core application stability by resolving critical backend database errors and improving AI data processing. It also delivers key UI refinements for a more intuitive user experience.
+
+### Added
+-   **Backend:** Implemented AI input size validation. New configuration variables (`MAX_RESUME_TEXT_LENGTH`, `MAX_JOB_TEXT_LENGTH`) limit the character length of text inputs (resumes, job descriptions) sent to AI models, optimizing token usage and preventing costly large requests.
+
+### Changed
+-   **Backend AI:** Updated the AI prompt for `matrix_rating` within `job_service.py` to instruct Gemini to generate letter grades (e.g., A+, B-) based on relevance scores, aligning with the intended business logic and replacing the previous "Strong Yes" scale.
+-   **Frontend UI:** Renamed the "Closed Pipeline" filter to "Inactive Applications" for improved clarity and user experience on the dashboard.
+-   **Frontend UI:** Implemented semantic color-coding and bolding for tracked job statuses (e.g., green for `OFFER_ACCEPTED`, red for `REJECTED`/`EXPIRED`, blue for active statuses) directly within the "Status" column of the job tracker table for better visual communication.
+-   **Frontend UI:** Modified the "Relevance" column to display the AI-generated `matrix_rating` (letter grade) instead of the raw numerical sum of scores, and renamed its header to "AI Grade" for better clarity.
+
+### Fixed
+-   **Database:** Resolved a critical `value too long for type character varying(2)` database error that was blocking job submissions. This was fixed by identifying the `job_analyses.matrix_rating` column and guiding the user to alter its type to `VARCHAR(50)`.
+
 ## v0.32.0 - 2025-07-02 - Resume Versioning & Profile Polish
 
 This release introduces core backend functionality for managing user resume versions and finalizes critical frontend UI stability, ensuring a polished user profile experience.

@@ -9,7 +9,7 @@
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Cost Management: AI Input/Output Size Validation** | 1000 | 3 | 100% | 0.25 | **12000** | N/A | S | **To Do** |
+| **Feature: Implement AI Content Classification for Resume & Job Submissions** | 1000 | 3 | 100% | 0.25 | **12000** | Flash | S | **To Do** |
 | **Feature: Re-implement "Jobs For You" Dashboard Module** | 1000 | 3 | 100% | 0.5 | **6000** | Flash | M | **To Do** |
 | **Feature: User-set Reminders & Next Action Notifications** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 | **Bugfix: Profile Save Fails Randomly (Likely Render Instance Spin-down)** | 1000 | 1 | 70% | 0.5 | **1400** | Flash | S | **To Do** |
@@ -31,6 +31,7 @@
 | **Feature: AI-Generated Application Assets (Resume/Cover Letter)** | 1000 | 3 | 90% | 1.0 | **2700** | Pro | L | **To Do** |
 | **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | Pro | M | **To Do** |
 | **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | Pro | L | **To Do** |
+| **Feature: Connect Resume Processing with Roles Data Type** | 1000 | 3 | 80% | 1.0 | **2400** | Pro | M | **To Do** |
 
 ## Tier 3: AI & System Intelligence (Mid-Term)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
@@ -72,7 +73,8 @@
 | **AI: Full Data Leverage Mandate** | 1 | 3 | 90% | 1.0 | **2.7** | N/A | S | **To Do** |
 | **AI: Automated Prompt QA System** | 1 | 3 | 80% | 3.0 | **0.8** | Pro | L | **To Do** |
 | **Backend: DB-Driven AI Protocols** | 1 | 2 | 100% | 0.5 | **4.0** | Pro | M | **To Do** |
-| **Feature: Connect Resume Processing with Roles Data Type** | 1000 | 3 | 80% | 1.0 | **2400** | Pro | M | **To Do** |
+| **Feature: AI Resume Content Quality Check (Resume Submission)** | 1000 | 2 | 90% | 0.5 | **1200** | Flash | S | **To Do** |
+| **UI/UX: Implement Dynamic Page Titles for SEO** | 1000 | 1 | 100% | 0.25 | **4000** | N/A | S | **To Do** |
 
 ## Tier 4: Future Vision & Long-Term bets
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
@@ -94,6 +96,15 @@
 ---
 
 ## Completed Features & Bugfixes
+### v0.33.0
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Database: Fix `job_analyses.matrix_rating` `VARCHAR(2)`** | Tier 1 | 12000 |
+| **Backend: Implement Resume Versioning on Submission** | Tier 1 | 8000 |
+| **UI/UX: Refine "Inactive Applications" Filter and Status Display** | Tier 2 | 8000 |
+| **Backend: Implement AI Input/Output Size Validation** | Tier 1 | 12000 |
+| **Bugfix: Dropdowns in Work Style section don't show selected value** | Tier 1 | 10000 |
+
 ### v0.32.0
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
