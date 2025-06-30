@@ -3,6 +3,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.27.0] - 2025-07-01 - Production Authentication & Profile Page Stability
+
+This release resolves two critical, high-priority bugs that were blocking core user flows. It fully stabilizes the production authentication environment, including the new user sign-up and redirect process. It also restores the user profile page to its complete, functional state, fixing both visual and stability issues.
+
+### Fixed
+-   **Critical Bug (Profile Page):** Restored multiple missing `<Collapsible>` sections ("Work Environment & Requirements", "Skills & Industry Focus", "Personality & Self-Assessment") to the User Profile page, which had been accidentally truncated.
+-   **Critical Bug (Profile Page Hang):** Resolved a silent frontend error where the profile page would hang indefinitely on "Loading profile..." for new users. The page was attempting to call `.toFixed()` on null geolocation data.
+-   **Critical Bug (New User Redirect):** Fixed a complete failure of the new user sign-up flow. The fix was multi-layered:
+    -   **Database:** Migrated the `users` table (`ALTER TABLE users ALTER COLUMN email DROP NOT NULL;`) to prevent backend crashes when Clerk created a user without an email (e.g., via social SSO).
+    -   **Clerk Instance:** Moved the application from a Development to a full Production instance in Clerk, including configuring DNS CNAME records in Cloudflare to authorize the production domain.
+    -   **Environment:** Updated Vercel and Render with new `live` production API keys.
+    -   **SSO:** Re-configured Google Sign-In for the new production instance to resolve OAuth `client_id` errors.
+    -   **Frontend:** Updated the `<SignUp>` component to use the modern `fallbackRedirectUrl` prop instead of the deprecated `afterSignUpUrl`.
+-   **Debugging:** Added `console.log` statements to the profile fetch lifecycle to improve future debugging.
+
+### Changed
+-   **Protocols:** Updated `PROTOCOLS.md` to include a `400,000` token soft-stop for Pro model conversations in the `Session Budgeting Protocol`.
+
 ## v0.26.0 - 2025-07-01 - User Onboarding & Deep Fit Framework (Partial)
 
 This release implements the foundational backend and frontend scaffolding for a new, two-phase user onboarding experience designed to capture deep user preferences. While the feature is not yet complete, the core API endpoints, database schema, and UI pages have been established. This release also includes a critical fix for new user signups.

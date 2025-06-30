@@ -1,15 +1,4 @@
-# Transparent Talent: Product Backlog & Roadmap v1.18
-
-## Unrefined Ideas & Brainstorming
-*   **Geocoding for typed locations:** Convert a user's typed address (e.g., "Winter Park, FL") into coordinates.
-*   **Reverse Geocoding:** Convert coordinates from the geolocation button into a human-readable city/state to pre-fill the location text field.
-*   **AI: Multi-Model Verification:** For critical AI calls, consider querying multiple models to validate responses and assess quality.
-*   **AI: New Vector Prompting:** On a regular cadence, perform research and prompt for new "Layer 3" deep-fit vectors to keep the profile relevant.
-*   **DevOps: Audit Core Files:** Perform a one-time audit of all major files (`auth.py`, etc.) and cherry-pick the definitive "best" versions to create a new stable baseline.
-*   **Feature: Bulk Reprocess Relevancy:** Allow users to trigger a bulk recalculation of job scores after a significant profile update.
-*   **Academics:** Build a knowledge base of educational institutions to add another vector to user analysis.
-
----
+# Transparent Talent: Product Backlog & Roadmap v1.19
 
 ## Column Definitions
 *   **AI Model:** The complexity required from the AI. (Flash, Pro, N/A)
@@ -20,9 +9,7 @@
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Bugfix: Restore missing sections on Profile page** | 1000 | 3 | 100% | 0.25 | **12000** | Flash | S | **To Do** |
 | **Bugfix: Dropdowns in Work Style section don't show selected value** | 1000 | 1 | 100% | 0.1 | **10000** | Flash | S | **To Do** |
-| **Bugfix: New user signup does not redirect to /welcome page** | 1000 | 3 | 100% | 0.25 | **12000** | Pro | S | **To Do** |
 | **Feature: Re-implement "Jobs For You" Dashboard Module** | 1000 | 3 | 100% | 0.5 | **6000** | Flash | M | **To Do** |
 | **Feature: User-set Reminders & Next Action Notifications** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 
@@ -32,6 +19,8 @@
 | **Marketing: LinkedIn Company Profile** | 1000 | 1 | 100% | 0.1 | **10000** | N/A | N/A | **To Do** |
 | **UI/UX: Refine "Inactive Applications" Filter and Status Display** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | S | **To Do** |
 | **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | L | **In Progress** |
+| **Feature: Resume File Upload & Parsing** | 1000 | 3 | 90% | 0.5 | **5400** | Pro | M | **To Do** |
+| **Feature: Bulk Reprocess Relevancy** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 | **UI/UX: Multi-step Archiving/Hiding Workflow for Tracked Jobs** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | Flash | M | **To Do** |
 | **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | Pro | M | **To Do** |
@@ -41,7 +30,10 @@
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Backend: Enhance Job Data for AI Matching** | 1000 | 3 | 100% | 0.5 | **12000** | Pro | M | **To Do** |
+| **Reverse Geocoding from Coordinates to Location Name** | 1000 | 1 | 100% | 0.1 | **10000** | N/A | S | **To Do** |
+| **Geocoding for Typed Location Search** | 1000 | 2 | 90% | 0.25 | **7200** | N/A | S | **To Do** |
 | **Feature: Instant Analysis for Known Jobs**| 1000 | 2 | 100% | 0.5 | **4000** | Pro | L | **To Do** |
+| **AI: New Vector Prompting Cadence** | 1000 | 2 | 90% | 0.5 | **3600** | Pro | M | **To Do** |
 | **Feature: Cascading Expiration from Job Posting to Applications** | 1000 | 3 | 80% | 1.0 | **2400** | Pro | M | **To Do** |
 | **Automation: Tiered Job Analysis (Lightweight Pre-Screening + Detailed AI)** | 1000 | 3 | 90% | 1.5 | **1800** | Pro | L | **To Do** |
 | **UI/UX: Complex Notification System for Job Expiration** | 1000 | 2 | 90% | 1.0 | **1800** | Pro | L | **To Do** |
@@ -51,14 +43,15 @@
 | **Feature: Proactive Anomaly Detection**| 1000 | 3 | 90% | 2.5 | **1080** | Pro | L | **To Do** |
 | **Feature: "Transparent Rejection"**| 1000 | 3 | 80% | 2.0 | **1200** | Pro | M | **To Do** |
 | **Feature: Detailed Interview Stage Tracking (w/ Email/Calendar)** | 1000 | 3 | 80% | 2.0 | **1200** | Pro | L | **To Do** |
-| **Feature: Automated Job Sourcing (Email/Platform Integration)** | 1000 | 2 | 90% | 0.75 | **900** | Pro | M | **To Do** |
-| **Documentation: Codify Industry Standards in Protocols** | 1 | 3 | 90% | 0.25 | **10.8** | N/A | S | **To Do** |
-| **Feature: "User News" Sourcing** | 1000 | 2 | 90% | 2.0 | **900** | Pro | M | **To Do** |
+| **Academics Knowledge Base for User Vectoring** | 1000 | 1 | 90% | 1.0 | **900** | Pro | M | **To Do** |
+| **Automation: Job Sourcing (Email/Platform Integration)** | 1000 | 2 | 90% | 0.75 | **900** | Pro | M | **To Do** |
 | **AI: Multi-Model Verification**| 1000 | 2 | 90% | 2.0 | **900** | Pro | M | **To Do** |
+| **Feature: "User News" Sourcing** | 1000 | 2 | 90% | 2.0 | **900** | Pro | M | **To Do** |
 | **Feature: Verifiable Outcomes**| 1000 | 3 | 80% | 3.0 | **800** | Pro | L | **To Do** |
 | **Backend: Automated News Sourcing** | 1000 | 1 | 90% | 2.0 | **450** | Pro | L | **To Do** |
 | **Backend: System-Wide Staleness Logic** | 1000 | 1 | 100% | 0.5 | **2000** | Pro | M | **To Do** |
-| **Feature: Browser Extension** | 500 | 2 | 80% | 3.0 | **267** | Pro | L | **To Do** |
+| **Documentation: Codify Industry Standards in Protocols** | 1 | 3 | 90% | 0.25 | **10.8** | N/A | S | **To Do** |
+| **DevOps: Audit Core Files for Stable Baseline** | 1 | 2 | 100% | 0.25 | **8.0** | N/A | S | **To Do** |
 | **AI: Full Data Leverage Mandate** | 1 | 3 | 90% | 1.0 | **2.7** | N/A | S | **To Do** |
 | **AI: Automated Prompt QA System** | 1 | 3 | 80% | 3.0 | **0.8** | Pro | L | **To Do** |
 | **Backend: DB-Driven AI Protocols** | 1 | 2 | 100% | 0.5 | **4.0** | Pro | M | **To Do** |
@@ -78,3 +71,15 @@
 | **BI: Platform-wide Hiring Funnel Analytics** | 10 | 3 | 100% | 3.0 | **10** | Pro | M | **To Do** |
 | **BI: ML User/Company Clustering** | 10 | 3 | 80% | 4.0 | **6.0** | Pro | L | **To Do** |
 | **Platform: Job Posting Multi-Context Awareness (Cities, Sources)** | 1 | 3 | 70% | 2.0 | **1.05** | Pro | M | **To Do** |
+
+---
+
+## Completed Features & Bugfixes
+### v0.27.0
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Bugfix: Restore missing sections on Profile page** | Tier 1 | 12000 |
+| **Bugfix: New user signup does not redirect to /welcome page** | Tier 1 | 12000 |
+
+### Previous Versions
+*Items from v0.26.0 and earlier are documented in the `CHANGELOG.md`.*
