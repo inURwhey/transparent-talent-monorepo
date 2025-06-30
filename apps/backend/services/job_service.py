@@ -1,11 +1,9 @@
-# Path: apps/backend/services/job_service.py
-
 import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 import json
 import re
-from ..config import config
+from ..config import config # Ensure config is imported
 
 class JobService:
     def __init__(self, logger):
@@ -48,8 +46,12 @@ class JobService:
             soup = BeautifulSoup(response.content, 'html.parser')
             job_text = soup.get_text(separator=' ', strip=True)
             
+            # --- NEW: Job text length validation ---
             if not job_text or len(job_text) < 100:
-                 raise ValueError("Extracted job text is too short or empty.")
+                 raise ValueError("Extracted job text is too short or empty for meaningful analysis.")
+            if len(job_text) > config.MAX_JOB_TEXT_LENGTH:
+                raise ValueError(f"Extracted job text too long ({len(job_text)} characters). Please keep it under {config.MAX_JOB_TEXT_LENGTH} characters.")
+            # --- END NEW ---
 
             self.logger.info(f"Successfully fetched job text. Length: {len(job_text)} characters.")
             
@@ -76,7 +78,6 @@ class JobService:
             self.logger.error("Cannot run AI analysis: Model is not configured.")
             raise ConnectionError("AI Service is not configured due to missing API key.")
 
-        # --- IMPORTANT AI PROMPT UPDATE ---
         # Updated instructions for matrix_rating to output a letter grade
         prompt = f"""
             You are a meticulous career-focused analyst for a platform called "Transparent Talent".
@@ -117,7 +118,6 @@ class JobService:
                 "recommended_testimonials": "array of strings (List 3-5 specific skills or experiences from the user's profile to highlight)"
             }}
         """
-        # --- END IMPORTANT AI PROMPT UPDATE ---
         
         self.logger.info("Sending request to Gemini AI for job analysis.")
         try:

@@ -3,6 +3,7 @@
 from flask import Blueprint, request, jsonify, g, current_app
 from ..auth import token_required
 from ..services.profile_service import ProfileService
+from ..config import config # Import config
 import google.generativeai as genai
 import json
 import re
@@ -21,8 +22,15 @@ def parse_resume():
     data = request.get_json()
     resume_text = data.get('resume_text')
 
-    if not resume_text or len(resume_text) < 100:
-        return jsonify({"error": "Resume text is too short or missing."}), 400
+    if not resume_text:
+        return jsonify({"error": "Resume text is missing."}), 400
+
+    # --- NEW: Resume text length validation ---
+    if len(resume_text) < 100:
+        return jsonify({"error": "Resume text is too short for meaningful analysis. Please provide more detail."}), 400
+    if len(resume_text) > config.MAX_RESUME_TEXT_LENGTH:
+        return jsonify({"error": f"Resume text too long ({len(resume_text)} characters). Please keep it under {config.MAX_RESUME_TEXT_LENGTH} characters."}), 400
+    # --- END NEW ---
 
     profile_service = ProfileService(current_app.logger)
     
@@ -58,7 +66,7 @@ def parse_resume():
         cleaned_response = re.sub(r'```json\s*|\s*```', '', response.text.strip())
         parsed_data = json.loads(cleaned_response)
 
-        # --- NEW LOGIC: Save raw resume text to resume_submissions table ---
+        # Save raw resume text to resume_submissions table
         resume_submission_id = profile_service.create_or_update_active_resume_submission(
             user_id,
             resume_text,
@@ -67,11 +75,8 @@ def parse_resume():
 
         if not resume_submission_id:
             current_app.logger.error(f"Failed to record resume submission for user_id: {user_id}")
-            # Decide if this should be a critical error or if profile update can proceed without resume record
-            # For now, we'll return an error, as this is a core part of resume versioning feature.
             return jsonify({"error": "Failed to record resume submission. Please try again."}), 500
-        # --- END NEW LOGIC ---
-
+        
         current_app.logger.info(f"Successfully parsed resume for user_id: {user_id}")
 
         # Use the existing update_profile service to save the data.

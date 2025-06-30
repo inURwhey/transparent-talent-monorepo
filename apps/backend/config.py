@@ -24,6 +24,10 @@ class Config:
     JOB_POSTING_MAX_AGE_DAYS = 60
     TRACKED_JOB_STALE_DAYS = 30
     LEGACY_URL_MALFORMED_PATTERN = re.compile(r".+\s+\(.+\)|\(.+?\)$")
+
+    # --- NEW: AI Input Size Limits (in characters) ---
+    MAX_RESUME_TEXT_LENGTH = int(os.getenv('MAX_RESUME_TEXT_LENGTH', '10000')) # Default to 10,000 characters
+    MAX_JOB_TEXT_LENGTH = int(os.getenv('MAX_JOB_TEXT_LENGTH', '10000')) # Default to 10,000 characters
     
     @staticmethod
     def validate():
