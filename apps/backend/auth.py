@@ -44,25 +44,21 @@ def token_required(f):
             
             db = get_db()
             with db.cursor() as cursor:
-                cursor.execute("SELECT id FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
+                cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
                 user = cursor.fetchone()
                 
                 if user:
-                    g.user_id = user['id']
+                    g.current_user = user
                 else:
                     current_app.logger.info(f"First-time user with Clerk ID {clerk_user_id}. Creating new user record.")
-                    # --- THE FIX ---
-                    # Only insert the guaranteed fields from the Clerk token.
-                    # The email address can be found in a couple of places in the claims.
                     email = claims.get('primary_email') or claims.get('email')
                     
-                    # We will now only insert the columns that actually exist in the `users` table.
                     cursor.execute(
-                        "INSERT INTO users (clerk_user_id, email) VALUES (%s, %s) RETURNING id",
+                        "INSERT INTO users (clerk_user_id, email) VALUES (%s, %s) RETURNING *",
                         (clerk_user_id, email)
                     )
-                    new_user_id = cursor.fetchone()['id']
-                    g.user_id = new_user_id
+                    new_user = cursor.fetchone()
+                    g.current_user = new_user
                     db.commit()
 
         except jwt.ExpiredSignatureError:
