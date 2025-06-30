@@ -26,6 +26,7 @@ import {
 interface AIAnalysis {
   position_relevance_score: number;
   environment_fit_score: number;
+  matrix_rating: string; // Ensure this is explicitly defined as a string for display
 }
 interface TrackedJob {
   tracked_job_id: number;
@@ -49,6 +50,12 @@ interface GetColumnsProps {
   handleToggleExcited: (trackedJobId: number, isExcited: boolean) => void;
 }
 
+// Define status groups for coloring
+const SUCCESS_STATUSES = ['OFFER_ACCEPTED'];
+const NEGATIVE_TERMINAL_STATUSES = ['REJECTED', 'EXPIRED'];
+const NEUTRAL_TERMINAL_STATUSES = ['WITHDRAWN'];
+const ACTIVE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS'];
+
 // This function generates the column definitions.
 // It takes callbacks as arguments to keep the column logic separate from the page logic.
 export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleExcited }: GetColumnsProps): ColumnDef<TrackedJob>[] => [
@@ -67,26 +74,44 @@ export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleEx
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => (
-      <Select
-        value={row.original.status}
-        onValueChange={(newValue) => handleStatusChange(row.original.tracked_job_id, newValue)}
-      >
-        <SelectTrigger className="w-[180px] bg-gray-50">
-          <SelectValue placeholder="Select Status" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="Saved">Saved</SelectItem>
-          <SelectItem value="Applied">Applied</SelectItem>
-          <SelectItem value="Interviewing">Interviewing</SelectItem>
-          <SelectItem value="Offer">Offer</SelectItem>
-          <SelectItem value="Rejected">Rejected</SelectItem>
-          <SelectItem value="Expired">Expired</SelectItem> {/* Added Expired status */}
-          <SelectItem value="Withdrawn">Withdrawn</SelectItem> {/* Added Withdrawn status */}
-          <SelectItem value="Accepted">Accepted</SelectItem> {/* Added Accepted status */}
-        </SelectContent>
-      </Select>
-    ),
+    cell: ({ row }) => {
+      const status = row.original.status;
+      let textColor = "text-gray-700"; // Default or neutral color
+
+      if (SUCCESS_STATUSES.includes(status)) {
+        textColor = "text-green-600 font-semibold";
+      } else if (NEGATIVE_TERMINAL_STATUSES.includes(status)) {
+        textColor = "text-red-600 font-semibold";
+      } else if (NEUTRAL_TERMINAL_STATUSES.includes(status)) {
+        textColor = "text-gray-600";
+      } else if (ACTIVE_STATUSES.includes(status)) {
+        textColor = "text-blue-600";
+      }
+
+      return (
+        <Select
+          value={status}
+          onValueChange={(newValue) => handleStatusChange(row.original.tracked_job_id, newValue)}
+        >
+          <SelectTrigger className="w-[180px] bg-gray-50">
+            {/* The SelectValue here will display the actual `status` value, so apply color */}
+            <SelectValue className={textColor} placeholder="Select Status" />
+          </SelectTrigger>
+          <SelectContent>
+            {/* Update SelectItem values to match backend ENUM exactly (all caps) */}
+            {/* The classNames here apply color to the dropdown items themselves */}
+            <SelectItem value="SAVED" className={ACTIVE_STATUSES.includes('SAVED') ? "text-blue-600" : ""}>Saved</SelectItem>
+            <SelectItem value="APPLIED" className={ACTIVE_STATUSES.includes('APPLIED') ? "text-blue-600" : ""}>Applied</SelectItem>
+            <SelectItem value="INTERVIEWING" className={ACTIVE_STATUSES.includes('INTERVIEWING') ? "text-blue-600" : ""}>Interviewing</SelectItem>
+            <SelectItem value="OFFER_NEGOTIATIONS" className={ACTIVE_STATUSES.includes('OFFER_NEGOTIATIONS') ? "text-blue-600" : ""}>Offer</SelectItem>
+            <SelectItem value="REJECTED" className={NEGATIVE_TERMINAL_STATUSES.includes('REJECTED') ? "text-red-600" : ""}>Rejected</SelectItem>
+            <SelectItem value="EXPIRED" className={NEGATIVE_TERMINAL_STATUSES.includes('EXPIRED') ? "text-red-600" : ""}>Expired</SelectItem>
+            <SelectItem value="WITHDRAWN" className={NEUTRAL_TERMINAL_STATUSES.includes('WITHDRAWN') ? "text-gray-600" : ""}>Withdrawn</SelectItem>
+            <SelectItem value="OFFER_ACCEPTED" className={SUCCESS_STATUSES.includes('OFFER_ACCEPTED') ? "text-green-600" : ""}>Accepted</SelectItem>
+          </SelectContent>
+        </Select>
+      );
+    },
   },
   {
     accessorKey: "status_reason", // NEW COLUMN: Status Reason for Tracked Job
@@ -120,20 +145,20 @@ export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleEx
     },
   },
   {
-    accessorKey: "relevance_score",
-    header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Relevance<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
+    accessorKey: "ai_grade", // Changed accessorKey to reflect new display
+    header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>AI Grade<ArrowUpDown className="ml-2 h-4 w-4" /></Button>), // Changed header text
     cell: ({ row }) => {
       const analysis = row.original.ai_analysis;
-      if (!analysis || analysis.position_relevance_score == null || analysis.environment_fit_score == null) {
+      if (!analysis || !analysis.matrix_rating) { // Check for matrix_rating
         return <div className="text-center text-muted-foreground">-</div>;
       }
-      const score = analysis.position_relevance_score + analysis.environment_fit_score;
-      return <div className="text-center font-medium">{score}</div>
+      return <div className="text-center font-medium">{analysis.matrix_rating}</div> // Display matrix_rating
     },
     sortingFn: (rowA, rowB) => {
-      const scoreA = rowA.original.ai_analysis ? rowA.original.ai_analysis.position_relevance_score + rowA.original.ai_analysis.environment_fit_score : -1;
-      const scoreB = rowB.original.ai_analysis ? rowB.original.ai_analysis.position_relevance_score + rowB.original.ai_analysis.environment_fit_score : -1;
-      return scoreA - scoreB;
+      // Simple alphabetical sort for letter grades for now
+      const gradeA = rowA.original.ai_analysis?.matrix_rating || '';
+      const gradeB = rowB.original.ai_analysis?.matrix_rating || '';
+      return gradeA.localeCompare(gradeB);
     }
   },
   {
