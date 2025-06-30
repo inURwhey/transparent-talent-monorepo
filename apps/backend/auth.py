@@ -6,7 +6,7 @@ import jwt
 from jwt.algorithms import RSAAlgorithm
 import requests
 from .config import config
-from .database import get_db # <-- Import the database helper
+from .database import get_db
 
 def get_jwks():
     jwks_url = f"{config.CLERK_ISSUER_URL}/.well-known/jwks.json"
@@ -39,29 +39,27 @@ def token_required(f):
             if not authorized_party or authorized_party not in config.CLERK_AUTHORIZED_PARTY:
                 raise jwt.exceptions.InvalidAudienceError(f"Invalid authorized party: {authorized_party}")
             
-            # --- USER RESOLUTION LOGIC ---
             clerk_user_id = claims.get('sub')
             if not clerk_user_id: raise Exception("Token is missing 'sub' (subject) claim.")
             
             db = get_db()
             with db.cursor() as cursor:
-                # Find our internal user ID from the Clerk ID
                 cursor.execute("SELECT id FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
                 user = cursor.fetchone()
                 
                 if user:
-                    # If the user exists, get their internal ID
                     g.user_id = user['id']
                 else:
-                    # If the user does not exist, this is their first API call.
-                    # Create them in our database.
                     current_app.logger.info(f"First-time user with Clerk ID {clerk_user_id}. Creating new user record.")
-                    # We can extract name/email from the token if they exist
-                    full_name = claims.get('name')
-                    email = claims.get('primary_email') # Assuming this claim exists
+                    # --- THE FIX ---
+                    # Only insert the guaranteed fields from the Clerk token.
+                    # The email address can be found in a couple of places in the claims.
+                    email = claims.get('primary_email') or claims.get('email')
+                    
+                    # We will now only insert the columns that actually exist in the `users` table.
                     cursor.execute(
-                        "INSERT INTO users (clerk_user_id, email, full_name) VALUES (%s, %s, %s) RETURNING id",
-                        (clerk_user_id, email, full_name)
+                        "INSERT INTO users (clerk_user_id, email) VALUES (%s, %s) RETURNING id",
+                        (clerk_user_id, email)
                     )
                     new_user_id = cursor.fetchone()['id']
                     g.user_id = new_user_id
