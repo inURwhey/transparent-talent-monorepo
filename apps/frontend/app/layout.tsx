@@ -38,7 +38,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider afterSignUpUrl="/dashboard/profile">
+    // The deprecated afterSignUpUrl prop has been removed. 
+    // This is now correctly handled by the NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL environment variable.
+    <ClerkProvider>
       <html lang="en">
         <body className={inter.className}>
           <Header />
