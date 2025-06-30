@@ -8,8 +8,8 @@ profile_bp = Blueprint('profile_bp', __name__)
 @profile_bp.route('/profile', methods=['GET'])
 @token_required
 def get_user_profile():
-    # The decorator now provides our internal integer ID directly.
-    user_id = g.user_id 
+    # Correctly read from g.current_user object set by the decorator
+    user_id = g.current_user['id'] 
     profile_service = ProfileService(current_app.logger)
     try:
         profile = profile_service.get_profile(user_id)
@@ -21,8 +21,8 @@ def get_user_profile():
 @profile_bp.route('/profile', methods=['PUT'])
 @token_required
 def update_user_profile():
-    # The decorator now provides our internal integer ID directly.
-    user_id = g.user_id
+    # Correctly read from g.current_user object set by the decorator
+    user_id = g.current_user['id']
     data = request.get_json()
     if not data:
         return jsonify({"error": "No update data provided"}), 400

@@ -16,8 +16,8 @@ jobs_bp = Blueprint('jobs_bp', __name__)
 @jobs_bp.route('/jobs/submit', methods=['POST'])
 @token_required
 def submit_job():
-    user_id = g.user_id # <-- Use the internal ID
-    # ... (rest of the function is unchanged)
+    # Correctly read from g.current_user object set by the decorator
+    user_id = g.current_user['id']
     data = request.get_json()
     job_url = data.get('job_url')
     if not job_url:
@@ -91,7 +91,8 @@ def submit_job():
 @jobs_bp.route('/tracked-jobs', methods=['GET'])
 @token_required
 def get_tracked_jobs():
-    user_id = g.user_id # <-- Use the internal ID
+    # Correctly read from g.current_user object set by the decorator
+    user_id = g.current_user['id']
     try:
         page = int(request.args.get('page', 1))
         limit = int(request.args.get('limit', 10))
@@ -111,7 +112,8 @@ def get_tracked_jobs():
 @jobs_bp.route('/tracked-jobs/<int:tracked_job_id>', methods=['PUT'])
 @token_required
 def update_tracked_job(tracked_job_id):
-    user_id = g.user_id # <-- Use the internal ID
+    # Correctly read from g.current_user object set by the decorator
+    user_id = g.current_user['id']
     data = request.get_json()
     if not data:
         return jsonify({"error": "No update data provided"}), 400
@@ -131,7 +133,8 @@ def update_tracked_job(tracked_job_id):
 @jobs_bp.route('/tracked-jobs/<int:tracked_job_id>', methods=['DELETE'])
 @token_required
 def remove_tracked_job(tracked_job_id):
-    user_id = g.user_id # <-- Use the internal ID
+    # Correctly read from g.current_user object set by the decorator
+    user_id = g.current_user['id']
     db = get_db()
     with db.cursor() as cursor:
         cursor.execute("DELETE FROM tracked_jobs WHERE id = %s AND user_id = %s RETURNING id", (tracked_job_id, user_id))
