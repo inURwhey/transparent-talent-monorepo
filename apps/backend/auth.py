@@ -39,9 +39,10 @@ def get_authorized_parties():
         logger.info(f"Using preview authorized party: {preview_url}")
         return [preview_url]
     else:  # development
-        # Development: Use localhost
-        logger.info("Using development authorized party: http://localhost:3000")
-        return ["http://localhost:3000"]
+        # Development: Use CLERK_AUTHORIZED_PARTY
+        parties = [party.strip() for party in os.getenv('CLERK_AUTHORIZED_PARTY', '').split(',') if party.strip()]
+        logger.info("Using development authorized party: {parties}")
+        return parties
 
 # Initialize authorized parties based on the environment
 AUTHORIZED_PARTIES = get_authorized_parties()
