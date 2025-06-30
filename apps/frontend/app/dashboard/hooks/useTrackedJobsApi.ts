@@ -7,7 +7,8 @@ import { type TrackedJob, type UpdatePayload } from '../types';
 
 export function useTrackedJobsApi() {
   const { getToken, isLoaded: isUserLoaded } = useAuth();
-  const apiBaseUrl = process.env.NEXT_PUBLIC_BACKEND_PREVIEW_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
+  // Reverted: Always point to the single production API URL
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,7 +26,7 @@ export function useTrackedJobsApi() {
   const fetchJobs = useCallback(() => {
     if (!isUserLoaded) return;
     setIsLoading(true);
-    setError(null); // Reset error on new fetch
+    setError(null);
     authedFetch(`${apiBaseUrl}/api/tracked-jobs?page=1&limit=1000`)
       .then(async (res) => {
         if (!res.ok) {
@@ -35,18 +36,16 @@ export function useTrackedJobsApi() {
         return res.json();
       })
       .then(data => {
-          setTrackedJobs(data.tracked_jobs || []); // Ensure trackedJobs is always an array
+          setTrackedJobs(data.tracked_jobs || []);
       })
       .catch(err => {
           setError(err.message);
-          setTrackedJobs([]); // On error, reset to an empty array to prevent crashes
+          setTrackedJobs([]);
       })
       .finally(() => setIsLoading(false));
   }, [isUserLoaded, apiBaseUrl, authedFetch]);
 
-  useEffect(() => {
-    fetchJobs();
-  }, [fetchJobs]);
+  useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
   const submitNewJob = useCallback(async (jobUrl: string): Promise<TrackedJob> => {
     const response = await authedFetch(`${apiBaseUrl}/api/jobs/submit`, { method: 'POST', body: JSON.stringify({ job_url: jobUrl }) });
