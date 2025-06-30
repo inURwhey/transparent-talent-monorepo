@@ -3,6 +3,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.25.0] - 2025-06-30 - Full-Stack Preview Environments & Branching Workflow
+
+This release establishes a foundational DevOps capability, enabling fully automated, full-stack preview environments for feature branches. This significantly improves development velocity, testing reliability, and code quality by allowing isolated testing before merging to production.
+
+### Added
+-   **DevOps:** Enabled full-stack preview environments by connecting Vercel Preview Deployments with dedicated Render backend services for feature branches.
+-   **Backend:** Implemented regex-based validation for the JWT's `azp` claim in `auth.py` to securely and automatically authorize dynamic Vercel preview URLs.
+
+### Changed
+-   **Backend:** Refactored the Flask CORS configuration in `app.py` to correctly handle preflight `OPTIONS` requests from any origin, unblocking cross-origin communication for preview deployments.
+-   **Frontend:** The API client hook (`useTrackedJobsApi.ts`) now uses a preview-specific environment variable (`NEXT_PUBLIC_BACKEND_PREVIEW_URL`) to connect to the correct backend service during preview deployments.
+-   **Documentation:** Added a formal "Git Branching & Preview Protocol" to `PROTOCOLS.md` to guide future development.
+
+### Fixed
+-   **Authentication:** Resolved critical authentication failures ('Invalid Authorized Party') that previously blocked all Vercel preview deployments.
+-   **CORS:** Fixed "No 'Access-Control-Allow-Origin' header" errors that blocked all API communication from Vercel preview deployments.
+
 ## [v0.24.0] - 2025-07-01 - User Profile Geolocation
 
 This release introduces the ability for users to add their geographic location to their profile, laying the groundwork for future proximity-based job searching.

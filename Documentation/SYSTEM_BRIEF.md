@@ -1,4 +1,4 @@
-# Transparent Talent: System Brief v2.3
+# Transparent Talent: System Brief v2.4
 
 ## 1. Core Vision & Business Model
 *   **Problem:** The job market is inefficient, opaque, and biased.
@@ -15,6 +15,7 @@
 *   **Architecture Style:** Decoupled three-tier application, managed in a **monorepo**. The backend now follows a service-oriented architecture with an application factory pattern.
 
 ## 3. Current Project Status
+*   **DevOps Workflow Enhanced:** A robust, automated workflow for full-stack preview environments has been established. This connects Vercel Preview Deployments to dedicated Render services for feature branches, enabling isolated testing and significantly improving development velocity and stability.
 *   **User Geolocation:** Users can now add their geographic location to their profile via a browser's Geolocation API, providing the foundational data for future proximity-based features. Critical data type bugs (`Decimal` vs `Number`) were resolved to ensure stability.
 *   **Backend Service Layer Complete:** A dedicated service layer for business logic is now fully implemented in the backend. The new `TrackedJobService` encapsulates all logic for updating tracked jobs, completing the backend's service-oriented architecture refactor.
 *   **Data Lifecycle Activated:** The foundational database migration for the new `tracked_jobs` data lifecycle has been successfully executed. The backend and frontend have been updated to be fully compatible with the new schema, including the new status `ENUM`s and milestone timestamp fields.
@@ -38,7 +39,7 @@
 *   **UI/UX Improvement: Collapsible Profile Sections:** The User Profile page has been redesigned with collapsible sections for "Contact & Basic Information", "Career Aspirations", "Work Environment & Requirements", "Skills & Industry Focus", and "Personality & Self-Assessment", significantly improving the user experience for managing detailed profile data.
 
 ## 4. Immediate Backlog & Next Steps
-1.  **Feature: User-set Reminders & Next Action Notifications:** Implement the UI and backend logic to allow users to set reminders for their tracked jobs. (RICE: 4000)
-2.  **Marketing: LinkedIn Company Profile:** Create a company profile on LinkedIn. (RICE: 10000)
-3.  **UI/UX: Refine "Inactive Applications" Filter and Status Display:** Refine the filter to accurately reflect the new status ENUMs. (RICE: 8000)
-4.  **Feature: Define & Verify New User Account Flow:** Define a comprehensive onboarding flow for new users. (RICE: 6000)
+1.  **Marketing: LinkedIn Company Profile:** Create a company profile on LinkedIn. (RICE: 10000)
+2.  **UI/UX: Refine "Inactive Applications" Filter and Status Display:** Refine the filter to accurately reflect the new status ENUMs. (RICE: 8000)
+3.  **Feature: Define & Verify New User Account Flow:** Define a comprehensive onboarding flow for new users. (RICE: 6000)
+4.  **Feature: User-set Reminders & Next Action Notifications:** Implement the UI and backend logic to allow users to set reminders for their tracked jobs. (RICE: 4000)
