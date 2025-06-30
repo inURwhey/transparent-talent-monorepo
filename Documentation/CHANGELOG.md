@@ -3,6 +3,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.30.0 - 2025-07-02 - Profile Redirection Bugfix
+
+This release addresses a critical bug in the user onboarding flow, ensuring that users with incomplete profiles are correctly guided to the initial setup page.
+
+### Fixed
+-   **Bugfix: Redirect empty profiles to /welcome:** Resolved an issue where users with incomplete profiles were redirected to `/dashboard/profile` instead of the intended `/welcome` page, ensuring proper onboarding flow.
+
 ## v0.29.0 - 2025-07-01 - Resume Versioning Architecture
 
 This release lays the architectural groundwork for a robust resume versioning system. This work deconstructs a large, complex feature into smaller, manageable implementation tasks, enabling more efficient future development.
