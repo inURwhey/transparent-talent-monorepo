@@ -3,6 +3,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.26.0 - 2025-07-01 - User Onboarding & Deep Fit Framework (Partial)
+
+This release implements the foundational backend and frontend scaffolding for a new, two-phase user onboarding experience designed to capture deep user preferences. While the feature is not yet complete, the core API endpoints, database schema, and UI pages have been established. This release also includes a critical fix for new user signups.
+
+### Added
+-   **Feature:** Created a new `/welcome` page for resume submission as the first step for new users.
+-   **Backend:** Added a `/api/onboarding/parse-resume` endpoint to parse resume text using Gemini and pre-fill user profiles.
+-   **Database:** Migrated the `user_profiles` table to include `has_completed_onboarding` and several new "Deep Fit" columns for work style preferences.
+
+### Changed
+-   **Authentication:** The `auth.py` decorator now correctly resolves a Clerk `sub` ID to an internal user ID, creating a new user record in the database on their first API call. This makes the user creation flow robust.
+
+### Fixed
+-   **Critical Bug:** Resolved a `KeyError: 'id'` and a `column "full_name" does not exist` error that caused a `500 Internal Server Error` for all new user signups, unblocking the registration process.
+
+### Known Issues
+-   The user profile page (`/dashboard/profile`) is currently broken and does not render all fields.
+-   The redirect flow for new users from signup -> welcome -> profile is not yet implemented.
+-   UI elements on the profile page, such as dropdowns, are not displaying their selected values correctly.
+
 ## [v0.25.0] - 2025-06-30 - Full-Stack Preview Environments & Branching Workflow
 
 This release establishes a foundational DevOps capability, enabling fully automated, full-stack preview environments for feature branches. This significantly improves development velocity, testing reliability, and code quality by allowing isolated testing before merging to production.

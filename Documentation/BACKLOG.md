@@ -1,44 +1,38 @@
-# Transparent Talent: Product Backlog & Roadmap v1.17
+# Transparent Talent: Product Backlog & Roadmap v1.18
 
 ## Unrefined Ideas & Brainstorming
-*This section is an inbox for raw ideas. During a "Session Summary" they will be refined, scored, and moved into the prioritized backlog below.*
+*   **Geocoding for typed locations:** Convert a user's typed address (e.g., "Winter Park, FL") into coordinates.
+*   **Reverse Geocoding:** Convert coordinates from the geolocation button into a human-readable city/state to pre-fill the location text field.
+*   **AI: Multi-Model Verification:** For critical AI calls, consider querying multiple models to validate responses and assess quality.
+*   **AI: New Vector Prompting:** On a regular cadence, perform research and prompt for new "Layer 3" deep-fit vectors to keep the profile relevant.
+*   **DevOps: Audit Core Files:** Perform a one-time audit of all major files (`auth.py`, etc.) and cherry-pick the definitive "best" versions to create a new stable baseline.
+*   **Feature: Bulk Reprocess Relevancy:** Allow users to trigger a bulk recalculation of job scores after a significant profile update.
+*   **Academics:** Build a knowledge base of educational institutions to add another vector to user analysis.
 
 ---
 
 ## Column Definitions
-
-### AI Model
-The "AI Model" column indicates the estimated complexity and nuance required from the AI assistant to generate and debug the code for a given feature.
-
-*   **Flash:** The task is straightforward, involves well-defined patterns, and requires minimal nuanced understanding.
-*   **Pro:** The task is complex, requires deeper contextual understanding, advanced debugging, or significant architectural decisions.
-*   **N/A:** The task is primarily conceptual or manual.
-
-### Session Cost
-The "Session Cost" column estimates the AI Studio session token budget required to complete the task, which is the primary constraint on development velocity.
-
-*   **S (Small):** < 40k tokens. A task that can be completed quickly with minimal context.
-*   **M (Medium):** 40k - 80k tokens. A standard feature or refactoring task.
-*   **L (Large):** 80k - 120k+ tokens. A complex architectural task or feature epic.
+*   **AI Model:** The complexity required from the AI. (Flash, Pro, N/A)
+*   **Session Cost:** The estimated AI Studio token budget required. (S, M, L)
 
 ---
 
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Bugfix: Restore missing sections on Profile page** | 1000 | 3 | 100% | 0.25 | **12000** | Flash | S | **To Do** |
+| **Bugfix: Dropdowns in Work Style section don't show selected value** | 1000 | 1 | 100% | 0.1 | **10000** | Flash | S | **To Do** |
+| **Bugfix: New user signup does not redirect to /welcome page** | 1000 | 3 | 100% | 0.25 | **12000** | Pro | S | **To Do** |
+| **Feature: Re-implement "Jobs For You" Dashboard Module** | 1000 | 3 | 100% | 0.5 | **6000** | Flash | M | **To Do** |
 | **Feature: User-set Reminders & Next Action Notifications** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
-
 
 ## Tier 2: Core User Experience & Differentiation
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Marketing: LinkedIn Company Profile** | 1000 | 1 | 100% | 0.1 | **10000** | N/A | N/A | **To Do** |
 | **UI/UX: Refine "Inactive Applications" Filter and Status Display** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | S | **To Do** |
-| **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | L | **To Do** |
-| **Feature: Geocoding for typed locations** | 1000 | 1 | 100% | 0.25 | **4000** | Flash | M | **To Do** |
-| **Feature: Reverse Geocoding for selected locations** | 1000 | 1 | 100% | 0.25 | **4000** | Flash | M | **To Do** |
+| **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | L | **In Progress** |
 | **UI/UX: Multi-step Archiving/Hiding Workflow for Tracked Jobs** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
-| **UI/UX: 'Jobs for You' Module Restoration** | 1000 | 3 | 90% | 0.75 | **3600** | Flash | S | **To Do** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | Flash | M | **To Do** |
 | **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | Pro | M | **To Do** |
 | **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | Pro | L | **To Do** |

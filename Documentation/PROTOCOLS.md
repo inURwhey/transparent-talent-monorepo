@@ -1,11 +1,15 @@
-# Transparent Talent: Operational Protocols v2.2
+# Transparent Talent: Operational Protocols v2.3
+
+## System Instructions (Core Operating Principles)
+*   **Full-File Output Mandate:** When providing file content for replacement, the AI **must** output the *entire*, complete, and untruncated code. Abbreviating with comments is a critical failure.
+*   **Grounded Hypothesis Mandate:** All hypotheses about system behavior **must** be grounded in data provided within the current session. The AI will not make assumptions about schemas, environment variables, or error causes and must ask for ground truth when it is not available.
 
 ## Future State Note
 The ultimate goal for these protocols is to generate structured **JSON** output that can be directly consumed by our backend API. The current CSV/Sheet-based output is an intermediary step for the manual and semi-automated phases.
 
 ## Developer Workflow Protocols
 
-### Git Branching & Preview Protocol v1.0
+### Git Branching & Preview Protocol v1.0 -- AS OF v2.3, BRANCHING ONLY WORKS ON THE bugfix BRANCH, not MAIN.
 *Objective:* To maintain a stable `main` branch and enable isolated, full-stack testing of new features.
 *Workflow:*
 1.  **Start Work:**
@@ -77,7 +81,7 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
 
 ### Session Budgeting Protocol v1.0
 *   **Objective:** To manage development velocity against the real-world constraint of daily token quotas in the AI Studio environment.
-*   **Ground Truth:** The user's account has a daily token quota for Pro models. The AI Studio UI also suffers from performance degradation on very long-context conversations (e.g., >120k tokens). These factors, not API rate limits, are the primary constraints on development.
+*   **Ground Truth:** The user's account has a daily token quota for Pro models, assumed as of v2.3 to be 400,000 tokens per day. The AI Studio UI also suffers from performance degradation on very long-context conversations (e.g., >120k tokens). These factors, not API rate limits, are the primary constraints on development.
 *   **Protocol:**
     1.  **Backlog Costing:** All items in `BACKLOG.md` will be assigned a `Session Cost` (S/M/L) that estimates the token budget required.
     2.  **Session Planning:** At the start of a session, the AI will reference the task's `Session Cost` to set expectations for what can be accomplished within the daily quota.
@@ -110,6 +114,14 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
 *   **Prime Directive:** When generating `BACKLOG.md` during an `END_PROMPT`, the AI will only include items with a "To Do" status, removing the "Completed" section.
 *   **Rationale:** The `CHANGELOG.md` is the official historical record. The completed list in the backlog is redundant and adds unnecessary token overhead.
 
+### Model Hand-off Protocol v1.0
+*   **Objective:** To ensure the correct AI model is used for the task at hand.
+*   **Protocol:** The AI will state when a task has become simple enough for a "Flash" model or if a "Flash" model is struggling and should escalate the task to a "Pro" model.
+
+### Manual Save Checkpoint Protocol v1.0
+*   **Objective:** To mitigate context loss from client-side failures.
+*   **Protocol:** After a significant milestone (e.g., successful deployment), the AI will issue a direct instruction: **"Protocol: Please save this chat now to prevent context loss."**
+
 ## Workflow Guide: How to Run Protocols
 This workflow should be executed sequentially within a single chat session to maintain context.
 1.  **Initiate Company & Lead Discovery (Protocol 1.4):** Start by providing the user's profile and resume and requesting a 'Master Target Company List' and 'Preliminary Job Leads'.
@@ -120,3 +132,4 @@ This workflow should be executed sequentially within a single chat session to ma
 *   **Full File Replacement vs. Targeted Changes:**
     *   **Full File Replacement:** For changes involving adding or removing multiple functions/routes; significant restructuring or refactoring of existing code; modifying a TypeScript interface or Python data structure that affects multiple parts of the file; or addressing complex bugs where a full context is crucial.
     *   **Targeted Changes:** For isolated changes that are a single line modification; adding or removing a single import statement; changing a literal value (e.g., a constant); or adding a single, small, self-contained `if` or `else` block.
+
