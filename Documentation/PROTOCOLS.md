@@ -80,12 +80,14 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
 2.  **Grounded Code Generation:** The generated code will strictly adhere to the column names and types from the user-provided schema.
 
 ### Session Budgeting Protocol v1.0
-*   **Objective:** To manage development velocity against the real-world constraint of daily token quotas in the AI Studio environment.
-*   **Ground Truth:** The user's account has a daily token quota for Pro models, assumed as of v2.3 to be 400,000 tokens per day. The AI Studio UI also suffers from performance degradation on very long-context conversations (e.g., >120k tokens). These factors, not API rate limits, are the primary constraints on development.
+*   **Objective:** To manage development velocity against the real-world constraints of token quotas and UI performance in the AI Studio environment.
+*   **Ground Truth:** The user's account has a daily token quota for Pro models, assumed as of v2.3 to be 400,000 tokens per day. The AI Studio UI also suffers from performance degradation on very long-context conversations (e.g., >120k tokens), which acts as a practical limit for Flash model sessions. These factors, not API rate limits, are the primary constraints on development.
 *   **Protocol:**
     1.  **Backlog Costing:** All items in `BACKLOG.md` will be assigned a `Session Cost` (S/M/L) that estimates the token budget required.
-    2.  **Session Planning:** At the start of a session, the AI will reference the task's `Session Cost` to set expectations for what can be accomplished within the daily quota.
-    3.  **Checkpointing:** For `L` (Large) cost tasks, the AI will proactively suggest using an `END_PROMPT` cycle to serve as a logical checkpoint, committing the work and resetting the session's token count to avoid UI lag.
+    2.  **Session Planning:** At the start of a session, the AI will reference the task's `Session Cost` to set expectations for what can be accomplished.
+    3.  **Checkpointing:** For `L` (Large) cost tasks, or as session context grows, the AI will proactively suggest using an `END_PROMPT` cycle to serve as a logical checkpoint, committing the work and resetting the session's token count.
+        *   **Flash Model Stop:** Sessions using Flash models should be soft-stopped around **120,000 tokens** to avoid UI lag.
+        *   **Pro Model Stop:** Sessions using Pro models should be soft-stopped as they approach the daily quota of **400,000 tokens**.
 
 ### Context Management & Session Scoping v1.0
 *   **Objective:** To optimize development efficiency by matching the session's context length to the nature of the task.
@@ -132,4 +134,3 @@ This workflow should be executed sequentially within a single chat session to ma
 *   **Full File Replacement vs. Targeted Changes:**
     *   **Full File Replacement:** For changes involving adding or removing multiple functions/routes; significant restructuring or refactoring of existing code; modifying a TypeScript interface or Python data structure that affects multiple parts of the file; or addressing complex bugs where a full context is crucial.
     *   **Targeted Changes:** For isolated changes that are a single line modification; adding or removing a single import statement; changing a literal value (e.g., a constant); or adding a single, small, self-contained `if` or `else` block.
-
