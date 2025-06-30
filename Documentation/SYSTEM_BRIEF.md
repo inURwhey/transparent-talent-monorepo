@@ -15,6 +15,7 @@
 *   **Architecture Style:** Decoupled three-tier application, managed in a **monorepo**. The backend now follows a service-oriented architecture with an application factory pattern.
 
 ## 3. Current Project Status
+*   **Resume Versioning Implemented:** The backend now successfully saves and manages multiple versions of user-submitted resumes, marking only the latest as active, providing a foundation for resume history and more advanced features.
 *   **Profile Dropdown Display Fixed:** The critical bug affecting dropdowns on the user profile page, which prevented saved values from being displayed correctly, has been resolved. This also eliminated associated console warnings and restored contextual placeholders.
 *   **Profile Redirection Fixed:** The bug preventing users with incomplete profiles from being correctly redirected to the `/welcome` onboarding page has been resolved, ensuring a smoother initial user experience.
 *   **Resume Versioning Architecture in Place:** The foundational database schema for storing historical resume submissions (`resume_submissions` table) has been successfully migrated to production. This deconstructs a large feature into smaller, manageable implementation tasks.
@@ -23,5 +24,5 @@
 *   **Application is stable and functional on its production domain.**
 
 ## 4. Immediate Backlog & Next Steps
-1.  **Backend: Implement Resume Versioning on Submission:** Update the resume parsing endpoint to save a copy of the raw text to the new `resume_submissions` table. (RICE: 8000)
-2.  **Feature: Re-implement "Jobs For You" Dashboard Module:** Re-enable and refine the module that suggests jobs based on user preferences. (RICE: 6000)
+1.  **UI/UX: Refine "Inactive Applications" Filter and Status Display:** Improve the filtering and display of inactive tracked jobs on the dashboard. (RICE: 8000)
+2.  **Cost Management: AI Input/Output Size Validation:** Implement checks to prevent excessively large inputs to AI models, optimizing token usage. (RICE: 12000)

@@ -3,6 +3,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.32.0 - 2025-07-02 - Resume Versioning & Profile Polish
+
+This release introduces core backend functionality for managing user resume versions and finalizes critical frontend UI stability, ensuring a polished user profile experience.
+
+### Added
+-   **Backend:** Implemented resume versioning on submission (`/api/onboarding/parse-resume`). Each resume text submitted is now stored in the `resume_submissions` table, with the most recent submission automatically set as `is_active = TRUE`, and all previous submissions for that user set to `FALSE`.
+
+### Fixed
+-   **Frontend:** Resolved all remaining display and interaction issues with dropdowns in the "Work Style & Preferences" section of the user profile, including correct value display and removal of "uncontrolled to controlled" React warnings. Contextual placeholder text for these fields is now correctly managed.
+
 ## v0.31.0 - 2025-07-02 - Profile Dropdown & UI Consistency Fixes
 
 This release resolves persistent issues with dropdown menus on the user profile page, ensuring that saved values are correctly displayed and eliminating console warnings related to component control. It also restores contextual placeholder text for a more intuitive user experience.

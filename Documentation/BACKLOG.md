@@ -9,7 +9,8 @@
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Backend: Implement Resume Versioning on Submission** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | S | **To Do** |
+| **UI/UX: Refine "Inactive Applications" Filter and Status Display** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | S | **To Do** |
+| **Cost Management: AI Input/Output Size Validation** | 1000 | 3 | 100% | 0.25 | **12000** | N/A | S | **To Do** |
 | **Feature: Re-implement "Jobs For You" Dashboard Module** | 1000 | 3 | 100% | 0.5 | **6000** | Flash | M | **To Do** |
 | **Feature: User-set Reminders & Next Action Notifications** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 
@@ -17,11 +18,11 @@
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Marketing: LinkedIn Company Profile** | 1000 | 1 | 100% | 0.1 | **10000** | N/A | N/A | **To Do** |
-| **UI/UX: Refine "Inactive Applications" Filter and Status Display** | 1000 | 2 | 100% | 0.25 | **8000** | Flash | S | **To Do** |
 | **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | L | **In Progress** |
 | **Feature: Resume File Upload & Parsing** | 1000 | 3 | 90% | 0.5 | **5400** | Pro | M | **To Do** |
-| **UI/UX: Implement Autosave for Profile and Resume Pages** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
+| **UI/UX: Modularize Profile Page Components** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 | **Feature: Bulk Reprocess Relevancy** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
+| **UI/UX: Implement Autosave for Profile and Resume Pages** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI/UX: Enhance Profile Completion UX** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI/UX: Multi-step Archiving/Hiding Workflow for Tracked Jobs** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI: Transparent Relevance Scorecard** | 1000 | 3 | 100% | 1.0 | **3000** | Flash | M | **To Do** |
@@ -46,9 +47,12 @@
 | **UI/UX: Complex Notification System for Job Expiration** | 1000 | 2 | 90% | 1.0 | **1800** | Pro | L | **To Do** |
 | **Feature: AI-Assisted Offer Negotiation** | 1000 | 3 | 90% | 1.5 | **1800** | Pro | L | **To Do** |
 | **Feature: LinkedIn Profile/Resume Content Extraction & AI Parsing** | 1000 | 3 | 80% | 1.5 | **1600** | Pro | L | **To Do** |
+| **Cost Management: User/Stream Usage Monitoring & Quotas** | 1000 | 2 | 80% | 1.0 | **1600** | Pro | M | **To Do** |
 | **Feature: AI-Powered Application Q&A & Learning System** | 1000 | 3 | 80% | 2.0 | **1200** | Pro | L | **To Do** |
+| **Feature: AI Resume Content Quality Check** | 1000 | 2 | 90% | 0.5 | **1200** | Flash | S | **To Do** |
 | **Automation: Full API Job Analysis**| 1000 | 3 | 90% | 2.0 | **1350** | Pro | L | **To Do** |
 | **Feature: "Transparent Rejection"**| 1000 | 3 | 80% | 2.0 | **1200** | Pro | M | **To Do** |
+| **Cost Management: AI Content Moderation for User-Generative Streams** | 1000 | 2 | 80% | 0.75 | **1080** | Pro | M | **To Do** |
 | **Feature: Proactive Anomaly Detection**| 1000 | 3 | 90% | 2.5 | **1080** | Pro | L | **To Do** |
 | **Feature: Detailed Interview Stage Tracking (w/ Email/Calendar)** | 1000 | 3 | 80% | 2.0 | **1200** | Pro | L | **To Do** |
 | **Academics Knowledge Base for User Vectoring** | 1000 | 1 | 90% | 1.0 | **900** | Pro | M | **To Do** |
@@ -84,20 +88,21 @@
 ---
 
 ## Completed Features & Bugfixes
-### v0.31.0
+### v0.32.0
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
+| **Backend: Implement Resume Versioning on Submission** | Tier 1 | 8000 |
 | **Bugfix: Dropdowns in Work Style section don't show selected value** | Tier 1 | 10000 |
 
-### v0.30.0
+### v0.31.0
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
 | **Bugfix: Redirect empty profiles to /welcome** | Tier 1 | 10000 |
 
-### v0.29.0
+### v0.30.0
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
 | **Architect Resume Versioning DB Schema** | Tier 2 | 6000 |
 
 ### Previous Versions
-*Items from v0.28.0 and earlier are documented in the `CHANGELOG.md`.*
+*Items from v0.29.0 and earlier are documented in the `CHANGELOG.md`.*
