@@ -1,3 +1,5 @@
+# Path: apps/backend/app.py
+
 import os
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -15,7 +17,10 @@ def create_app():
     app.config.from_object(config.Config)
 
     # --- Extensions ---
-    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True, expose_headers=["Authorization"])
+    # Read allowed origins from environment variable
+    allowed_origins_str = os.getenv('ALLOWED_ORIGINS', '')
+    allowed_origins = [origin.strip() for origin in allowed_origins_str.split(',') if origin.strip()]
+    CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True, expose_headers=["Authorization"])
 
     # --- Database Initialization ---
     from . import database
