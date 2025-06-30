@@ -7,7 +7,7 @@ import { type TrackedJob, type UpdatePayload } from '../types';
 
 export function useTrackedJobsApi() {
   const { getToken, isLoaded: isUserLoaded } = useAuth();
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const apiBaseUrl = process.env.NEXT_PUBLIC_BACKEND_PREVIEW_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,24 +22,34 @@ export function useTrackedJobsApi() {
     return fetch(url, { ...options, headers });
   }, [getToken]);
 
-  useEffect(() => {
-    if (isUserLoaded) {
-      setIsLoading(true);
-      authedFetch(`${apiBaseUrl}/api/tracked-jobs?page=1&limit=1000`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.error) throw new Error(data.error);
-            setTrackedJobs(data.tracked_jobs);
-        })
-        .catch(err => setError(err.message))
-        .finally(() => setIsLoading(false));
-    }
+  const fetchJobs = useCallback(() => {
+    if (!isUserLoaded) return;
+    setIsLoading(true);
+    setError(null); // Reset error on new fetch
+    authedFetch(`${apiBaseUrl}/api/tracked-jobs?page=1&limit=1000`)
+      .then(async (res) => {
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ error: `Server responded with ${res.status}` }));
+          throw new Error(errorData.error || `Server responded with ${res.status}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+          setTrackedJobs(data.tracked_jobs || []); // Ensure trackedJobs is always an array
+      })
+      .catch(err => {
+          setError(err.message);
+          setTrackedJobs([]); // On error, reset to an empty array to prevent crashes
+      })
+      .finally(() => setIsLoading(false));
   }, [isUserLoaded, apiBaseUrl, authedFetch]);
 
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
+
   const submitNewJob = useCallback(async (jobUrl: string): Promise<TrackedJob> => {
-    const response = await authedFetch(`${apiBaseUrl}/api/jobs/submit`, {
-      method: 'POST', body: JSON.stringify({ job_url: jobUrl }),
-    });
+    const response = await authedFetch(`${apiBaseUrl}/api/jobs/submit`, { method: 'POST', body: JSON.stringify({ job_url: jobUrl }) });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Failed to submit job.');
     setTrackedJobs(prev => [result, ...prev]);
@@ -49,21 +59,18 @@ export function useTrackedJobsApi() {
   const updateTrackedJob = useCallback(async (trackedJobId: number, payload: UpdatePayload) => {
     setTrackedJobs(prev => prev.map(job => job.tracked_job_id === trackedJobId ? { ...job, ...payload } : job));
     try {
-      const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, {
-        method: 'PUT', body: JSON.stringify(payload)
-      });
-      if (!response.ok) throw new Error("Update failed, will revert.");
+      const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, { method: 'PUT', body: JSON.stringify(payload) });
+      if (!response.ok) throw new Error("Update failed.");
       const updatedFromServer = await response.json();
       setTrackedJobs(prev => prev.map(job => job.tracked_job_id === trackedJobId ? updatedFromServer : job));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Update failed.");
-      // Revert logic: This requires fetching all jobs again to ensure consistency
-      authedFetch(`${apiBaseUrl}/api/tracked-jobs?page=1&limit=1000`).then(res => res.json()).then(data => setTrackedJobs(data.tracked_jobs));
+      fetchJobs();
     }
-  }, [apiBaseUrl, authedFetch]);
+  }, [apiBaseUrl, authedFetch, fetchJobs]);
 
   const removeTrackedJob = useCallback(async (trackedJobId: number) => {
-    const originalJobs = trackedJobs;
+    const originalJobs = [...trackedJobs];
     setTrackedJobs(prev => prev.filter(job => job.tracked_job_id !== trackedJobId));
     try {
       const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, { method: 'DELETE' });
@@ -72,7 +79,7 @@ export function useTrackedJobsApi() {
       setError(err instanceof Error ? err.message : "Delete failed.");
       setTrackedJobs(originalJobs);
     }
-  }, [apiBaseUrl, authedFetch, trackedJobs]); // trackedJobs is needed here for the revert action
+  }, [apiBaseUrl, authedFetch, trackedJobs]);
 
   return { trackedJobs, isLoading, error, actions: { submitNewJob, updateTrackedJob, removeTrackedJob }};
 }
