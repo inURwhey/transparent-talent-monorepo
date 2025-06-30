@@ -10,6 +10,7 @@ import requests
 import jwt
 from jwt import PyJWKClient
 import logging
+import re # <--- IMPORT THE REGEX MODULE
 
 # Configure logging for this module
 logging.basicConfig(level=logging.INFO)
@@ -17,36 +18,14 @@ logger = logging.getLogger(__name__)
 
 # --- CONFIGURATION ---
 ISSUER_URL = os.getenv('CLERK_ISSUER_URL')
+# This should now ONLY contain your static, known URLs (production, localhost)
+AUTHORIZED_PARTIES = [party.strip() for party in os.getenv('CLERK_AUTHORIZED_PARTY', '').split(',') if party.strip()]
+# Define the regex pattern for valid Vercel preview URLs
+PREVIEW_URL_PATTERN = re.compile(r"^https://transparent-talent-frontend-.*\.vercel\.app$")
 
-# Function to determine authorized parties based on VERCEL_ENV
-def get_authorized_parties():
-    vercel_env = os.getenv('VERCEL_ENV', 'development')  # Default to 'development' if not set
-    logger.info(f"VERCEL_ENV: {vercel_env}")
 
-    if vercel_env == 'production':
-        # Production: Use URLs from CLERK_AUTHORIZED_PARTY
-        parties = [party.strip() for party in os.getenv('CLERK_AUTHORIZED_PARTY', '').split(',') if party.strip()]
-        logger.info(f"Using production authorized parties: {parties}")
-        return parties
-    elif vercel_env == 'preview':
-        # Preview: Use the VERCEL_URL
-        vercel_url = os.getenv('VERCEL_URL')
-        if not vercel_url:
-            logger.warning("VERCEL_URL is not set in preview environment. Authentication may fail.")
-            return []  # Or handle this differently, e.g., return a default localhost URL
-        # VERCEL_URL does not include the protocol (https://), so prepend it
-        preview_url = f"https://{vercel_url}"
-        logger.info(f"Using preview authorized party: {preview_url}")
-        return [preview_url]
-    else:  # development
-        # Development: Use CLERK_AUTHORIZED_PARTY
-        parties = [party.strip() for party in os.getenv('CLERK_AUTHORIZED_PARTY', '').split(',') if party.strip()]
-        logger.info("Using development authorized party: {parties}")
-        return parties
-
-# Initialize authorized parties based on the environment
-AUTHORIZED_PARTIES = get_authorized_parties()
-
+logger.info(f"Auth Module Init: ISSUER_URL = '{ISSUER_URL}'")
+logger.info(f"Auth Module Init: Static AUTHORIZED_PARTIES = {AUTHORIZED_PARTIES}")
 
 jwks_client = None
 try:
@@ -56,8 +35,7 @@ try:
     logger.info("Auth Module Init: PyJWKClient initialized successfully.")
 except Exception as e:
     logger.error(f"Auth Module Init: Failed to initialize PyJWKClient: {e}")
-    # Re-raise the exception or handle it to prevent 'token_required' from being defined if auth cannot work
-    raise # It's best to fail fast if the auth system cannot be initialized
+    raise
 
 def get_db_connection():
     db_url = os.getenv('DATABASE_URL')
@@ -65,6 +43,7 @@ def get_db_connection():
     return psycopg2.connect(db_url)
 
 def get_clerk_user_info(clerk_user_id):
+    # This function remains unchanged...
     clerk_secret_key = os.getenv('CLERK_SECRET_KEY')
     if not clerk_secret_key:
         logger.error("CLERK_SECRET_KEY is not set. Cannot fetch Clerk user info.")
@@ -92,42 +71,47 @@ def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if jwks_client is None:
-            logger.error("token_required called but jwks_client is not initialized. Check CLERK_ISSUER_URL.")
-            return jsonify({"message": "Server authentication setup incomplete. Please try again later."}), 500
+            logger.error("token_required called but jwks_client is not initialized.")
+            return jsonify({"message": "Server authentication setup incomplete."}), 500
 
         try:
-            logger.info("--- AUTHENTICATION ATTEMPT START ---")
             auth_header = request.headers.get('Authorization')
             if not auth_header or not auth_header.startswith('Bearer '):
-                logger.warning("--> FAILURE: Auth header missing or invalid.")
                 return jsonify({"message": "Authorization header is missing or invalid"}), 401
 
             token = auth_header.split(' ')[1]
             signing_key = jwks_client.get_signing_key_from_jwt(token)
 
-            # --- MODIFIED: Removed 'audience' parameter from jwt.decode ---
-            # Manually validate 'azp' claim as Clerk issues 'azp' not 'aud'
             claims = jwt.decode(
                 token,
                 signing_key.key,
                 algorithms=["RS256"],
-                issuer=ISSUER_URL, # Validates 'iss' claim
+                issuer=ISSUER_URL,
                 options={"verify_exp": True, "verify_nbf": True, "verify_iat": True}
             )
 
-            # 1. Validate Authorized Party (azp) manually
+            # --- NEW VALIDATION LOGIC ---
             azp_claim = claims.get('azp')
-            if not azp_claim or azp_claim not in AUTHORIZED_PARTIES:
-                logger.warning(f"--> FAILURE: Invalid Authorized Party. Got: '{azp_claim}', Expected one of: {AUTHORIZED_PARTIES}")
-                raise jwt.InvalidAudienceError("Invalid authorized party.") # Using InvalidAudienceError for consistency
+            is_valid = False
+            if azp_claim:
+                # 1. Check if it's in the static list of production/localhost URLs
+                if azp_claim in AUTHORIZED_PARTIES:
+                    is_valid = True
+                # 2. If not, check if it matches the Vercel preview URL pattern
+                elif PREVIEW_URL_PATTERN.match(azp_claim):
+                    logger.info(f"Authorized preview URL by pattern match: {azp_claim}")
+                    is_valid = True
+
+            if not is_valid:
+                logger.warning(f"--> FAILURE: Invalid Authorized Party. Got: '{azp_claim}', which is not in {AUTHORIZED_PARTIES} and does not match the preview pattern.")
+                raise jwt.InvalidAudienceError("Invalid authorized party.")
 
             logger.info("--> SUCCESS: Token claims validated (iss, azp, exp, nbf, iat).")
-
+            # The rest of the function remains unchanged...
             clerk_user_id = claims.get('sub')
             if not clerk_user_id:
-                logger.warning("--> FAILURE: Token is missing 'sub' claim.")
                 return jsonify({"message": "Invalid token: missing user ID (sub) claim"}), 401
-
+            
             conn = None
             try:
                 conn = get_db_connection()
@@ -135,41 +119,28 @@ def token_required(f):
                     cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
                     user = cursor.fetchone()
                     if not user:
-                        logger.info(f"--> New user detected: {clerk_user_id}. Creating DB entry.")
                         user_email = get_clerk_user_info(clerk_user_id)
                         if not user_email:
-                            logger.error(f"Could not retrieve email for Clerk user {clerk_user_id}.")
                             return jsonify({"message": "Could not retrieve user email from Clerk"}), 500
-
+                        
                         cursor.execute("SELECT * FROM users WHERE email = %s AND clerk_user_id IS NULL", (user_email,))
                         user = cursor.fetchone()
                         if user:
-                            logger.info(f"--> Updating existing user {user['id']} with Clerk ID {clerk_user_id}.")
                             cursor.execute("UPDATE users SET clerk_user_id = %s WHERE id = %s RETURNING *;", (clerk_user_id, user['id']))
                             user = cursor.fetchone()
                             conn.commit()
                         else:
-                            logger.info(f"--> Inserting new user with Clerk ID {clerk_user_id} and email {user_email}.")
                             cursor.execute("INSERT INTO users (clerk_user_id, email) VALUES (%s, %s) RETURNING *;", (clerk_user_id, user_email))
                             user = cursor.fetchone()
                             conn.commit()
                     g.current_user = user
-                logger.info("--- AUTHENTICATION ATTEMPT SUCCEEDED ---")
             finally:
-                if conn:
-                    conn.close()
-
+                if conn: conn.close()
         except jwt.ExpiredSignatureError:
-            logger.warning("--> FAILURE: Token has expired.")
             return jsonify({"message": "Token has expired"}), 401
-        except jwt.InvalidTokenError as e: # Catch other general JWT validation errors
-            logger.warning(f"--> FAILURE: JWT Invalid Token Error: {e}")
+        except jwt.InvalidTokenError as e:
             return jsonify({"message": f"Token is invalid: {str(e)}"}), 401
-        except requests.exceptions.RequestException as e:
-            logger.error(f"--> FAILURE: Network error during Clerk API call: {e}")
-            return jsonify({"message": "Network error during authentication process."}), 500
         except Exception as e:
-            logger.error(f"--> FAILURE: A general exception occurred during authentication: {type(e).__name__} - {e}")
             return jsonify({"message": "An unexpected error occurred during authentication."}), 500
 
         return f(*args, **kwargs)
