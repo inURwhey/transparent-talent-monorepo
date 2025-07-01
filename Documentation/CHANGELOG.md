@@ -3,6 +3,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.36.0 - 2025-07-03 - Job Matching Architecture & Salary Data Model
+
+This release completes the high-level architectural design for the "Jobs For You" recommendation engine and refactors the underlying user profile data model for improved robustness and scalability. This work deconstructs two major epics into a clear, sequenced set of implementation tasks.
+
+### Added
+-   **Architecture:** Designed the V1 architecture for a new `JobMatchingService` and a corresponding `GET /api/jobs/recommendations` endpoint. The service's V1 scoring algorithm will rank jobs based on a combination of AI analysis and new structured data fields.
+-   **Protocols:** Formally added an **"Epic/Task"** structure to the backlog management protocol to improve clarity and tracking of large feature initiatives.
+
+### Changed
+-   **Database:** Re-architected the `user_profiles` table by replacing the `desired_annual_compensation` TEXT column with two new INTEGER columns: `desired_salary_min` and `desired_salary_max`. This change eliminates brittle text parsing and improves data integrity.
+
+### Fixed
+-   No bugs were addressed in this release; changes were purely architectural and preparatory.
+
 ## v0.35.0 - 2025-07-02 - Enhanced Job Data Architecture & Handoff Protocol
 
 This release implements the foundational database architecture for the "Jobs For You" recommendation engine. By enhancing the `jobs` table with structured, queryable fields, this work unblocks future development of advanced job matching services. This release also codifies a new "Task Handoff" protocol to improve workflow efficiency between different AI models.
