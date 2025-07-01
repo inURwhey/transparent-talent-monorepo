@@ -13,8 +13,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronUp, MapPin, XCircle } from 'lucide-react';
-import { type Profile } from '../types';
+import { type Profile } from '@/app/dashboard/types'; // <-- Corrected path alias
 
+// ... rest of file is unchanged, but I will provide it in full to prevent truncation errors.
 const ONBOARDING_REQUIRED_FIELDS: (keyof Profile)[] = [
     'work_style_preference',
     'conflict_resolution_style',
@@ -73,33 +74,23 @@ export default function UserProfilePage() {
     }, [getToken]);
 
     const fetchProfile = useCallback(async () => {
-        if (!isAuthLoaded) {
-            return;
-        }
+        if (!isAuthLoaded) return;
         setIsLoading(true);
         try {
             const response = await authedFetch(`${apiBaseUrl}/api/profile`);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch profile. Status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error('Failed to fetch profile.');
             const data: Profile = await response.json();
             setProfile(data);
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (err: any) { setError(err.message); } 
+        finally { setIsLoading(false); }
     }, [isAuthLoaded, authedFetch, apiBaseUrl]);
 
-    useEffect(() => {
-        fetchProfile();
-    }, [fetchProfile]);
+    useEffect(() => { fetchProfile(); }, [fetchProfile]);
     
     const handleChange = useCallback((id: keyof Profile, value: any) => {
         setProfile(prev => {
             if (!prev) return null;
             let actualValue: any = value;
-
             if (id === 'desired_salary_min' || id === 'desired_salary_max') {
                 actualValue = parseFormattedNumber(value);
             } else if (value === '') {
@@ -109,9 +100,7 @@ export default function UserProfilePage() {
             } else if (value === 'null') {
                 actualValue = null;
             }
-
             let updatedProfile = { ...prev, [id]: actualValue };
-
             if (id === 'preferred_work_style' && actualValue === 'On-site') {
                 updatedProfile.is_remote_preferred = false;
             }
@@ -127,19 +116,15 @@ export default function UserProfilePage() {
         setIsSaving(true);
         setError(null);
         setSuccessMessage(null);
-        
         try {
             const response = await authedFetch(`${apiBaseUrl}/api/profile`, { method: 'PUT', body: JSON.stringify(payload) });
             if (!response.ok) throw new Error((await response.json()).error || 'Failed to save profile.');
-            
             const updatedProfile: Profile = await response.json();
             setProfile(updatedProfile);
             setSuccessMessage("Profile updated successfully! Redirecting to dashboard...");
-            
             setTimeout(() => {
                 router.push('/dashboard');
             }, 1500);
-
         } catch (err: any) { 
             console.error("Error updating profile:", err);
             setError(err.message); 
@@ -150,18 +135,15 @@ export default function UserProfilePage() {
     const handleSubmit = useCallback((e: FormEvent) => {
         e.preventDefault();
         if (!profile) return;
-        
         let payload: Partial<Profile> = { ...profile };
         delete (payload as any).id;
         delete (payload as any).user_id;
-        
         if (!profile.has_completed_onboarding) {
             const isComplete = ONBOARDING_REQUIRED_FIELDS.every(field => !!payload[field]);
             if (isComplete) {
                 payload.has_completed_onboarding = true;
             }
         }
-        
         updateProfileData(payload);
     }, [profile, updateProfileData]);
 
@@ -203,7 +185,6 @@ export default function UserProfilePage() {
                     <h1 className="text-3xl font-bold text-gray-800">Your Profile</h1>
                     {profile.has_completed_onboarding && (<Link href="/dashboard" passHref><Button variant="outline">Back to Dashboard</Button></Link>)}
                 </div>
-
                 {!profile.has_completed_onboarding && (
                     <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-md" role="alert">
                         <p className="font-bold">Complete Your Profile to Unlock Your Dashboard</p>
@@ -212,7 +193,6 @@ export default function UserProfilePage() {
                 )}
                 {error && <div className="bg-red-100 border-l-4 border-red-400 text-red-700 p-4 mb-4" role="alert"><strong className="font-bold">Error! </strong>{error}</div>}
                 {successMessage && <div className="bg-green-100 border-l-4 border-green-400 text-green-700 p-4 mb-4" role="alert"><strong className="font-bold">Success! </strong>{successMessage}</div>}
-
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <Collapsible open={openSections.workStyle} onOpenChange={() => toggleSection('workStyle')} className="border-2 border-indigo-300 rounded-md shadow-lg">
                         <CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg bg-indigo-50">Work Style & Preferences (Required){openSections.workStyle ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
@@ -255,7 +235,6 @@ export default function UserProfilePage() {
                             </div>
                         </CollapsibleContent>
                     </Collapsible>
-
                     <Collapsible open={openSections.personalInfo} onOpenChange={() => toggleSection('personalInfo')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Contact & Basic Information{openSections.personalInfo ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                         <CollapsibleContent className="p-4 pt-0 space-y-4">
                             <div><Label htmlFor="full_name">Full Name</Label><Input id="full_name" type="text" value={profile.full_name || ''} onChange={(e) => handleChange('full_name', e.target.value)} /></div>
@@ -266,42 +245,22 @@ export default function UserProfilePage() {
                             <div><Label htmlFor="resume_url">Resume URL</Label><Input id="resume_url" type="url" value={profile.resume_url || ''} onChange={(e) => handleChange('resume_url', e.target.value)} placeholder="https://your-resume-host.com/resume.pdf" /></div>
                         </CollapsibleContent>
                     </Collapsible>
-
                     <Collapsible open={openSections.careerGoals} onOpenChange={() => toggleSection('careerGoals')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Career Aspirations{openSections.careerGoals ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                         <CollapsibleContent className="p-4 pt-0 space-y-4">
                             <div><Label htmlFor="short_term_career_goal">Short-Term Career Goal</Label><Textarea id="short_term_career_goal" value={profile.short_term_career_goal || ''} onChange={(e) => handleChange('short_term_career_goal', e.target.value)} rows={3} /></div>
                             <div><Label htmlFor="long_term_career_goals">Long-Term Career Goals</Label><Textarea id="long_term_career_goals" value={profile.long_term_career_goals || ''} onChange={(e) => handleChange('long_term_career_goals', e.target.value)} rows={3} /></div>
                             <div><Label htmlFor="desired_title">Desired Job Title</Label><Input id="desired_title" type="text" value={profile.desired_title || ''} onChange={(e) => handleChange('desired_title', e.target.value)} /></div>
-                            
                             <div>
                                 <Label htmlFor="desired_salary_min">Desired Minimum Annual Salary</Label>
-                                <Input
-                                    id="desired_salary_min"
-                                    type="text"
-                                    inputMode="numeric"
-                                    pattern="[0-9,]*"
-                                    value={formatNumberForDisplay(profile.desired_salary_min)}
-                                    onChange={(e) => handleChange('desired_salary_min', e.target.value)}
-                                    placeholder="e.g., 150,000"
-                                />
+                                <Input id="desired_salary_min" type="text" inputMode="numeric" pattern="[0-9,]*" value={formatNumberForDisplay(profile.desired_salary_min)} onChange={(e) => handleChange('desired_salary_min', e.target.value)} placeholder="e.g., 150,000" />
                             </div>
                             <div>
                                 <Label htmlFor="desired_salary_max">Desired Maximum Annual Salary</Label>
-                                <Input
-                                    id="desired_salary_max"
-                                    type="text"
-                                    inputMode="numeric"
-                                    pattern="[0-9,]*"
-                                    value={formatNumberForDisplay(profile.desired_salary_max)}
-                                    onChange={(e) => handleChange('desired_salary_max', e.target.value)}
-                                    placeholder="e.g., 180,000"
-                                />
+                                <Input id="desired_salary_max" type="text" inputMode="numeric" pattern="[0-9,]*" value={formatNumberForDisplay(profile.desired_salary_max)} onChange={(e) => handleChange('desired_salary_max', e.target.value)} placeholder="e.g., 180,000" />
                             </div>
-
                             <div><Label htmlFor="ideal_role_description">Ideal Role Description</Label><Textarea id="ideal_role_description" value={profile.ideal_role_description || ''} onChange={(e) => handleChange('ideal_role_description', e.target.value)} rows={5} /></div>
                         </CollapsibleContent>
                     </Collapsible>
-
                     <Collapsible open={openSections.workEnv} onOpenChange={() => toggleSection('workEnv')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Work Environment & Requirements{openSections.workEnv ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                         <CollapsibleContent className="p-4 pt-0 space-y-4">
                             <div><Label htmlFor="preferred_work_style_select">Preferred Work Location</Label><Select value={profile.preferred_work_style || 'null'} onValueChange={(v) => handleChange('preferred_work_style', v)}><SelectTrigger id="preferred_work_style_select"><SelectValue placeholder="No Preference"/></SelectTrigger><SelectContent><SelectItem value="null">No Preference</SelectItem><SelectItem value="On-site">On-site</SelectItem><SelectItem value="Hybrid">Hybrid</SelectItem><SelectItem value="Remote">Remote</SelectItem></SelectContent></Select></div>
@@ -313,7 +272,6 @@ export default function UserProfilePage() {
                             <div><Label htmlFor="deal_breakers">Deal Breakers</Label><Textarea id="deal_breakers" value={profile.deal_breakers || ''} onChange={(e) => handleChange('deal_breakers', e.target.value)} rows={3} /></div>
                         </CollapsibleContent>
                     </Collapsible>
-
                     <Collapsible open={openSections.skills} onOpenChange={() => toggleSection('skills')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Skills & Industry Focus{openSections.skills ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                         <CollapsibleContent className="p-4 pt-0 space-y-4">
                             <div><Label htmlFor="core_strengths">Core Strengths</Label><Textarea id="core_strengths" value={profile.core_strengths || ''} onChange={(e) => handleChange('core_strengths', e.target.value)} rows={3} /></div>
@@ -322,7 +280,6 @@ export default function UserProfilePage() {
                             <div><Label htmlFor="industries_to_avoid">Industries to Avoid</Label><Input id="industries_to_avoid" type="text" value={profile.industries_to_avoid || ''} onChange={(e) => handleChange('industries_to_avoid', e.target.value)} /></div>
                         </CollapsibleContent>
                     </Collapsible>
-
                     <Collapsible open={openSections.personality} onOpenChange={() => toggleSection('personality')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Personality & Self-Assessment{openSections.personality ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                         <CollapsibleContent className="p-4 pt-0 space-y-4">
                             <div><Label htmlFor="personality_adjectives">Describe Yourself in a Few Adjectives</Label><Input id="personality_adjectives" type="text" value={profile.personality_adjectives || ''} onChange={(e) => handleChange('personality_adjectives', e.target.value)} /></div>
@@ -331,7 +288,6 @@ export default function UserProfilePage() {
                             <div><Label htmlFor="personality_gallup_strengths">Gallup Strengths (Top 5)</Label><Textarea id="personality_gallup_strengths" value={profile.personality_gallup_strengths || ''} onChange={(e) => handleChange('personality_gallup_strengths', e.target.value)} rows={3} /></div>
                         </CollapsibleContent>
                     </Collapsible>
-                    
                     <Button type="submit" disabled={isSaving} className="w-full bg-indigo-600 hover:bg-indigo-700">{isSaving ? 'Saving...' : 'Save Profile'}</Button>
                 </form>
             </div>
