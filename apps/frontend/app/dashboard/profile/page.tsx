@@ -29,6 +29,21 @@ const changeToleranceFrontendToBackendMap: Record<string, string> = {
     'The team is nimble and priorities pivot often based on new data.': 'High',
 };
 
+// Helper to format numbers with commas for display
+const formatNumberForDisplay = (num: number | null | undefined): string => {
+    if (num === null || num === undefined) return '';
+    return new Intl.NumberFormat('en-US').format(num);
+};
+
+// Helper to parse formatted strings back to numbers
+const parseFormattedNumber = (str: string | null | undefined): number | null => {
+    if (str === null || str === undefined || str.trim() === '') return null;
+    const cleaned = str.replace(/,/g, ''); // Remove commas
+    const parsed = Number(cleaned);
+    return isNaN(parsed) ? null : parsed;
+};
+
+
 export default function UserProfilePage() {
     const { getToken, isLoaded: isAuthLoaded } = useAuth();
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -92,11 +107,7 @@ export default function UserProfilePage() {
 
             // Handle number inputs (desired_salary_min, desired_salary_max)
             if (id === 'desired_salary_min' || id === 'desired_salary_max') {
-                actualValue = value === '' ? null : Number(value);
-                // Ensure NaN results in null for number fields
-                if (isNaN(actualValue as number)) {
-                    actualValue = null;
-                }
+                actualValue = parseFormattedNumber(value); // Use helper to parse string to number
             }
             // Convert empty string from Select or Textarea to null for backend if it's the placeholder value
             else if (value === '') {
@@ -282,22 +293,24 @@ export default function UserProfilePage() {
                                 <Label htmlFor="desired_salary_min">Desired Minimum Annual Salary</Label>
                                 <Input
                                     id="desired_salary_min"
-                                    type="number"
-                                    step="10000" // Added step for 10k increments
-                                    value={profile.desired_salary_min ?? ''} // Use ?? to handle 0 values correctly
+                                    type="text" // Changed to text to allow comma input
+                                    inputMode="numeric" // Hint for mobile keyboards
+                                    pattern="[0-9,]*" // Allow digits and commas
+                                    value={formatNumberForDisplay(profile.desired_salary_min)}
                                     onChange={(e) => handleChange('desired_salary_min', e.target.value)}
-                                    placeholder="e.g., 150000"
+                                    placeholder="e.g., 150,000"
                                 />
                             </div>
                             <div>
                                 <Label htmlFor="desired_salary_max">Desired Maximum Annual Salary</Label>
                                 <Input
                                     id="desired_salary_max"
-                                    type="number"
-                                    step="10000" // Added step for 10k increments
-                                    value={profile.desired_salary_max ?? ''} // Use ?? to handle 0 values correctly
+                                    type="text" // Changed to text to allow comma input
+                                    inputMode="numeric" // Hint for mobile keyboards
+                                    pattern="[0-9,]*" // Allow digits and commas
+                                    value={formatNumberForDisplay(profile.desired_salary_max)}
                                     onChange={(e) => handleChange('desired_salary_max', e.target.value)}
-                                    placeholder="e.g., 180000"
+                                    placeholder="e.g., 180,000"
                                 />
                             </div>
 
