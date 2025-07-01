@@ -3,9 +3,9 @@ from flask import Blueprint, request, jsonify, g, current_app
 from ..auth import token_required
 from ..services.profile_service import ProfileService
 
-profile_bp = Blueprint('profile_bp', __name__, url_prefix='/api')
+# Prefix will be defined in app.py during registration
+profile_bp = Blueprint('profile_bp', __name__)
 
-# Define the fields required to mark onboarding as complete
 ONBOARDING_REQUIRED_FIELDS = [
     'work_style_preference',
     'conflict_resolution_style',
@@ -35,11 +35,8 @@ def update_user_profile():
     
     profile_service = ProfileService(current_app.logger)
     
-    # Check if this update will complete onboarding
-    # First, get the current state of the profile from the database
     current_profile = profile_service.get_profile(user_id)
     if not current_profile.get('has_completed_onboarding'):
-        # Merge incoming data with current data to check for completion
         merged_profile = {**current_profile, **data}
         is_complete = all(merged_profile.get(field) for field in ONBOARDING_REQUIRED_FIELDS)
         if is_complete:

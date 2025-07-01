@@ -4,15 +4,13 @@ from flask import Blueprint, jsonify, g, current_app
 from ..auth import token_required
 from ..services.job_matching_service import JobMatchingService
 
-# Removed url_prefix, it will be handled in app.py for consistency
+# Prefix will be defined in app.py during registration
 reco_bp = Blueprint('reco_bp', __name__)
 
 @reco_bp.route('/jobs/recommendations', methods=['GET'])
 @token_required
 def get_job_recommendations():
-    """
-    Returns a ranked list of job recommendations for the authenticated user.
-    """
+    # ... (rest of the function is unchanged)
     user_id = g.current_user['id']
     
     try:

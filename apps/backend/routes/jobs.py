@@ -11,11 +11,13 @@ from ..config import config
 import psycopg2
 import requests
 
-jobs_bp = Blueprint('jobs_bp', __name__, url_prefix='/api')
+# Prefix will be defined in app.py during registration
+jobs_bp = Blueprint('jobs_bp', __name__)
 
 @jobs_bp.route('/jobs/submit', methods=['POST'])
 @token_required
 def submit_job():
+    # ... (rest of the function is unchanged)
     user_id = g.current_user['id']
     data = request.get_json()
     job_url = data.get('job_url')
@@ -27,13 +29,13 @@ def submit_job():
     db = get_db()
     
     try:
-        # First, check if the user is already tracking this job
+        # Check if user is already tracking the job
         with db.cursor() as cursor:
             cursor.execute("SELECT t.id FROM tracked_jobs t JOIN jobs j ON t.job_id = j.id WHERE t.user_id = %s AND j.job_url = %s", (user_id, job_url))
             if cursor.fetchone():
                 return jsonify({"error": "You are already tracking this job."}), 409
 
-        # Fetch the user's profile to check their onboarding status
+        # Fetch user profile to check onboarding status
         user_profile = profile_service.get_profile(user_id)
         perform_ai_analysis = user_profile.get('has_completed_onboarding', False)
         
@@ -45,13 +47,10 @@ def submit_job():
             analysis_result = job_data['analysis']
         else:
             current_app.logger.info(f"User {user_id} has not completed onboarding. Skipping AI analysis.")
-            # We still need basic info if we're skipping AI. We can get this from a simple scrape.
-            # This part can be enhanced later. For now, we'll use placeholders.
             analysis_result = {
                 'company_name': 'Unknown Company (Profile Incomplete)',
                 'job_title': 'Unknown Title (Profile Incomplete)'
             }
-
 
         with db.cursor() as cursor:
             company_name = analysis_result.get('company_name', 'Unknown Company')
@@ -82,7 +81,6 @@ def submit_job():
             ))
             job_id = cursor.fetchone()['id']
 
-            # Only create an analysis record if we performed the analysis
             if perform_ai_analysis:
                 cursor.execute("""
                     INSERT INTO job_analyses (job_id, user_id, analysis_protocol_version, position_relevance_score, environment_fit_score, hiring_manager_view, matrix_rating, summary, qualification_gaps, recommended_testimonials)
@@ -119,3 +117,56 @@ def submit_job():
         db.rollback()
         current_app.logger.error(f"An unexpected error occurred in submit_job route: {e}")
         return jsonify({"error": "An internal server error occurred."}), 500
+
+@jobs_bp.route('/tracked-jobs', methods=['GET'])
+@token_required
+def get_tracked_jobs():
+    user_id = g.current_user['id']
+    try:
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 10))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid pagination parameters"}), 400
+    offset = (page - 1) * limit
+    db = get_db()
+    service = TrackedJobService(current_app.logger)
+    with db.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) FROM tracked_jobs WHERE user_id = %s;", (user_id,))
+        total_count = cursor.fetchone()[0]
+        cursor.execute("SELECT id FROM tracked_jobs WHERE user_id = %s ORDER BY created_at DESC, id DESC LIMIT %s OFFSET %s;", (user_id, limit, offset))
+        job_ids = [row['id'] for row in cursor.fetchall()]
+        tracked_jobs = [service._get_formatted_job_by_id(cursor, job_id, user_id) for job_id in job_ids]
+        return jsonify({"tracked_jobs": [job for job in tracked_jobs if job is not None], "total_count": total_count, "page": page, "limit": limit})
+
+@jobs_bp.route('/tracked-jobs/<int:tracked_job_id>', methods=['PUT'])
+@token_required
+def update_tracked_job(tracked_job_id):
+    user_id = g.current_user['id']
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No update data provided"}), 400
+    service = TrackedJobService(current_app.logger)
+    try:
+        updated_job = service.update_job(user_id, tracked_job_id, data)
+        if updated_job:
+            return jsonify(updated_job), 200
+        else:
+            return jsonify({"error": "Tracked job not found or permission denied"}), 404
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error in update_tracked_job route: {e}")
+        return jsonify({"error": "An internal server error occurred."}), 500
+
+@jobs_bp.route('/tracked-jobs/<int:tracked_job_id>', methods=['DELETE'])
+@token_required
+def remove_tracked_job(tracked_job_id):
+    user_id = g.current_user['id']
+    db = get_db()
+    with db.cursor() as cursor:
+        cursor.execute("DELETE FROM tracked_jobs WHERE id = %s AND user_id = %s RETURNING id", (tracked_job_id, user_id))
+        if cursor.fetchone():
+            db.commit()
+            return jsonify({"message": "Tracked job removed successfully"}), 200
+        else:
+            return jsonify({"error": "Tracked job not found or permission denied"}), 404

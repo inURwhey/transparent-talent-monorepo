@@ -9,9 +9,7 @@ def create_app():
     from . import config
     app.config.from_object(config.Config)
     
-    # Updated CORS configuration for robustness.
-    # This explicitly allows any origin and is the standard for APIs
-    # protected by token-based authentication.
+    # Explicit CORS configuration for all /api/ routes
     CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
     from . import database
@@ -24,7 +22,7 @@ def create_app():
     from .routes.onboarding import onboarding_bp
     from .routes.recommendations import reco_bp
     
-    # Register all blueprints with the consistent '/api' prefix
+    # Register all blueprints with a consistent /api prefix
     app.register_blueprint(profile_bp, url_prefix='/api')
     app.register_blueprint(jobs_bp, url_prefix='/api')
     app.register_blueprint(admin_bp, url_prefix='/api')

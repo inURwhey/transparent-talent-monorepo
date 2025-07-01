@@ -7,15 +7,13 @@ import google.generativeai as genai
 import json
 import re
 
-onboarding_bp = Blueprint('onboarding_bp', __name__, url_prefix='/api')
+# Prefix will be defined in app.py during registration
+onboarding_bp = Blueprint('onboarding_bp', __name__)
 
 @onboarding_bp.route('/onboarding/parse-resume', methods=['POST'])
 @token_required
 def parse_resume():
-    """
-    Receives raw resume text, parses it using an AI model, and populates
-    the user's profile with the extracted data.
-    """
+    # ... (rest of the function is unchanged)
     user_id = g.current_user['id']
     data = request.get_json()
     resume_text = data.get('resume_text')
@@ -28,7 +26,6 @@ def parse_resume():
     try:
         current_app.logger.info(f"Starting resume parse for user_id: {user_id}")
         
-        # This saves a copy of the resume for versioning
         profile_service.create_or_update_active_resume_submission(user_id, resume_text, 'welcome-page-v1')
         
         json_schema = {field: "string (or null)" for field in profile_service.allowed_fields if field not in ['is_remote_preferred', 'latitude', 'longitude', 'has_completed_onboarding']}
@@ -60,8 +57,6 @@ def parse_resume():
 
         current_app.logger.info(f"Successfully parsed resume for user_id: {user_id}")
 
-        # The resume parsing no longer automatically completes onboarding.
-        # It just pre-fills the data. The user must save their profile to complete.
         updated_profile = profile_service.update_profile(user_id, parsed_data)
 
         if not updated_profile:
