@@ -3,6 +3,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.35.0 - 2025-07-02 - Enhanced Job Data Architecture & Handoff Protocol
+
+This release implements the foundational database architecture for the "Jobs For You" recommendation engine. By enhancing the `jobs` table with structured, queryable fields, this work unblocks future development of advanced job matching services. This release also codifies a new "Task Handoff" protocol to improve workflow efficiency between different AI models.
+
+### Added
+-   **Database:** Created new `ENUM` types (`job_modality_enum`, `job_level_enum`) to support structured job data.
+-   **Database:** Enhanced the `jobs` table by adding new columns for structured data, including `salary_min`, `salary_max`, `required_experience_years`, `job_modality`, and `deduced_job_level`.
+-   **Protocols:** Added a new "Task Handoff Protocol" to `PROTOCOLS.md` to formalize the creation of `TASK_HANDOFF.md` files, ensuring seamless context transfer from Pro to Flash development sessions.
+
+### Changed
+-   **Protocols:** Refined the AI Model classification system to include `Creative` and sub-types for `Pro` tasks (`Pro Breakdown`, `Pro Execute`) for more accurate project planning.
+
 ## v0.34.0 - 2025-07-02 - AI Content Validation & Enhanced Profile Parsing
 
 This release introduces intelligent AI-driven content validation at the submission pipeline's entry points and significantly improves the robustness of user profile parsing, preventing data inconsistencies and optimizing AI resource usage.
