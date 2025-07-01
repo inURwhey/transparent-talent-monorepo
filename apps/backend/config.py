@@ -25,10 +25,12 @@ class Config:
     TRACKED_JOB_STALE_DAYS = 30
     LEGACY_URL_MALFORMED_PATTERN = re.compile(r".+\s+\(.+\)|\(.+?\)$")
 
-    # --- NEW: AI Input Size Limits (in characters) ---
+    # --- AI Input Size Limits (in characters) ---
     MAX_RESUME_TEXT_LENGTH = int(os.getenv('MAX_RESUME_TEXT_LENGTH', '10000')) # Default to 10,000 characters
     MAX_JOB_TEXT_LENGTH = int(os.getenv('MAX_JOB_TEXT_LENGTH', '10000')) # Default to 10,000 characters
-    
+    # --- NEW: Maximum length of text to send to classification AI ---
+    MAX_CLASSIFICATION_TEXT_LENGTH = int(os.getenv('MAX_CLASSIFICATION_TEXT_LENGTH', '2000')) # e.g., 2,000 characters for classification
+
     @staticmethod
     def validate():
         if not Config.DATABASE_URL:

@@ -3,7 +3,8 @@
 from flask import Blueprint, request, jsonify, g, current_app
 from ..auth import token_required
 from ..services.profile_service import ProfileService
-from ..config import config # Import config
+from ..services.job_service import JobService # Import JobService for classification
+from ..config import config
 import google.generativeai as genai
 import json
 import re
@@ -25,17 +26,23 @@ def parse_resume():
     if not resume_text:
         return jsonify({"error": "Resume text is missing."}), 400
 
-    # --- NEW: Resume text length validation ---
+    # Resume text length validation
     if len(resume_text) < 100:
         return jsonify({"error": "Resume text is too short for meaningful analysis. Please provide more detail."}), 400
     if len(resume_text) > config.MAX_RESUME_TEXT_LENGTH:
         return jsonify({"error": f"Resume text too long ({len(resume_text)} characters). Please keep it under {config.MAX_RESUME_TEXT_LENGTH} characters."}), 400
-    # --- END NEW ---
 
     profile_service = ProfileService(current_app.logger)
+    job_service = JobService(current_app.logger) # Instantiate JobService for classification
     
     try:
         current_app.logger.info(f"Starting resume parse for user_id: {user_id}")
+
+        # --- NEW: AI Classification Check ---
+        is_resume = job_service.is_resume_content(resume_text)
+        if not is_resume:
+            return jsonify({"error": "The provided text does not appear to be a resume. Please submit valid resume content."}), 400
+        # --- END NEW ---
         
         # Use the ProfileService's allowed_fields to construct the desired JSON schema for the prompt
         # This keeps our prompt dynamically in sync with our service layer.

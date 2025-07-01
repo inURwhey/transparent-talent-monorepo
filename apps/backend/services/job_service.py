@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import google.generativeai as genai
 import json
 import re
-from ..config import config # Ensure config is imported
+from ..config import config
 
 class JobService:
     def __init__(self, logger):
@@ -46,11 +46,16 @@ class JobService:
             soup = BeautifulSoup(response.content, 'html.parser')
             job_text = soup.get_text(separator=' ', strip=True)
             
-            # --- NEW: Job text length validation ---
+            # Job text length validation
             if not job_text or len(job_text) < 100:
                  raise ValueError("Extracted job text is too short or empty for meaningful analysis.")
             if len(job_text) > config.MAX_JOB_TEXT_LENGTH:
                 raise ValueError(f"Extracted job text too long ({len(job_text)} characters). Please keep it under {config.MAX_JOB_TEXT_LENGTH} characters.")
+
+            # --- NEW: AI Classification Check ---
+            is_job_posting = self.is_job_posting_content(job_text)
+            if not is_job_posting:
+                raise ValueError("The provided text does not appear to be a job posting. Please submit a valid job description URL.")
             # --- END NEW ---
 
             self.logger.info(f"Successfully fetched job text. Length: {len(job_text)} characters.")
@@ -131,6 +136,56 @@ class JobService:
             self.logger.error(f"AI analysis failed. Raw response was: {response.text}")
             self.logger.error(f"Error during AI analysis or JSON parsing: {e}")
             raise # Re-raise to be handled by the route
+
+    # --- NEW: AI Classification Methods ---
+    def is_resume_content(self, text: str) -> bool:
+        """
+        Uses AI to classify if the given text content is a resume.
+        Returns True if it's a resume, False otherwise.
+        """
+        return self._run_ai_classification(text, 'resume')
+
+    def is_job_posting_content(self, text: str) -> bool:
+        """
+        Uses AI to classify if the given text content is a job posting.
+        Returns True if it's a job posting, False otherwise.
+        """
+        return self._run_ai_classification(text, 'job_posting')
+
+    def _run_ai_classification(self, text: str, content_type: str) -> bool:
+        """
+        Private method to run a lightweight AI classification.
+        """
+        if not self.model:
+            self.logger.error("Cannot run AI classification: Model is not configured.")
+            # For classification, we can default to True if AI is down to avoid blocking,
+            # and rely on downstream parsing for actual errors.
+            return True 
+
+        classification_prompt = f"""
+            Analyze the following text content. Determine if it is a valid and recognizable {content_type}.
+            Respond with only "YES" if it is, and "NO" if it is not.
+            Do not include any other text, punctuation, or formatting.
+
+            TEXT CONTENT:
+            ---
+            {text[:config.MAX_CLASSIFICATION_TEXT_LENGTH]} # Use a limited length for classification to save tokens
+            ---
+            Is this a {content_type}? (YES/NO):
+        """
+        self.logger.info(f"Sending request to Gemini AI for {content_type} classification.")
+        try:
+            response = self.model.generate_content(classification_prompt)
+            # Clean and normalize response for robust comparison
+            cleaned_response = response.text.strip().upper()
+            self.logger.info(f"AI classified {content_type} as: {cleaned_response}")
+            return cleaned_response == "YES"
+        except Exception as e:
+            self.logger.error(f"AI classification for {content_type} failed: {e}")
+            # If AI classification fails, assume valid to avoid blocking valid submissions due to AI issues.
+            # Downstream parsing will catch if it's truly invalid.
+            return True
+    # --- END NEW ---
 
     def check_url_validity(self, full_url_string: str) -> bool:
         """
