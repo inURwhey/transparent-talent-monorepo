@@ -13,8 +13,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronUp, MapPin, XCircle } from 'lucide-react';
-import { type Profile } from '../types'; // <-- The missing import that caused the build to fail
+import { type Profile } from '@/app/dashboard/types'; // <-- Corrected path alias
 
+// ... rest of file is unchanged, but I will provide it in full to prevent truncation errors.
 const ONBOARDING_REQUIRED_FIELDS: (keyof Profile)[] = [
     'work_style_preference',
     'conflict_resolution_style',
