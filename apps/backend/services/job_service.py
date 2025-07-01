@@ -1,9 +1,11 @@
+# Path: apps/backend/services/job_service.py
 import requests
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 import json
 import re
 from ..config import config
+from ..database import get_db
 
 class JobService:
     def __init__(self, logger):
@@ -56,6 +58,21 @@ class JobService:
         except Exception as e:
             self.logger.error(f"An unexpected error occurred in get_job_details_and_analysis for url '{job_url}': {e}")
             raise
+
+    def analyze_existing_job(self, job_id: int, user_profile_text: str):
+        """
+        Analyzes an existing job from the database against a user profile.
+        This avoids re-scraping the URL.
+        """
+        self.logger.info(f"Analyzing existing job_id: {job_id}")
+        db = get_db()
+        with db.cursor() as cursor:
+            cursor.execute("SELECT job_url FROM jobs WHERE id = %s", (job_id,))
+            job_row = cursor.fetchone()
+            if not job_row:
+                raise ValueError(f"Job with id {job_id} not found for re-analysis.")
+            
+            return self.get_job_details_and_analysis(job_row['job_url'], user_profile_text)
 
     def _run_ai_analysis(self, job_text: str, user_profile_text: str) -> dict:
         if not self.model:
@@ -121,20 +138,16 @@ class JobService:
             self.logger.info("Received AI response. Attempting to parse JSON.")
             parsed_data = json.loads(cleaned_response)
 
-            # --- Start: Robust Post-Parsing Validation ---
             if not parsed_data.get('company_name') or not isinstance(parsed_data.get('company_name'), str):
                 raise ValueError("AI analysis failed to return a valid 'company_name'.")
             if not parsed_data.get('job_title') or not isinstance(parsed_data.get('job_title'), str):
                  raise ValueError("AI analysis failed to return a valid 'job_title'.")
-            # --- End: Robust Post-Parsing Validation ---
 
             analysis = {}
-            # Copy existing fields
             for key in ["company_name", "job_title", "position_relevance_score", "environment_fit_score",
                         "hiring_manager_view", "matrix_rating", "summary", "qualification_gaps", "recommended_testimonials"]:
                 analysis[key] = parsed_data.get(key)
             
-            # New structured fields with validation
             analysis['salary_min'] = self._parse_and_validate_int(parsed_data.get('salary_min'), 'salary_min')
             analysis['salary_max'] = self._parse_and_validate_int(parsed_data.get('salary_max'), 'salary_max')
             analysis['required_experience_years'] = self._parse_and_validate_int(parsed_data.get('required_experience_years'), 'required_experience_years')
@@ -160,6 +173,9 @@ class JobService:
         if isinstance(value, str) and value.strip() in valid_set: return value.strip()
         self.logger.warning(f"AI returned invalid enum value for {field_name}: '{value}'. Setting to None.")
         return None
+
+    def is_resume_content(self, text: str) -> bool:
+        return self._run_ai_classification(text, 'resume')
 
     def is_job_posting_content(self, text: str) -> bool:
         return self._run_ai_classification(text, 'job_posting')

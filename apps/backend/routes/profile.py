@@ -3,7 +3,6 @@ from flask import Blueprint, request, jsonify, g, current_app
 from ..auth import token_required
 from ..services.profile_service import ProfileService
 
-# Prefix will be defined in app.py during registration
 profile_bp = Blueprint('profile_bp', __name__)
 
 ONBOARDING_REQUIRED_FIELDS = [
@@ -35,19 +34,29 @@ def update_user_profile():
     
     profile_service = ProfileService(current_app.logger)
     
-    current_profile = profile_service.get_profile(user_id)
-    if not current_profile.get('has_completed_onboarding'):
-        merged_profile = {**current_profile, **data}
-        is_complete = all(merged_profile.get(field) for field in ONBOARDING_REQUIRED_FIELDS)
-        if is_complete:
-            data['has_completed_onboarding'] = True
-            current_app.logger.info(f"User {user_id} has completed onboarding.")
-
     try:
+        current_profile = profile_service.get_profile(user_id)
+        onboarding_was_just_completed = False
+
+        if not current_profile.get('has_completed_onboarding'):
+            # Create a merged view of the profile for checking completion
+            merged_profile = {**current_profile, **data}
+            is_complete = all(merged_profile.get(field) for field in ONBOARDING_REQUIRED_FIELDS)
+            if is_complete:
+                data['has_completed_onboarding'] = True
+                onboarding_was_just_completed = True
+                current_app.logger.info(f"User {user_id} has completed onboarding with this update.")
+
         updated_profile = profile_service.update_profile(user_id, data)
+        
+        # If onboarding was just completed, trigger the re-analysis
+        if onboarding_was_just_completed:
+            current_app.logger.info(f"Triggering job re-analysis for user {user_id} post-onboarding.")
+            profile_service.trigger_reanalysis_for_user(user_id)
+
         if updated_profile is None:
              return jsonify({"message": "No valid profile fields to update"}), 200
         return jsonify(updated_profile), 200
     except Exception as e:
-        current_app.logger.error(f"Error in update_user_profile route: {e}")
+        current_app.logger.error(f"Error in update_user_profile route for user_id {user_id}: {e}")
         return jsonify({"error": "An internal server error occurred."}), 500
