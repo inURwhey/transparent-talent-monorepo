@@ -1,11 +1,9 @@
 # Path: apps/backend/routes/recommendations.py
-
 from flask import Blueprint, jsonify, g, current_app
 from ..auth import token_required
 from ..services.job_matching_service import JobMatchingService
 
-# Prefix will be defined in app.py during registration
-reco_bp = Blueprint('reco_bp', __name__)
+reco_bp = Blueprint('reco_bp', __name__, url_prefix='/api')
 
 @reco_bp.route('/jobs/recommendations', methods=['GET'])
 @token_required

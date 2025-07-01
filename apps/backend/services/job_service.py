@@ -51,7 +51,6 @@ class JobService:
                 "job_text": job_text,
                 "analysis": analysis
             }
-
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Failed to fetch job URL '{job_url}': {e}")
             raise
@@ -62,9 +61,9 @@ class JobService:
     def analyze_existing_job(self, job_id: int, user_profile_text: str):
         """
         Analyzes an existing job from the database against a user profile.
-        This avoids re-scraping the URL.
+        This re-scrapes the URL to get the job text for analysis.
         """
-        self.logger.info(f"Analyzing existing job_id: {job_id}")
+        self.logger.info(f"Re-analyzing existing job_id: {job_id}")
         db = get_db()
         with db.cursor() as cursor:
             cursor.execute("SELECT job_url FROM jobs WHERE id = %s", (job_id,))
@@ -138,10 +137,12 @@ class JobService:
             self.logger.info("Received AI response. Attempting to parse JSON.")
             parsed_data = json.loads(cleaned_response)
 
+            # --- Start: Robust Post-Parsing Validation ---
             if not parsed_data.get('company_name') or not isinstance(parsed_data.get('company_name'), str):
                 raise ValueError("AI analysis failed to return a valid 'company_name'.")
             if not parsed_data.get('job_title') or not isinstance(parsed_data.get('job_title'), str):
                  raise ValueError("AI analysis failed to return a valid 'job_title'.")
+            # --- End: Robust Post-Parsing Validation ---
 
             analysis = {}
             for key in ["company_name", "job_title", "position_relevance_score", "environment_fit_score",
