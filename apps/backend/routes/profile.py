@@ -3,13 +3,20 @@ from flask import Blueprint, request, jsonify, g, current_app
 from ..auth import token_required
 from ..services.profile_service import ProfileService
 
-profile_bp = Blueprint('profile_bp', __name__)
+profile_bp = Blueprint('profile_bp', __name__, url_prefix='/api')
+
+# Define the fields required to mark onboarding as complete
+ONBOARDING_REQUIRED_FIELDS = [
+    'work_style_preference',
+    'conflict_resolution_style',
+    'communication_preference',
+    'change_tolerance'
+]
 
 @profile_bp.route('/profile', methods=['GET'])
 @token_required
 def get_user_profile():
-    # Correctly read from g.current_user object set by the decorator
-    user_id = g.current_user['id'] 
+    user_id = g.current_user['id']
     profile_service = ProfileService(current_app.logger)
     try:
         profile = profile_service.get_profile(user_id)
@@ -21,13 +28,24 @@ def get_user_profile():
 @profile_bp.route('/profile', methods=['PUT'])
 @token_required
 def update_user_profile():
-    # Correctly read from g.current_user object set by the decorator
     user_id = g.current_user['id']
     data = request.get_json()
     if not data:
         return jsonify({"error": "No update data provided"}), 400
     
     profile_service = ProfileService(current_app.logger)
+    
+    # Check if this update will complete onboarding
+    # First, get the current state of the profile from the database
+    current_profile = profile_service.get_profile(user_id)
+    if not current_profile.get('has_completed_onboarding'):
+        # Merge incoming data with current data to check for completion
+        merged_profile = {**current_profile, **data}
+        is_complete = all(merged_profile.get(field) for field in ONBOARDING_REQUIRED_FIELDS)
+        if is_complete:
+            data['has_completed_onboarding'] = True
+            current_app.logger.info(f"User {user_id} has completed onboarding.")
+
     try:
         updated_profile = profile_service.update_profile(user_id, data)
         if updated_profile is None:
