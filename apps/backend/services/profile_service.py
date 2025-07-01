@@ -12,7 +12,9 @@ class ProfileService:
         self.logger = logger
         self.allowed_fields = [
             "full_name", "current_location", "linkedin_profile_url", "resume_url",
-            "short_term_career_goal", "long_term_career_goals", "desired_annual_compensation",
+            "short_term_career_goal", "long_term_career_goals", 
+            # Removed "desired_annual_compensation", added new integer fields
+            "desired_salary_min", "desired_salary_max",
             "desired_title", "ideal_role_description", "preferred_company_size",
             "ideal_work_culture", "disliked_work_culture", "core_strengths",
             "skills_to_avoid", "non_negotiable_requirements", "deal_breakers",
@@ -43,11 +45,13 @@ class ProfileService:
 
     def get_profile_for_analysis(self, user_id: int):
         profile = self.get_profile(user_id)
+        # Updated analysis_columns to reflect new salary fields for AI analysis
         analysis_columns = [
             "short_term_career_goal", "ideal_role_description", "core_strengths",
             "skills_to_avoid", "preferred_industries", "industries_to_avoid",
             "desired_title", "non_negotiable_requirements", "deal_breakers",
-            "preferred_work_style", "is_remote_preferred"
+            "preferred_work_style", "is_remote_preferred",
+            "desired_salary_min", "desired_salary_max" # Include new salary fields
         ]
         profile_labels = {
             "short_term_career_goal": "Short-Term Career Goal", "ideal_role_description": "Ideal Role",
@@ -55,7 +59,9 @@ class ProfileService:
             "preferred_industries": "Preferred Industries", "industries_to_avoid": "Industries To Avoid",
             "desired_title": "Desired Title", "non_negotiable_requirements": "Non-Negotiables",
             "deal_breakers": "Deal Breakers", "preferred_work_style": "Preferred Work Style",
-            "is_remote_preferred": "Remote Preference"
+            "is_remote_preferred": "Remote Preference",
+            "desired_salary_min": "Desired Minimum Salary", # New label
+            "desired_salary_max": "Desired Maximum Salary"  # New label
         }
         profile_parts = []
         for col in analysis_columns:
@@ -63,11 +69,16 @@ class ProfileService:
             if col == 'is_remote_preferred':
                 if value: profile_parts.append(f"- {profile_labels[col]}: Yes, remote is preferred.")
                 else: profile_parts.append(f"- {profile_labels[col]}: No, remote is not preferred.")
+            # Handle new integer salary fields
+            elif col in ['desired_salary_min', 'desired_salary_max']:
+                if value is not None:
+                    profile_parts.append(f"- {profile_labels[col]}: {int(value)}") # Cast to int to ensure no decimals
             elif value and str(value).strip():
                 profile_parts.append(f"- {profile_labels[col]}: {value}")
         if len(profile_parts) <= 1:
              raise ValueError("User profile is too sparse. Please fill out your profile to enable analysis.")
         return "\n".join(profile_parts)
+
 
     def update_profile(self, user_id: int, data: dict):
         fields_to_update = []
@@ -75,10 +86,15 @@ class ProfileService:
         for field, value in data.items():
             if field in self.allowed_fields:
                 fields_to_update.append(f"{field} = %s")
+                # Handle boolean fields (like is_remote_preferred, has_completed_onboarding)
                 if field in ['is_remote_preferred', 'has_completed_onboarding']:
                     params.append(bool(value))
+                # Handle integer fields (like desired_salary_min, desired_salary_max)
+                elif field in ['desired_salary_min', 'desired_salary_max']:
+                    params.append(int(value) if value is not None else None) # Ensure integer or None
+                # Handle other fields
                 else:
-                    params.append(value if value else None)
+                    params.append(value if value else None) # Use None for empty strings or falsy values
         if not fields_to_update:
             self.logger.warning("Update profile called with no valid fields.")
             return None
@@ -131,9 +147,10 @@ class ProfileService:
     def _format_profile(self, profile_row: DictCursor, description) -> dict:
         if not profile_row: return {}
         profile_dict = {}
+        # Updated string_fields to remove desired_annual_compensation
         string_fields = [
             'full_name', 'current_location', 'linkedin_profile_url', 'resume_url',
-            'short_term_career_goal', 'long_term_career_goals', 'desired_annual_compensation',
+            'short_term_career_goal', 'long_term_career_goals', 
             'desired_title', 'ideal_role_description', 'preferred_company_size',
             'ideal_work_culture', 'disliked_work_culture', 'core_strengths', 'skills_to_avoid',
             'preferred_industries', 'industries_to_avoid', 'personality_adjectives',
@@ -146,6 +163,9 @@ class ProfileService:
             value = profile_row[col_name]
             if isinstance(value, Decimal):
                 profile_dict[col_name] = float(value)
+            # Handle integer fields specifically to return None for null values, not empty string
+            elif col_name in ['desired_salary_min', 'desired_salary_max', 'latitude', 'longitude']:
+                 profile_dict[col_name] = int(value) if value is not None else None
             elif col_name in string_fields and value is None:
                 profile_dict[col_name] = ""
             elif col_name in ['is_remote_preferred', 'has_completed_onboarding'] and value is None:
