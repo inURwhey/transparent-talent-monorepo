@@ -75,6 +75,24 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
         *   **Contextual Snippets:** The exact SQL scripts that were run, and the `\d <table_name>` output for any modified tables. This provides the Flash model with all necessary schema information without needing the full chat history.
     3.  **Instruct User:** The Pro model will instruct the user to save this `TASK_HANDOFF.md` file and provide it as the *primary context* for the next Flash session.
 
+### Test Plan Generation Protocol v1.0
+*   **Objective:** To ensure all implemented features are thoroughly tested and verified before marking a task complete.
+*   **Trigger:** Immediately after a code generation step is completed (and before requesting a commit message for full deployment) for any task marked as `Flash` or `Pro Execute`.
+*   **Workflow:**
+    1.  **Acknowledge Code Completion:** The AI states that the coding phase for the logical unit is complete.
+    2.  **Generate Test Plan:** The AI provides a comprehensive test plan, presented as a Markdown document. The test plan will include:
+        *   **Feature/Task:** Clear reference to what is being tested.
+        *   **Objective:** The specific goal of the testing.
+        *   **Prerequisites:** Any setup required before testing.
+        *   **Test Cases:** A series of numbered steps for verification, including:
+            *   **Input:** What data/action to provide.
+            *   **Expected Output:** What the system should do (UI changes, API response status, specific data in database).
+            *   **Verification Steps:** How to check the results (e.g., inspect UI, check browser console, query DB, examine backend logs).
+        *   **Edge Cases/Negative Tests:** Specific scenarios for robustness.
+        *   **Regression Tests:** What existing functionality might be affected and needs re-verification.
+    3.  **Instruct User:** The AI will instruct the user to execute the test plan.
+    4.  **Await Confirmation:** The AI will wait for user confirmation of successful testing before providing the commit message or proceeding.
+
 ### Clerk Interaction Protocol v1.0
 *Objective:* To prevent debugging cycles and ensure correctness when modifying authentication code related to the `@clerk/nextjs` library.
 
