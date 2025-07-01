@@ -9,8 +9,10 @@ def create_app():
     from . import config
     app.config.from_object(config.Config)
     
-    # Reverted to simple, broad CORS for production
-    CORS(app, supports_credentials=True)
+    # Updated CORS configuration for robustness.
+    # This explicitly allows any origin and is the standard for APIs
+    # protected by token-based authentication.
+    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
     from . import database
     database.init_app(app)
@@ -27,7 +29,7 @@ def create_app():
     app.register_blueprint(jobs_bp, url_prefix='/api')
     app.register_blueprint(admin_bp, url_prefix='/api')
     app.register_blueprint(onboarding_bp, url_prefix='/api')
-    app.register_blueprint(reco_bp, url_prefix='/api') # Now consistent with others
+    app.register_blueprint(reco_bp, url_prefix='/api')
 
     @app.route('/')
     def index(): return "Backend server is running."
