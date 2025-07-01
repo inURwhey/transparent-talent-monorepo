@@ -9,7 +9,6 @@
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Feature: Implement AI Content Classification for Resume & Job Submissions** | 1000 | 3 | 100% | 0.25 | **12000** | Flash | S | **To Do** |
 | **Feature: Re-implement "Jobs For You" Dashboard Module** | 1000 | 3 | 100% | 0.5 | **6000** | Flash | M | **To Do** |
 | **Feature: User-set Reminders & Next Action Notifications** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 | **Bugfix: Profile Save Fails Randomly (Likely Render Instance Spin-down)** | 1000 | 1 | 70% | 0.5 | **1400** | Flash | S | **To Do** |
@@ -20,9 +19,11 @@
 | **Marketing: LinkedIn Company Profile** | 1000 | 1 | 100% | 0.1 | **10000** | N/A | N/A | **To Do** |
 | **UI/UX: Add filler text to "preferred work location" dropdown & conditional logic for remote preference.** | 1000 | 1 | 100% | 0.1 | **10000** | Flash | S | **To Do** |
 | **UI/UX: Change "Desired Job Title" to "Desired Job Title(s)"** | 1000 | 1 | 100% | 0.05 | **20000** | N/A | S | **To Do** |
+| **UI/UX: Job Reactivation Flow for Inactive Tracked Jobs** | 1000 | 2 | 100% | 0.25 | **5000** | Flash | S | **To Do** |
 | **Feature: Define & Verify New User Account Flow** | 1000 | 3 | 100% | 0.5 | **6000** | Pro | L | **In Progress** |
 | **Feature: Resume File Upload & Parsing** | 1000 | 3 | 90% | 0.5 | **5400** | Pro | M | **To Do** |
 | **UI/UX: Modularize Profile Page Components** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
+| **Feature: Intelligent Duplicate Resume Handling (Reactivation/Discard)** | 1000 | 2 | 90% | 0.5 | **9000** | Flash | M | **To Do** |
 | **Feature: Bulk Reprocess Relevancy** | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 | **UI/UX: Implement Autosave for Profile and Resume Pages** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI/UX: Enhance Profile Completion UX** | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
@@ -32,12 +33,14 @@
 | **Feature: Bulk Job Submission (CSV/URLs)** | 500 | 3 | 90% | 1.0 | **1350** | Pro | M | **To Do** |
 | **Feature: User Feedback Loop** | 1000 | 3 | 100% | 2.5 | **1200** | Pro | L | **To Do** |
 | **Feature: Connect Resume Processing with Roles Data Type** | 1000 | 3 | 80% | 1.0 | **2400** | Pro | M | **To Do** |
+| **UI/UX: Implement Dynamic Page Titles for SEO** | 1000 | 1 | 100% | 0.25 | **4000** | N/A | S | **To Do** |
 
 ## Tier 3: AI & System Intelligence (Mid-Term)
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Backend: Enhance Job Data for AI Matching** | 1000 | 3 | 100% | 0.5 | **12000** | Pro | M | **To Do** |
 | **Reverse Geocoding from Coordinates to Location Name** | 1000 | 1 | 100% | 0.1 | **10000** | N/A | S | **To Do** |
+| **Feature: AI-Driven Content Trimming/Extraction (Job Posts & Resumes)** | 1000 | 3 | 90% | 0.75 | **2700** | Pro | M | **To Do** |
 | **AI: Refine AI Grade Prompt for `matrix_rating`** | 1000 | 3 | 90% | 0.5 | **5400** | Pro | M | **To Do** |
 | **AI: Refine Resume Parsing & Job Relevance Prompts** | 1000 | 2 | 90% | 0.25 | **7200** | Pro | M | **To Do** |
 | **Geocoding for Typed Location Search** | 1000 | 2 | 90% | 0.25 | **7200** | N/A | S | **To Do** |
@@ -55,7 +58,9 @@
 | **Cost Management: User/Stream Usage Monitoring & Quotas** | 1000 | 2 | 80% | 1.0 | **1600** | Pro | M | **To Do** |
 | **UI: "Relevancy Cards" Differentiated by User Tier** | 1000 | 2 | 80% | 1.0 | **1600** | Flash | M | **To Do** |
 | **Feature: AI-Powered Application Q&A & Learning System** | 1000 | 3 | 80% | 2.0 | **1200** | Pro | L | **To Do** |
-| **Feature: AI Resume Content Quality Check** | 1000 | 2 | 90% | 0.5 | **1200** | Flash | S | **To Do** |
+| **Feature: AI Resume Content Quality Check (Resume Submission)** | 1000 | 2 | 90% | 0.5 | **1200** | Flash | S | **To Do** |
+| **Feature: AI-Driven Job Deduplication & Consolidation** | 1000 | 3 | 80% | 1.5 | **3600** | Pro | L | **To Do** |
+| **Feature: User Profile Versioning & AI-Assisted Merging** | 1000 | 3 | 70% | 2.0 | **4200** | Pro | L | **To Do** |
 | **Automation: Full API Job Analysis**| 1000 | 3 | 90% | 2.0 | **1350** | Pro | L | **To Do** |
 | **Feature: "Transparent Rejection"**| 1000 | 3 | 80% | 2.0 | **1200** | Pro | M | **To Do** |
 | **Cost Management: AI Content Moderation for User-Generative Streams** | 1000 | 2 | 80% | 0.75 | **1080** | Pro | M | **To Do** |
@@ -73,8 +78,6 @@
 | **AI: Full Data Leverage Mandate** | 1 | 3 | 90% | 1.0 | **2.7** | N/A | S | **To Do** |
 | **AI: Automated Prompt QA System** | 1 | 3 | 80% | 3.0 | **0.8** | Pro | L | **To Do** |
 | **Backend: DB-Driven AI Protocols** | 1 | 2 | 100% | 0.5 | **4.0** | Pro | M | **To Do** |
-| **Feature: AI Resume Content Quality Check (Resume Submission)** | 1000 | 2 | 90% | 0.5 | **1200** | Flash | S | **To Do** |
-| **UI/UX: Implement Dynamic Page Titles for SEO** | 1000 | 1 | 100% | 0.25 | **4000** | N/A | S | **To Do** |
 
 ## Tier 4: Future Vision & Long-Term bets
 | Feature | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
@@ -92,10 +95,21 @@
 | **BI: Platform-wide Hiring Funnel Analytics** | 10 | 3 | 100% | 3.0 | **10** | Pro | M | **To Do** |
 | **BI: ML User/Company Clustering** | 10 | 3 | 80% | 4.0 | **6.0** | Pro | L | **To Do** |
 | **Platform: Job Posting Multi-Context Awareness (Cities, Sources)** | 1 | 3 | 70% | 2.0 | **1.05** | Pro | M | **To Do** |
+| **Feature: Very Low Priority - Academic CV Support** | 10 | 1 | 50% | 0.5 | **2.5** | Pro | L | **To Do** |
 
 ---
 
 ## Completed Features & Bugfixes
+### v0.34.0
+| Feature/Bugfix | Original Tier | RICE Score |
+| :--- | :--- | :--- |
+| **Feature: Implement AI Content Classification for Resume & Job Submissions** | Tier 1 | 12000 |
+| **Database: Fix `job_analyses.matrix_rating` `VARCHAR(2)`** | Tier 1 | 12000 |
+| **Backend: Implement Resume Versioning on Submission** | Tier 1 | 8000 |
+| **UI/UX: Refine "Inactive Applications" Filter and Status Display** | Tier 2 | 8000 |
+| **Backend: Implement AI Input/Output Size Validation** | Tier 1 | 12000 |
+| **Bugfix: Dropdowns in Work Style section don't show selected value** | Tier 1 | 10000 |
+
 ### v0.33.0
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
@@ -104,14 +118,6 @@
 | **UI/UX: Refine "Inactive Applications" Filter and Status Display** | Tier 2 | 8000 |
 | **Backend: Implement AI Input/Output Size Validation** | Tier 1 | 12000 |
 | **Bugfix: Dropdowns in Work Style section don't show selected value** | Tier 1 | 10000 |
-
-### v0.32.0
-| Feature/Bugfix | Original Tier | RICE Score |
-| :--- | :--- | :--- |
-| **Backend: Implement Resume Versioning on Submission** | Tier 1 | 8000 |
-| **UI/UX: Refine "Inactive Applications" Filter and Status Display** | Tier 2 | 8000 |
-| **Bugfix: Dropdowns in Work Style section don't show selected value** | Tier 1 | 10000 |
-| **Database: Fix `job_analyses.matrix_rating` `VARCHAR(2)`** | Tier 1 | 12000 |
 
 ### v0.31.0
 | Feature/Bugfix | Original Tier | RICE Score |

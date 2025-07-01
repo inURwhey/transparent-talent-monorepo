@@ -3,6 +3,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.34.0 - 2025-07-02 - AI Content Validation & Enhanced Profile Parsing
+
+This release introduces intelligent AI-driven content validation at the submission pipeline's entry points and significantly improves the robustness of user profile parsing, preventing data inconsistencies and optimizing AI resource usage.
+
+### Added
+-   **Backend AI:** Implemented a new AI content classification step for both resume and job submissions. A lightweight AI model now verifies if submitted text is a valid resume or job posting early in the pipeline (`job_service.py`, `onboarding.py`). If not, the submission is rejected, saving tokens on full AI processing.
+-   **Backend:** Added explicit post-parsing validation for specific AI-generated profile fields (`preferred_work_style`, `personality_16_personalities`) in `onboarding.py`. If AI output for these fields does not match expected formats or allowed values, the data is discarded (set to `null`) rather than causing database errors.
+
+### Changed
+-   **Backend Config:** Increased `MAX_RESUME_TEXT_LENGTH` to `25,000` characters and `MAX_JOB_TEXT_LENGTH` to `50,000` characters in `config.py`. These initial ingestion limits are now more permissive, anticipating a future AI-driven content trimming step.
+-   **Backend AI Prompt:** Refined the AI prompt for `personality_16_personalities` and `preferred_work_style` in `onboarding.py` to guide Gemini towards generating values strictly adhering to expected formats (e.g., standard Myers-Briggs types, 'On-site', 'Remote', 'Hybrid').
+
+### Fixed
+-   **Backend:** Resolved the `value too long for type character varying(50)` error that was preventing resume submissions, by implementing robust post-parsing validation and discard logic for `personality_16_personalities` and `preferred_work_style`.
+
 ## v0.33.0 - 2025-07-02 - Core Backend Stability & UI Polish
 
 This release significantly enhances core application stability by resolving critical backend database errors and improving AI data processing. It also delivers key UI refinements for a more intuitive user experience.

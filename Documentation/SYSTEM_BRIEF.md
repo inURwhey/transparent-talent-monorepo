@@ -15,7 +15,9 @@
 *   **Architecture Style:** Decoupled three-tier application, managed in a **monorepo**. The backend now follows a service-oriented architecture with an application factory pattern.
 
 ## 3. Current Project Status
-*   **AI Input Validation Implemented:** Backend now validates the size of resume and job text inputs before sending to AI models, preventing excessive token usage.
+*   **AI Content Validation Implemented:** Backend now uses AI to classify if submitted text is a resume or job posting, saving tokens and improving user feedback.
+*   **Robust Profile Parsing:** Resume parsing now includes intelligent post-processing validation for AI-generated profile fields, ensuring data integrity by discarding malformed values and preventing database errors.
+*   **AI Input Validation Implemented:** Backend now validates the size of resume and job text inputs before sending to AI models, optimizing token usage.
 *   **Job Submission Fully Functional:** The system can now successfully ingest new job URLs, perform AI analysis (including the new letter grade for `matrix_rating`), and save them to the database, resolving a critical blocking issue.
 *   **Resume Versioning Implemented:** The backend now successfully saves and manages multiple versions of user-submitted resumes, marking only the latest as active, providing a foundation for resume history and more advanced features.
 *   **Profile Dropdown Display Fixed:** The critical bug affecting dropdowns on the user profile page, which prevented saved values from being displayed correctly, has been resolved. This also eliminated associated console warnings and restored contextual placeholders.
@@ -26,5 +28,5 @@
 *   **Application is stable and functional on its production domain.**
 
 ## 4. Immediate Backlog & Next Steps
-1.  **Feature: Implement AI Content Classification for Resume & Job Submissions:** Implement AI checks to verify if submitted text is actually a resume or job posting before full processing, saving tokens and improving user feedback. (RICE: 12000)
+1.  **Feature: Re-implement "Jobs For You" Dashboard Module:** Re-enable and refine the module that suggests jobs based on user preferences. (RICE: 6000)
 2.  **UI/UX: Change "Desired Job Title" to "Desired Job Title(s)":** A simple text change on the profile page. (RICE: 20000)
