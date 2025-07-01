@@ -12,9 +12,8 @@ export interface Profile {
   resume_url: string | null;
   short_term_career_goal: string | null;
   long_term_career_goals: string | null;
-  // Removed old desired_annual_compensation: string | null;
-  desired_salary_min: number | null; // New structured salary field
-  desired_salary_max: number | null; // New structured salary field
+  desired_salary_min: number | null;
+  desired_salary_max: number | null;
   desired_title: string | null;
   ideal_role_description: string | null;
   preferred_company_size: string | null;
@@ -32,8 +31,6 @@ export interface Profile {
   personality_gallup_strengths: string | null;
   preferred_work_style: 'On-site' | 'Remote' | 'Hybrid' | null;
   is_remote_preferred: boolean | null;
-
-  // --- NEW "LAYER 3" FIELDS ---
   has_completed_onboarding: boolean;
   work_style_preference: string | null;
   conflict_resolution_style: string | null;
@@ -80,6 +77,7 @@ export interface RecommendedJob {
   company_name: string;
   job_url: string;
   match_score: number;
+  matrix_rating: string | null; // <-- ADDED THIS PROPERTY
   job_modality: string | null;
   deduced_job_level: string | null;
 }
