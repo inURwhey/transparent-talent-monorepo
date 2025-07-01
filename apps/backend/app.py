@@ -1,19 +1,17 @@
 # Path: apps/backend/app.py
 import os
-from flask import Flask, jsonify
-from flask_cors import CORS
+from flask import Flask, jsonify, request
 
 def create_app():
     app = Flask(__name__)
 
-    # This is the correct import path for your config module
     from . import config
     app.config.from_object(config.Config)
     
-    # This is the robust CORS configuration we need
-    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+    # We are now handling CORS manually via middleware below.
+    # from flask_cors import CORS
+    # CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-    # Initialize database
     from . import database
     database.init_app(app)
 
@@ -31,9 +29,33 @@ def create_app():
     app.register_blueprint(onboarding_bp, url_prefix='/api')
     app.register_blueprint(reco_bp, url_prefix='/api')
 
+    @app.after_request
+    def after_request(response):
+        """
+        Manually attach CORS headers to every response.
+        This is a robust way to handle CORS for production APIs.
+        """
+        # The frontend URL from Vercel
+        origin = request.headers.get('Origin')
+        allowed_origins = [
+            'https://www.transparenttalent.ai', 
+            'https://transparenttalent.ai'
+        ]
+        
+        # This is a simplified check. A more robust regex could be used for previews.
+        if origin and any(origin.startswith(url) for url in allowed_origins):
+             response.headers.add('Access-Control-Allow-Origin', origin)
+        
+        # For development, a wildcard is often used, but explicit is better for prod.
+        # response.headers.add('Access-Control-Allow-Origin', '*')
+
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+
     @app.route('/')
-    def index():
-        return "Backend server is running."
+    def index(): return "Backend server is running."
 
     @app.route('/api/debug-env')
     def debug_env():
@@ -45,7 +67,6 @@ def create_app():
 
     return app
 
-# This part is for local development and should not be removed
 app = create_app()
 
 if __name__ == '__main__':
