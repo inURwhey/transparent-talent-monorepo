@@ -29,7 +29,6 @@ class JobMatchingService:
         """
         Fetches all jobs with an AI analysis that the user is not already tracking.
         """
-        # This query joins jobs with analyses and filters out jobs the user already tracks.
         query = """
             SELECT
                 j.id, j.job_title, j.company_name, j.job_url,
@@ -80,25 +79,20 @@ class JobMatchingService:
                 for job in all_jobs:
                     score = 0
                     
-                    # 1. Base Score from AI Grade
-                    score += self.GRADE_TO_SCORE.get(job['matrix_rating'], 60) # Default to a low C grade if rating is weird
+                    score += self.GRADE_TO_SCORE.get(job['matrix_rating'], 60)
 
-                    # 2. Modality Bonus
                     if job['job_modality'] and user_profile['preferred_work_style'] and job['job_modality'] == user_profile['preferred_work_style']:
                         score += 10
                     
-                    # 3. Salary Match Bonus
                     user_sal_min = user_profile.get('desired_salary_min')
                     user_sal_max = user_profile.get('desired_salary_max')
                     job_sal_min = job.get('salary_min')
                     job_sal_max = job.get('salary_max')
 
                     if user_sal_min and user_sal_max and job_sal_min and job_sal_max:
-                        # Check for overlap between user's desired range and job's stated range
                         if max(user_sal_min, job_sal_min) <= min(user_sal_max, job_sal_max):
                             score += 8
                     
-                    # 4. Leadership Tier Gap Penalty
                     user_tier = self._infer_user_leadership_tier(user_profile)
                     job_tier = self.JOB_LEVEL_TO_INT.get(job['deduced_job_level'])
                     
@@ -110,9 +104,9 @@ class JobMatchingService:
                     
                     job_dict = dict(job)
                     job_dict['match_score'] = score
+                    # The matrix_rating is already in job_dict from the initial query, so no change needed here.
                     scored_jobs.append(job_dict)
 
-                # Sort jobs by the final match score in descending order
                 ranked_jobs = sorted(scored_jobs, key=lambda x: x['match_score'], reverse=True)
                 
                 self.logger.info(f"Successfully scored and ranked {len(ranked_jobs)} jobs for user_id: {user_id}.")
@@ -120,5 +114,4 @@ class JobMatchingService:
 
         except Exception as e:
             self.logger.error(f"Error generating recommendations for user_id {user_id}: {e}")
-            # In case of an error, return an empty list to avoid crashing the client
             return []
