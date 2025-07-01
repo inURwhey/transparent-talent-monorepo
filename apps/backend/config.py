@@ -26,10 +26,23 @@ class Config:
     LEGACY_URL_MALFORMED_PATTERN = re.compile(r".+\s+\(.+\)|\(.+?\)$")
 
     # --- AI Input Size Limits (in characters) ---
-    MAX_RESUME_TEXT_LENGTH = int(os.getenv('MAX_RESUME_TEXT_LENGTH', '10000')) # Default to 10,000 characters
-    MAX_JOB_TEXT_LENGTH = int(os.getenv('MAX_JOB_TEXT_LENGTH', '10000')) # Default to 10,000 characters
-    # --- NEW: Maximum length of text to send to classification AI ---
-    MAX_CLASSIFICATION_TEXT_LENGTH = int(os.getenv('MAX_CLASSIFICATION_TEXT_LENGTH', '2000')) # e.g., 2,000 characters for classification
+    # These limits are for initial ingestion, assuming a subsequent AI trimming step will reduce effective tokens.
+    MAX_RESUME_TEXT_LENGTH = int(os.getenv('MAX_RESUME_TEXT_LENGTH', '100000')) # Increased significantly for initial ingest
+    MAX_JOB_TEXT_LENGTH = int(os.getenv('MAX_JOB_TEXT_LENGTH', '200000')) # Increased significantly for initial ingest
+    MAX_CLASSIFICATION_TEXT_LENGTH = int(os.getenv('MAX_CLASSIFICATION_TEXT_LENGTH', '2000')) # Remains small for cheap classification
+
+    # --- Domain Whitelist/Blacklist for Job Postings ---
+    # Domains from which job posts are considered high quality and bypass AI classification.
+    # Add company career sites and major reputable job boards.
+    WHITELISTED_JOB_DOMAINS = [
+        'linkedin.com', 'indeed.com', 'glassdoor.com', 'boards.greenhouse.io',
+        'jobs.lever.co', 'workday.com', 'careers.google.com', 'amazon.jobs'
+    ]
+    # Domains from which job posts are considered low quality/spam and are immediately rejected.
+    # Updated based on research.
+    BLACKLISTED_JOB_DOMAINS = [
+        'geebo.com',
+    ]
 
     @staticmethod
     def validate():
