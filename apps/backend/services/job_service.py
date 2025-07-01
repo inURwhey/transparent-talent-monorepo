@@ -26,6 +26,11 @@ class JobService:
             self.model = None
             self.logger.warning("JobService initialized without a GEMINI_API_KEY. AI analysis is disabled.")
 
+        # Define valid ENUM values for validation of AI output
+        self.VALID_JOB_MODALITIES = {'On-site', 'Remote', 'Hybrid'}
+        self.VALID_JOB_LEVELS = {'Entry', 'Mid', 'Senior', 'Staff', 'Principal', 'Manager', 'Director', 'VP', 'C-Suite'}
+
+
     def get_job_details_and_analysis(self, job_url: str, user_profile_text: str):
         """
         Fetches job text from a URL and performs an AI analysis against a user profile.
@@ -84,6 +89,7 @@ class JobService:
             raise ConnectionError("AI Service is not configured due to missing API key.")
 
         # Updated instructions for matrix_rating to output a letter grade
+        # Also added instructions for new structured data fields
         prompt = f"""
             You are a meticulous career-focused analyst for a platform called "Transparent Talent".
             Your task is to analyze a job description in the context of a user's professional profile.
@@ -100,6 +106,12 @@ class JobService:
             - 30-39: D
             - 0-29: F
 
+            Extract the following structured data points from the job description:
+            - `salary_min` and `salary_max`: The minimum and maximum annual salary in USD. If only one value is given, use it for both min and max. If a range like "$150k - $180k" is given, extract both numbers. If "DOE" (Depends On Experience), "Competitive", or no salary is stated, set to null.
+            - `required_experience_years`: The minimum number of years of experience explicitly stated or clearly implied by the role's seniority (e.g., "Senior" often implies 5+ years, "Director" implies 10+). If not stated or ambiguously implied (e.g. "several years"), set to null.
+            - `job_modality`: The work arrangement. Choose exactly one from "On-site", "Remote", or "Hybrid". Infer based on location keywords (e.g., "New York, NY" implies On-site unless stated otherwise), explicit remote policy, or hybrid mentions. If unsure or if role can be either (e.g., "remote/in-office"), set to null.
+            - `deduced_job_level`: The seniority level of the role. Choose exactly one from "Entry", "Mid", "Senior", "Staff", "Principal", "Manager", "Director", "VP", "C-Suite". Infer based on title, responsibilities, and implied years of experience. If unsure, set to null.
+
             USER PROFILE:
             ---
             {user_profile_text}
@@ -114,6 +126,11 @@ class JobService:
             {{
                 "company_name": "string",
                 "job_title": "string",
+                "salary_min": "integer (annual salary in USD, e.g., 120000) or null",
+                "salary_max": "integer (annual salary in USD, e.g., 150000) or null",
+                "required_experience_years": "integer (e.g., 5) or null",
+                "job_modality": "string ('On-site', 'Remote', 'Hybrid') or null",
+                "deduced_job_level": "string ('Entry', 'Mid', 'Senior', 'Staff', 'Principal', 'Manager', 'Director', 'VP', 'C-Suite') or null",
                 "position_relevance_score": "integer (1-100)",
                 "environment_fit_score": "integer (1-100)",
                 "hiring_manager_view": "string (A concise paragraph from the hiring manager's perspective on the candidate's fit)",
@@ -131,11 +148,49 @@ class JobService:
             cleaned_response = re.sub(r'```json\s*|\s*```', '', response.text.strip())
             
             self.logger.info("Received AI response. Attempting to parse JSON.")
-            return json.loads(cleaned_response)
+            parsed_data = json.loads(cleaned_response)
+
+            # --- Extract and Validate New Structured Fields ---
+            analysis = {}
+            # Copy existing fields first
+            for key in ["company_name", "job_title", "position_relevance_score", "environment_fit_score",
+                        "hiring_manager_view", "matrix_rating", "summary", "qualification_gaps", "recommended_testimonials"]:
+                analysis[key] = parsed_data.get(key)
+            
+            # New structured fields with validation/casting
+            analysis['salary_min'] = self._parse_and_validate_int(parsed_data.get('salary_min'), 'salary_min')
+            analysis['salary_max'] = self._parse_and_validate_int(parsed_data.get('salary_max'), 'salary_max')
+            analysis['required_experience_years'] = self._parse_and_validate_int(parsed_data.get('required_experience_years'), 'required_experience_years')
+            analysis['job_modality'] = self._validate_enum(parsed_data.get('job_modality'), self.VALID_JOB_MODALITIES, 'job_modality')
+            analysis['deduced_job_level'] = self._validate_enum(parsed_data.get('deduced_job_level'), self.VALID_JOB_LEVELS, 'deduced_job_level')
+
+            self.logger.info(f"Successfully parsed and validated AI analysis for job. Modality: {analysis.get('job_modality')}, Level: {analysis.get('deduced_job_level')}, Salary: {analysis.get('salary_min')}-{analysis.get('salary_max')}")
+            return analysis
         except Exception as e:
-            self.logger.error(f"AI analysis failed. Raw response was: {response.text}")
+            self.logger.error(f"AI analysis failed. Raw response was: {response.text if 'response' in locals() else 'N/A'}")
             self.logger.error(f"Error during AI analysis or JSON parsing: {e}")
             raise # Re-raise to be handled by the route
+
+    # --- New Helper Methods for Validation ---
+    def _parse_and_validate_int(self, value, field_name):
+        if value is None:
+            return None
+        try:
+            # Attempt to convert to string first to handle cases like Decimal, then int
+            return int(str(value))
+        except (ValueError, TypeError):
+            self.logger.warning(f"AI returned invalid integer for {field_name}: '{value}'. Setting to None.")
+            return None
+
+    def _validate_enum(self, value, valid_set, field_name):
+        if value is None:
+            return None
+        if isinstance(value, str) and value.strip() in valid_set:
+            return value.strip()
+        self.logger.warning(f"AI returned invalid enum value for {field_name}: '{value}'. Expected one of {valid_set}. Setting to None.")
+        return None
+    # --- END New Helper Methods ---
+
 
     # --- NEW: AI Classification Methods ---
     def is_resume_content(self, text: str) -> bool:

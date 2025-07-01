@@ -39,17 +39,33 @@ def submit_job():
 
         with db.cursor() as cursor:
             company_name = analysis_result.get('company_name', 'Unknown Company')
+            job_title = analysis_result.get('job_title', 'Unknown Title')
+
+            # Extract new structured fields from AI analysis_result
+            salary_min = analysis_result.get('salary_min')
+            salary_max = analysis_result.get('salary_max')
+            required_experience_years = analysis_result.get('required_experience_years')
+            job_modality = analysis_result.get('job_modality')
+            deduced_job_level = analysis_result.get('deduced_job_level')
+
             cursor.execute("SELECT id FROM companies WHERE LOWER(name) = LOWER(%s)", (company_name,))
             company_row = cursor.fetchone()
             company_id = company_row['id'] if company_row else cursor.execute("INSERT INTO companies (name) VALUES (%s) RETURNING id", (company_name,)) and cursor.fetchone()['id']
             
-            job_title = analysis_result.get('job_title', 'Unknown Title')
             cursor.execute("""
-                INSERT INTO jobs (company_id, company_name, job_title, job_url, source, status, last_checked_at)
-                VALUES (%s, %s, %s, %s, %s, 'Active', NOW())
-                ON CONFLICT (job_url) DO UPDATE SET job_title = EXCLUDED.job_title, status = 'Active', last_checked_at = NOW()
+                INSERT INTO jobs (company_id, company_name, job_title, job_url, source, status, last_checked_at,
+                                  salary_min, salary_max, required_experience_years, job_modality, deduced_job_level)
+                VALUES (%s, %s, %s, %s, %s, 'Active', NOW(), %s, %s, %s, %s, %s)
+                ON CONFLICT (job_url) DO UPDATE SET 
+                    job_title = EXCLUDED.job_title, status = 'Active', last_checked_at = NOW(),
+                    salary_min = EXCLUDED.salary_min, salary_max = EXCLUDED.salary_max,
+                    required_experience_years = EXCLUDED.required_experience_years,
+                    job_modality = EXCLUDED.job_modality, deduced_job_level = EXCLUDED.deduced_job_level
                 RETURNING id;
-            """, (company_id, company_name, job_title, job_url, 'User Submission'))
+            """, (
+                company_id, company_name, job_title, job_url, 'User Submission',
+                salary_min, salary_max, required_experience_years, job_modality, deduced_job_level
+            ))
             job_id = cursor.fetchone()['id']
 
             cursor.execute("""
@@ -84,6 +100,7 @@ def submit_job():
         current_app.logger.error(f"DATABASE ERROR in submit_job route: {e}")
         return jsonify({"error": "A database error occurred."}), 500
     except Exception as e:
+        # Corrected logger call to use current_app.logger consistently
         db.rollback()
         current_app.logger.error(f"An unexpected error occurred in submit_job route: {e}")
         return jsonify({"error": "An internal server error occurred."}), 500
@@ -91,7 +108,6 @@ def submit_job():
 @jobs_bp.route('/tracked-jobs', methods=['GET'])
 @token_required
 def get_tracked_jobs():
-    # Correctly read from g.current_user object set by the decorator
     user_id = g.current_user['id']
     try:
         page = int(request.args.get('page', 1))
@@ -112,7 +128,6 @@ def get_tracked_jobs():
 @jobs_bp.route('/tracked-jobs/<int:tracked_job_id>', methods=['PUT'])
 @token_required
 def update_tracked_job(tracked_job_id):
-    # Correctly read from g.current_user object set by the decorator
     user_id = g.current_user['id']
     data = request.get_json()
     if not data:
@@ -133,7 +148,6 @@ def update_tracked_job(tracked_job_id):
 @jobs_bp.route('/tracked-jobs/<int:tracked_job_id>', methods=['DELETE'])
 @token_required
 def remove_tracked_job(tracked_job_id):
-    # Correctly read from g.current_user object set by the decorator
     user_id = g.current_user['id']
     db = get_db()
     with db.cursor() as cursor:
