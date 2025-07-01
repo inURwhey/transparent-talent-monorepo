@@ -8,11 +8,11 @@ import { PaginationState } from '@tanstack/react-table';
 import Link from 'next/link';
 
 import { useTrackedJobsApi } from './hooks/useTrackedJobsApi';
-import { useJobRecommendationsApi } from '../../hooks/useJobRecommendationsApi'; // <-- Import new hook
+import { useJobRecommendationsApi } from '../../hooks/useJobRecommendationsApi';
 import { DataTable } from './data-table';
 import { getColumns } from './components/columns';
 import { JobSubmissionForm } from './components/JobSubmissionForm';
-import JobsForYou from './components/JobsForYou'; // <-- Import new component
+import JobsForYou from './components/JobsForYou';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,7 +23,7 @@ const ACTIVE_PIPELINE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEG
 export default function UserDashboard() {
   const router = useRouter();
   const { trackedJobs, isLoading: isLoadingJobs, error: jobsError, actions } = useTrackedJobsApi();
-  const { data: recommendedJobs, isLoading: isLoadingRecs, error: recsError } = useJobRecommendationsApi(); // <-- Use new hook
+  const { data: recommendedJobs, isLoading: isLoadingRecs, error: recsError, refetch: refetchRecommendations } = useJobRecommendationsApi(); // <-- Destructure refetch
   const { isLoaded: isUserLoaded, user } = useUser();
   const { getToken } = useAuth();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -61,9 +61,10 @@ export default function UserDashboard() {
       await actions.submitNewJob(jobUrl);
       setFilterStatus('all');
       setPagination({ pageIndex: 0, pageSize: 10 });
+      await refetchRecommendations(); // <-- Refetch recommendations after tracking a new job
     } catch (error) { setSubmissionError(error instanceof Error ? error.message : 'An unknown submission error occurred.'); } 
     finally { setIsSubmitting(false); }
-  }, [actions]);
+  }, [actions, refetchRecommendations]); // <-- Add refetch to dependency array
 
   const handleStatusChange = useCallback(async (trackedJobId: number, newStatus: string) => {
     const currentJob = trackedJobs.find(job => job.tracked_job_id === trackedJobId);
@@ -126,6 +127,7 @@ export default function UserDashboard() {
           error={recsError} 
           onTrack={handleJobSubmit}
           isSubmitting={isSubmitting}
+          isProfileComplete={profile.has_completed_onboarding} // <-- Pass flag
         />
 
         <JobSubmissionForm onSubmit={handleJobSubmit} isSubmitting={isSubmitting} submissionError={submissionError} />

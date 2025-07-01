@@ -4,6 +4,7 @@
 import { type RecommendedJob } from '../types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import CompleteProfileCTA from './CompleteProfileCTA'; // <-- Import new component
 
 interface JobsForYouProps {
   jobs: RecommendedJob[];
@@ -11,49 +12,40 @@ interface JobsForYouProps {
   error: string | null;
   onTrack: (jobUrl: string) => void;
   isSubmitting: boolean;
+  isProfileComplete: boolean; // <-- New prop
 }
 
-export default function JobsForYou({ jobs, isLoading, error, onTrack, isSubmitting }: JobsForYouProps) {
+export default function JobsForYou({ jobs, isLoading, error, onTrack, isSubmitting, isProfileComplete }: JobsForYouProps) {
   
-  if (isLoading) {
-    return (
-        <div className="p-6 border rounded-lg shadow-md bg-white">
-            <h2 className="text-2xl font-bold mb-4 text-gray-800">Jobs For You</h2>
-            <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                    <div key={i} className="animate-pulse flex space-x-4">
-                        <div className="flex-1 space-y-2 py-1">
-                            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-  }
+  const renderContent = () => {
+    if (!isProfileComplete) {
+      return <CompleteProfileCTA />;
+    }
 
-  if (error) {
+    if (isLoading) {
+      return (
+          <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                  <div key={i} className="animate-pulse flex space-x-4">
+                      <div className="flex-1 space-y-2 py-1">
+                          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                          <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                      </div>
+                  </div>
+              ))}
+          </div>
+      );
+    }
+  
+    if (error) {
+      return <p className="text-red-700">Error loading recommendations: {error}</p>;
+    }
+  
+    if (jobs.length === 0) {
+      return <p className="text-gray-600">No new job recommendations available at this time. As you track more jobs, we'll learn what you like!</p>;
+    }
+  
     return (
-        <div className="p-6 border rounded-lg shadow-md bg-red-50">
-            <h2 className="text-2xl font-bold mb-4 text-red-800">Jobs For You</h2>
-            <p className="text-red-700">Error loading recommendations: {error}</p>
-        </div>
-    );
-  }
-
-  if (jobs.length === 0) {
-    return (
-        <div className="p-6 border rounded-lg shadow-md bg-white">
-            <h2 className="text-2xl font-bold mb-4 text-gray-800">Jobs For You</h2>
-            <p className="text-gray-600">No job recommendations available at this time. As you track more jobs, we'll learn what you like!</p>
-        </div>
-    );
-  }
-
-  return (
-    <div className="p-6 border rounded-lg shadow-md bg-white">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Jobs For You</h2>
       <ul className="space-y-3">
         {jobs.map((job) => (
           <li key={job.id} className="p-4 border rounded-md flex justify-between items-center hover:bg-gray-50 transition-colors">
@@ -79,6 +71,13 @@ export default function JobsForYou({ jobs, isLoading, error, onTrack, isSubmitti
           </li>
         ))}
       </ul>
+    );
+  };
+
+  return (
+    <div className="p-6 border rounded-lg shadow-md bg-white">
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">Jobs For You</h2>
+      {renderContent()}
     </div>
   );
 }
