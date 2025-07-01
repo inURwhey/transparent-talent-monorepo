@@ -3,6 +3,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.38.0 - 2025-07-03 - Structured Job Data Parsing Implemented
+
+This release enhances the backend's ability to ingest rich, structured data from job descriptions, a crucial step for building advanced job recommendation features.
+
+### Added
+-   **Backend:** Implemented parsing and storage of new structured job data fields (`salary_min`, `salary_max`, `required_experience_years`, `job_modality`, `deduced_job_level`) from AI analysis into the `jobs` table.
+-   **Backend:** Added robust validation helper methods (`_parse_and_validate_int`, `_validate_enum`) in `job_service.py` to ensure data integrity of AI-generated structured fields, casting to correct types or setting to `NULL` for invalid values.
+-   **Protocols:** Introduced the `Test Plan Generation Protocol` to `PROTOCOLS.md`, mandating detailed test plans for all implemented features, including SQL validation queries.
+
+### Changed
+-   **Backend AI Prompt:** Updated the Gemini AI prompt within `job_service.py` to explicitly request the new structured job data fields in its JSON output schema.
+-   **Backend Routes:** Modified the `jobs/submit` route in `jobs.py` to include the new structured data in its `INSERT` and `ON CONFLICT DO UPDATE SET` statements for the `jobs` table.
+
+### Fixed
+-   No bugs were addressed in this release; changes were feature-driven.
+
 ## v0.37.0 - 2025-07-03 - Structured User Profile Salary Fields
 
 This release implements the frontend changes for structured user salary preferences, aligning the UI with the recently migrated backend data model.
