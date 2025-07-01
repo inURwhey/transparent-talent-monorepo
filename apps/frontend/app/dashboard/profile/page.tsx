@@ -283,7 +283,7 @@ export default function UserProfilePage() {
                                 <Input
                                     id="desired_salary_min"
                                     type="number"
-                                    step="10000" {/* Added step for 10k increments */}
+                                    step="10000" // Added step for 10k increments
                                     value={profile.desired_salary_min ?? ''} // Use ?? to handle 0 values correctly
                                     onChange={(e) => handleChange('desired_salary_min', e.target.value)}
                                     placeholder="e.g., 150000"
@@ -294,7 +294,7 @@ export default function UserProfilePage() {
                                 <Input
                                     id="desired_salary_max"
                                     type="number"
-                                    step="10000" {/* Added step for 10k increments */}
+                                    step="10000" // Added step for 10k increments
                                     value={profile.desired_salary_max ?? ''} // Use ?? to handle 0 values correctly
                                     onChange={(e) => handleChange('desired_salary_max', e.target.value)}
                                     placeholder="e.g., 180000"
