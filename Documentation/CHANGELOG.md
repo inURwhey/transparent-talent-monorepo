@@ -3,6 +3,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.39.0 - 2025-07-03 - V1 Job Matching Service Implemented
+
+This release introduces the core backend service for generating personalized job recommendations. This service provides the API foundation for the upcoming "Jobs For You" dashboard module.
+
+### Added
+-   **`services/job_matching_service.py`:** A new service containing the V1 matching algorithm. The algorithm calculates a `match_score` for each job based on the AI-generated `matrix_rating` and applies bonuses/penalties based on structured data alignment (work modality, salary range, leadership tier gap).
+-   **`routes/recommendations.py`:** A new Flask Blueprint defining the `GET /api/jobs/recommendations` endpoint, which exposes the `JobMatchingService` to the frontend.
+
+### Changed
+-   **`app.py`:** The main application factory was updated to register the new recommendations blueprint, activating the `/api/jobs/recommendations` route.
+
 ## v0.38.0 - 2025-07-03 - Structured Job Data Parsing Implemented
 
 This release enhances the backend's ability to ingest rich, structured data from job descriptions, a crucial step for building advanced job recommendation features.

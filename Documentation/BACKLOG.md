@@ -1,4 +1,4 @@
-# Transparent Talent: Product Backlog & Roadmap v1.25
+# Transparent Talent: Product Backlog & Roadmap v1.26
 
 ## Column Definitions
 *   **AI Model:** The complexity required from the AI. (Flash, Pro [Breakdown/Execute], Creative, N/A)
@@ -18,7 +18,6 @@
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Backend: Implement V1 JobMatchingService** | E01 | 1000 | 3 | 100% | 0.5 | **6000** | Pro Execute| M | **To Do** |
 | **UI: Implement "Jobs For You" Dashboard Module** | E01 | 1000 | 3 | 100% | 0.5 | **6000** | Flash | M | **To Do** |
 | **Feature: User-set Reminders & Next Action Notifications** | - | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 | **Bugfix: Profile Save Fails Randomly (Likely Render Instance Spin-down)** | - | 1000 | 1 | 70% | 0.5 | **1400** | Flash | S | **To Do** |
@@ -29,8 +28,8 @@
 | **UI/UX: Change "Desired Job Title" to "Desired Job Title(s)"** | E02 | 1000 | 1 | 100% | 0.05 | **20000** | N/A | S | **To Do** |
 | **Marketing: LinkedIn Company Profile** | - | 1000 | 1 | 100% | 0.1 | **10000** | N/A | N/A | **To Do** |
 | **UI/UX: Add filler text to "preferred work location" dropdown & conditional logic for remote preference.**| E02 | 1000 | 1 | 100% | 0.1 | **10000** | Flash | S | **To Do** |
-| **UI/UX: Prompt Users with Incomplete Profiles to Update** | E02 | 1000 | 2 | 90% | 0.25 | **8000** | Flash | S | **To Do** |
 | **Feature: Intelligent Duplicate Resume Handling (Reactivation/Discard)** | E02 | 1000 | 2 | 90% | 0.5 | **9000** | Flash | M | **To Do** |
+| **UI/UX: Prompt Users with Incomplete Profiles to Update** | E02 | 1000 | 2 | 90% | 0.25 | **8000** | Flash | S | **To Do** |
 | **UI/UX: Job Reactivation Flow for Inactive Tracked Jobs** | - | 1000 | 2 | 100% | 0.25 | **5000** | Flash | S | **To Do** |
 | **Feature: Resume File Upload & Parsing** | E02 | 1000 | 3 | 90% | 0.5 | **5400** | Pro | M | **To Do** |
 | **UI/UX: Modularize Profile Page Components** | E02 | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
@@ -50,10 +49,10 @@
 ---
 
 ## Completed Features & Bugfixes
-### v0.38.0
+### v0.39.0
 | Feature/Bugfix | Original Tier | RICE Score | Epic |
 | :--- | :--- | :--- | :--- |
-| **Backend: Update AI prompt to parse new structured job fields** | Tier 1 | 12000 | E01 |
+| **Backend: Implement V1 JobMatchingService** | Tier 1 | 6000 | E01 |
 
 ### Previous Versions
-*Items from v0.37.0 and earlier are documented in the `CHANGELOG.md`.*
+*Items from v0.38.0 and earlier are documented in the `CHANGELOG.md`.*
