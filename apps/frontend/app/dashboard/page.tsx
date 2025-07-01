@@ -3,6 +3,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import { PaginationState } from '@tanstack/react-table';
 import Link from 'next/link';
 
@@ -15,11 +16,12 @@ import JobsForYou from './components/JobsForYou';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { type UpdatePayload, type Profile } from './types';
+import { type UpdatePayload, type Profile, type RecommendedJob } from './types'; // Import RecommendedJob
 
 const ACTIVE_PIPELINE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS'];
 
 export default function UserDashboard() {
+  const router = useRouter();
   const { trackedJobs, isLoading: isLoadingJobs, error: jobsError, actions } = useTrackedJobsApi();
   const { data: recommendedJobs, isLoading: isLoadingRecs, error: recsError, refetch: refetchRecommendations } = useJobRecommendationsApi();
   const { isLoaded: isUserLoaded, user } = useUser();
@@ -32,23 +34,31 @@ export default function UserDashboard() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [filterStatus, setFilterStatus] = useState<'all' | 'active_pipeline' | 'closed_pipeline' | 'active_posting' | 'expired_posting'>('all');
 
-  // Fetch profile once on load to determine onboarding status
+  // This hook is now split to avoid re-triggering redirects on every profile state change
   useEffect(() => {
     const fetchInitialProfile = async () => {
-        if (!isUserLoaded) return;
-        try {
-            const token = await getToken();
-            if (!token) return;
-            const response = await fetch(`${apiBaseUrl}/api/profile`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) throw new Error("Could not fetch profile");
-            const profileData: Profile = await response.json();
-            setProfile(profileData);
-        } catch (error) { console.error("Failed to fetch initial profile:", error); }
+      if (!isUserLoaded || profile) return; // Only run once on initial load
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const response = await fetch(`${apiBaseUrl}/api/profile`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error("Could not fetch profile");
+        const profileData: Profile = await response.json();
+        setProfile(profileData);
+      } catch (error) { console.error("Failed to fetch initial profile:", error); }
     };
     fetchInitialProfile();
-  }, [isUserLoaded, getToken, apiBaseUrl]);
+  }, [isUserLoaded, getToken, apiBaseUrl, profile]);
+
+  // This hook handles the redirect logic separately
+  useEffect(() => {
+    if (profile && !profile.has_completed_onboarding) {
+        router.push('/dashboard/profile');
+    }
+  }, [profile, router]);
+
 
   const handleJobSubmit = useCallback(async (jobUrl: string) => {
     setIsSubmitting(true);
@@ -57,10 +67,10 @@ export default function UserDashboard() {
       await actions.submitNewJob(jobUrl);
       setFilterStatus('all');
       setPagination({ pageIndex: 0, pageSize: 10 });
-      await refetchRecommendations();
+      await refetchRecommendations(); // <-- This refetches recommendations after tracking a job
     } catch (error) { setSubmissionError(error instanceof Error ? error.message : 'An unknown submission error occurred.'); } 
     finally { setIsSubmitting(false); }
-  }, [actions, refetchRecommendations]);
+  }, [actions, refetchRecommendations]); // <-- Added refetch to dependency array
 
   const handleStatusChange = useCallback(async (trackedJobId: number, newStatus: string) => {
     const currentJob = trackedJobs.find(job => job.tracked_job_id === trackedJobId);

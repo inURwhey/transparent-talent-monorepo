@@ -4,7 +4,7 @@
 import { type RecommendedJob } from '../types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import CompleteProfileCTA from './CompleteProfileCTA'; // <-- Import new component
+import CompleteProfileCTA from './CompleteProfileCTA';
 
 interface JobsForYouProps {
   jobs: RecommendedJob[];
@@ -12,7 +12,7 @@ interface JobsForYouProps {
   error: string | null;
   onTrack: (jobUrl: string) => void;
   isSubmitting: boolean;
-  isProfileComplete: boolean; // <-- New prop
+  isProfileComplete: boolean;
 }
 
 export default function JobsForYou({ jobs, isLoading, error, onTrack, isSubmitting, isProfileComplete }: JobsForYouProps) {
@@ -55,7 +55,8 @@ export default function JobsForYou({ jobs, isLoading, error, onTrack, isSubmitti
               </Link>
               <p className="text-sm text-muted-foreground">{job.company_name}</p>
               <div className="flex items-center space-x-2 text-xs mt-1">
-                  <span className="font-medium">Match: {job.match_score}</span>
+                  {/* Updated to display matrix_rating (letter grade) for consistency */}
+                  <span className="font-medium">AI Grade: {job.matrix_rating || 'N/A'}</span>
                   {job.job_modality && <span className="bg-gray-100 px-2 py-0.5 rounded-full">{job.job_modality}</span>}
                   {job.deduced_job_level && <span className="bg-gray-100 px-2 py-0.5 rounded-full">{job.deduced_job_level}</span>}
               </div>
