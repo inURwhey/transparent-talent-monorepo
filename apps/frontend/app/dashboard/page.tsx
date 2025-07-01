@@ -3,7 +3,6 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
 import { PaginationState } from '@tanstack/react-table';
 import Link from 'next/link';
 
@@ -21,9 +20,8 @@ import { type UpdatePayload, type Profile } from './types';
 const ACTIVE_PIPELINE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS'];
 
 export default function UserDashboard() {
-  const router = useRouter();
   const { trackedJobs, isLoading: isLoadingJobs, error: jobsError, actions } = useTrackedJobsApi();
-  const { data: recommendedJobs, isLoading: isLoadingRecs, error: recsError, refetch: refetchRecommendations } = useJobRecommendationsApi(); // <-- Destructure refetch
+  const { data: recommendedJobs, isLoading: isLoadingRecs, error: recsError, refetch: refetchRecommendations } = useJobRecommendationsApi();
   const { isLoaded: isUserLoaded, user } = useUser();
   const { getToken } = useAuth();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -34,8 +32,9 @@ export default function UserDashboard() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [filterStatus, setFilterStatus] = useState<'all' | 'active_pipeline' | 'closed_pipeline' | 'active_posting' | 'expired_posting'>('all');
 
+  // Fetch profile once on load to determine onboarding status
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
+    const fetchInitialProfile = async () => {
         if (!isUserLoaded) return;
         try {
             const token = await getToken();
@@ -43,16 +42,13 @@ export default function UserDashboard() {
             const response = await fetch(`${apiBaseUrl}/api/profile`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!response.ok) return;
+            if (!response.ok) throw new Error("Could not fetch profile");
             const profileData: Profile = await response.json();
             setProfile(profileData);
-            if (!profileData.has_completed_onboarding) {
-                router.push('/welcome');
-            }
-        } catch (error) { console.error("Failed to check onboarding status:", error); }
+        } catch (error) { console.error("Failed to fetch initial profile:", error); }
     };
-    checkOnboardingStatus();
-  }, [isUserLoaded, router, getToken, apiBaseUrl]);
+    fetchInitialProfile();
+  }, [isUserLoaded, getToken, apiBaseUrl]);
 
   const handleJobSubmit = useCallback(async (jobUrl: string) => {
     setIsSubmitting(true);
@@ -61,10 +57,10 @@ export default function UserDashboard() {
       await actions.submitNewJob(jobUrl);
       setFilterStatus('all');
       setPagination({ pageIndex: 0, pageSize: 10 });
-      await refetchRecommendations(); // <-- Refetch recommendations after tracking a new job
+      await refetchRecommendations();
     } catch (error) { setSubmissionError(error instanceof Error ? error.message : 'An unknown submission error occurred.'); } 
     finally { setIsSubmitting(false); }
-  }, [actions, refetchRecommendations]); // <-- Add refetch to dependency array
+  }, [actions, refetchRecommendations]);
 
   const handleStatusChange = useCallback(async (trackedJobId: number, newStatus: string) => {
     const currentJob = trackedJobs.find(job => job.tracked_job_id === trackedJobId);
@@ -105,8 +101,7 @@ export default function UserDashboard() {
   const columns = useMemo(() => getColumns({ handleStatusChange, handleRemoveJob, handleToggleExcited }), [handleStatusChange, handleRemoveJob, handleToggleExcited]);
 
   const isLoading = !isUserLoaded || isLoadingJobs || !profile;
-  if (isLoading && trackedJobs.length === 0) return <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>;
-  if (!profile?.has_completed_onboarding) return <div className="min-h-screen flex items-center justify-center">Redirecting to complete your profile...</div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>;
   if (jobsError) return <div className="min-h-screen flex items-center justify-center text-center"><div><h2 className="text-xl font-semibold text-red-600">An Error Occurred</h2><p className="text-gray-600 mt-2">There was an issue loading your dashboard data.</p><p className="text-sm mt-4 text-red-700 font-mono bg-red-50 p-4 rounded-md"><strong>Error Details:</strong> {jobsError}</p></div></div>;
   
   return (
@@ -120,14 +115,13 @@ export default function UserDashboard() {
             <Link href="/dashboard/profile" passHref><Button>Edit Profile</Button></Link>
         </div>
 
-        {/* New Jobs For You Module */}
         <JobsForYou 
           jobs={recommendedJobs} 
           isLoading={isLoadingRecs} 
           error={recsError} 
           onTrack={handleJobSubmit}
           isSubmitting={isSubmitting}
-          isProfileComplete={profile.has_completed_onboarding} // <-- Pass flag
+          isProfileComplete={profile.has_completed_onboarding}
         />
 
         <JobSubmissionForm onSubmit={handleJobSubmit} isSubmitting={isSubmitting} submissionError={submissionError} />

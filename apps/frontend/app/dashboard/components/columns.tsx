@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import UnlockAIGradeCTA from "./UnlockAIGradeCTA" // <-- Import new component
 
 // --- TYPE DEFINITIONS ---
 // Keep types in sync with page.tsx
@@ -149,15 +150,16 @@ export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleEx
     header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>AI Grade<ArrowUpDown className="ml-2 h-4 w-4" /></Button>), // Changed header text
     cell: ({ row }) => {
       const analysis = row.original.ai_analysis;
-      if (!analysis || !analysis.matrix_rating) { // Check for matrix_rating
-        return <div className="text-center text-muted-foreground">-</div>;
+      if (!analysis || !analysis.matrix_rating) {
+        // If no analysis, show the CTA to complete profile
+        return <UnlockAIGradeCTA />;
       }
-      return <div className="text-center font-medium">{analysis.matrix_rating}</div> // Display matrix_rating
+      return <div className="text-center font-medium">{analysis.matrix_rating}</div>
     },
     sortingFn: (rowA, rowB) => {
       // Simple alphabetical sort for letter grades for now
-      const gradeA = rowA.original.ai_analysis?.matrix_rating || '';
-      const gradeB = rowB.original.ai_analysis?.matrix_rating || '';
+      const gradeA = rowA.original.ai_analysis?.matrix_rating || 'Z'; // Sort empty grades last
+      const gradeB = rowB.original.ai_analysis?.matrix_rating || 'Z';
       return gradeA.localeCompare(gradeB);
     }
   },
