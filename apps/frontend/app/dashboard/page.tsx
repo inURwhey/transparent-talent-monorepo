@@ -16,7 +16,7 @@ import JobsForYou from './components/JobsForYou';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { type UpdatePayload, type Profile, type RecommendedJob } from './types'; // Import RecommendedJob
+import { type UpdatePayload, type Profile } from './types';
 
 const ACTIVE_PIPELINE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS'];
 
@@ -34,30 +34,24 @@ export default function UserDashboard() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [filterStatus, setFilterStatus] = useState<'all' | 'active_pipeline' | 'closed_pipeline' | 'active_posting' | 'expired_posting'>('all');
 
-  // This hook is now split to avoid re-triggering redirects on every profile state change
+  // This hook now ONLY fetches the profile to get the onboarding status.
+  // It no longer performs any redirects.
   useEffect(() => {
     const fetchInitialProfile = async () => {
-      if (!isUserLoaded || profile) return; // Only run once on initial load
-      try {
-        const token = await getToken();
-        if (!token) return;
-        const response = await fetch(`${apiBaseUrl}/api/profile`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error("Could not fetch profile");
-        const profileData: Profile = await response.json();
-        setProfile(profileData);
-      } catch (error) { console.error("Failed to fetch initial profile:", error); }
+        if (!isUserLoaded || profile) return; // Only run once on initial load
+        try {
+            const token = await getToken();
+            if (!token) return;
+            const response = await fetch(`${apiBaseUrl}/api/profile`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error("Could not fetch profile");
+            const profileData: Profile = await response.json();
+            setProfile(profileData);
+        } catch (error) { console.error("Failed to fetch initial profile:", error); }
     };
     fetchInitialProfile();
   }, [isUserLoaded, getToken, apiBaseUrl, profile]);
-
-  // This hook handles the redirect logic separately
-  useEffect(() => {
-    if (profile && !profile.has_completed_onboarding) {
-        router.push('/dashboard/profile');
-    }
-  }, [profile, router]);
 
 
   const handleJobSubmit = useCallback(async (jobUrl: string) => {
@@ -67,10 +61,10 @@ export default function UserDashboard() {
       await actions.submitNewJob(jobUrl);
       setFilterStatus('all');
       setPagination({ pageIndex: 0, pageSize: 10 });
-      await refetchRecommendations(); // <-- This refetches recommendations after tracking a job
+      await refetchRecommendations();
     } catch (error) { setSubmissionError(error instanceof Error ? error.message : 'An unknown submission error occurred.'); } 
     finally { setIsSubmitting(false); }
-  }, [actions, refetchRecommendations]); // <-- Added refetch to dependency array
+  }, [actions, refetchRecommendations]);
 
   const handleStatusChange = useCallback(async (trackedJobId: number, newStatus: string) => {
     const currentJob = trackedJobs.find(job => job.tracked_job_id === trackedJobId);
@@ -110,7 +104,7 @@ export default function UserDashboard() {
 
   const columns = useMemo(() => getColumns({ handleStatusChange, handleRemoveJob, handleToggleExcited }), [handleStatusChange, handleRemoveJob, handleToggleExcited]);
 
-  const isLoading = !isUserLoaded || isLoadingJobs || !profile;
+  const isLoading = !isUserLoaded || !profile;
   if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>;
   if (jobsError) return <div className="min-h-screen flex items-center justify-center text-center"><div><h2 className="text-xl font-semibold text-red-600">An Error Occurred</h2><p className="text-gray-600 mt-2">There was an issue loading your dashboard data.</p><p className="text-sm mt-4 text-red-700 font-mono bg-red-50 p-4 rounded-md"><strong>Error Details:</strong> {jobsError}</p></div></div>;
   
