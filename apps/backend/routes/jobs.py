@@ -40,7 +40,6 @@ def submit_job():
                     return jsonify({"error": "You are already tracking this job."}), 409
                 else:
                     # This is a "re-track" scenario. The user deleted it and is now adding it back.
-                    # Simply create a new tracked_jobs entry and return.
                     current_app.logger.info(f"User {user_id} is re-tracking existing job_id {job_id}.")
                     cursor.execute("INSERT INTO tracked_jobs (user_id, job_id) VALUES (%s, %s) RETURNING id;", (user_id, job_id))
                     tracked_job_id = cursor.fetchone()['id']
@@ -66,7 +65,6 @@ def submit_job():
                     'job_title': 'Unknown Title (Profile Incomplete)'
                 }
 
-            # This transaction block is now only for brand new jobs
             company_name = analysis_result.get('company_name', 'Unknown Company')
             job_title = analysis_result.get('job_title', 'Unknown Title')
             salary_min = analysis_result.get('salary_min') if perform_ai_analysis else None
@@ -130,4 +128,56 @@ def submit_job():
         db.rollback()
         current_app.logger.error(f"An unexpected error occurred in submit_job route: {e}")
         return jsonify({"error": "An internal server error occurred."}), 500
-# ... rest of file is unchanged
+
+@jobs_bp.route('/tracked-jobs', methods=['GET'])
+@token_required
+def get_tracked_jobs():
+    user_id = g.current_user['id']
+    try:
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 10))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid pagination parameters"}), 400
+    offset = (page - 1) * limit
+    db = get_db()
+    service = TrackedJobService(current_app.logger)
+    with db.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) FROM tracked_jobs WHERE user_id = %s;", (user_id,))
+        total_count = cursor.fetchone()[0]
+        cursor.execute("SELECT id FROM tracked_jobs WHERE user_id = %s ORDER BY created_at DESC, id DESC LIMIT %s OFFSET %s;", (user_id, limit, offset))
+        job_ids = [row['id'] for row in cursor.fetchall()]
+        tracked_jobs = [service._get_formatted_job_by_id(cursor, job_id, user_id) for job_id in job_ids]
+        return jsonify({"tracked_jobs": [job for job in tracked_jobs if job is not None], "total_count": total_count, "page": page, "limit": limit})
+
+@jobs_bp.route('/tracked-jobs/<int:tracked_job_id>', methods=['PUT'])
+@token_required
+def update_tracked_job(tracked_job_id):
+    user_id = g.current_user['id']
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No update data provided"}), 400
+    service = TrackedJobService(current_app.logger)
+    try:
+        updated_job = service.update_job(user_id, tracked_job_id, data)
+        if updated_job:
+            return jsonify(updated_job), 200
+        else:
+            return jsonify({"error": "Tracked job not found or permission denied"}), 404
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error in update_tracked_job route: {e}")
+        return jsonify({"error": "An internal server error occurred."}), 500
+
+@jobs_bp.route('/tracked-jobs/<int:tracked_job_id>', methods=['DELETE'])
+@token_required
+def remove_tracked_job(tracked_job_id):
+    user_id = g.current_user['id']
+    db = get_db()
+    with db.cursor() as cursor:
+        cursor.execute("DELETE FROM tracked_jobs WHERE id = %s AND user_id = %s RETURNING id", (tracked_job_id, user_id))
+        if cursor.fetchone():
+            db.commit()
+            return jsonify({"message": "Tracked job removed successfully"}), 200
+        else:
+            return jsonify({"error": "Tracked job not found or permission denied"}), 404
