@@ -90,8 +90,16 @@ export default function UserProfilePage() {
             if (!prev) return null;
             let actualValue: any = value;
 
-            // Convert empty string from Select to null for backend if it's the placeholder value
-            if (value === '') {
+            // Handle number inputs (desired_salary_min, desired_salary_max)
+            if (id === 'desired_salary_min' || id === 'desired_salary_max') {
+                actualValue = value === '' ? null : Number(value);
+                // Ensure NaN results in null for number fields
+                if (isNaN(actualValue as number)) {
+                    actualValue = null;
+                }
+            }
+            // Convert empty string from Select or Textarea to null for backend if it's the placeholder value
+            else if (value === '') {
                 actualValue = null;
             } 
             // Apply specific mapping for change_tolerance
@@ -268,7 +276,29 @@ export default function UserProfilePage() {
                             <div><Label htmlFor="short_term_career_goal">Short-Term Career Goal</Label><Textarea id="short_term_career_goal" value={profile.short_term_career_goal || ''} onChange={(e) => handleChange('short_term_career_goal', e.target.value)} rows={3} /></div>
                             <div><Label htmlFor="long_term_career_goals">Long-Term Career Goals</Label><Textarea id="long_term_career_goals" value={profile.long_term_career_goals || ''} onChange={(e) => handleChange('long_term_career_goals', e.target.value)} rows={3} /></div>
                             <div><Label htmlFor="desired_title">Desired Job Title</Label><Input id="desired_title" type="text" value={profile.desired_title || ''} onChange={(e) => handleChange('desired_title', e.target.value)} /></div>
-                            <div><Label htmlFor="desired_annual_compensation">Desired Annual Compensation</Label><Input id="desired_annual_compensation" type="text" value={profile.desired_annual_compensation || ''} onChange={(e) => handleChange('desired_annual_compensation', e.target.value)} placeholder="$150,000 - $180,000" /></div>
+                            
+                            {/* Replaced old Desired Annual Compensation with two new fields */}
+                            <div>
+                                <Label htmlFor="desired_salary_min">Desired Minimum Annual Salary</Label>
+                                <Input
+                                    id="desired_salary_min"
+                                    type="number"
+                                    value={profile.desired_salary_min ?? ''} // Use ?? to handle 0 values correctly
+                                    onChange={(e) => handleChange('desired_salary_min', e.target.value)}
+                                    placeholder="e.g., 150000"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="desired_salary_max">Desired Maximum Annual Salary</Label>
+                                <Input
+                                    id="desired_salary_max"
+                                    type="number"
+                                    value={profile.desired_salary_max ?? ''} // Use ?? to handle 0 values correctly
+                                    onChange={(e) => handleChange('desired_salary_max', e.target.value)}
+                                    placeholder="e.g., 180000"
+                                />
+                            </div>
+
                             <div><Label htmlFor="ideal_role_description">Ideal Role Description</Label><Textarea id="ideal_role_description" value={profile.ideal_role_description || ''} onChange={(e) => handleChange('ideal_role_description', e.target.value)} rows={5} /></div>
                         </CollapsibleContent>
                     </Collapsible>

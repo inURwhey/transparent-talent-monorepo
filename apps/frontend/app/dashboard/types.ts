@@ -12,7 +12,9 @@ export interface Profile {
   resume_url: string | null;
   short_term_career_goal: string | null;
   long_term_career_goals: string | null;
-  desired_annual_compensation: string | null;
+  // Removed old desired_annual_compensation: string | null;
+  desired_salary_min: number | null; // New structured salary field
+  desired_salary_max: number | null; // New structured salary field
   desired_title: string | null;
   ideal_role_description: string | null;
   preferred_company_size: string | null;
