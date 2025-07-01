@@ -3,6 +3,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.40.0 - 2025-07-03 - "Jobs For You" Frontend Architecture
+
+This release completes the architectural design for the frontend module that will display job recommendations to the user. This work creates a clear, component-based implementation plan.
+
+### Added
+-   **Architecture:** Designed the frontend architecture for the "Jobs For You" module, including a new `useJobRecommendationsApi` custom hook for data fetching and a `JobsForYou.tsx` presentational component.
+-   **Protocols:** Updated the `TASK_HANDOFF.md` document to include this new frontend epic, providing skeletal code and type definitions to guide implementation.
+
 ## v0.39.0 - 2025-07-03 - V1 Job Matching Service Implemented
 
 This release introduces the core backend service for generating personalized job recommendations. This service provides the API foundation for the upcoming "Jobs For You" dashboard module.
