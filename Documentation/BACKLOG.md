@@ -1,4 +1,4 @@
-# Transparent Talent: Product Backlog & Roadmap v1.23
+# Transparent Talent: Product Backlog & Roadmap v1.24
 
 ## Column Definitions
 *   **AI Model:** The complexity required from the AI. (Flash, Pro [Breakdown/Execute], Creative, N/A)
@@ -18,7 +18,6 @@
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **UI: Update profile page with new salary fields** | E02 | 1000 | 3 | 100% | 0.25 | **12000** | Flash | S | **To Do** |
 | **Backend: Update AI prompt to parse new structured job fields** | E01 | 1000 | 3 | 100% | 0.25 | **12000** | Flash | S | **To Do** |
 | **Backend: Implement V1 JobMatchingService** | E01 | 1000 | 3 | 100% | 0.5 | **6000** | Pro Execute| M | **To Do** |
 | **UI: Implement "Jobs For You" Dashboard Module** | E01 | 1000 | 3 | 100% | 0.5 | **6000** | Flash | M | **To Do** |
@@ -51,11 +50,10 @@
 ---
 
 ## Completed Features & Bugfixes
-### v0.36.0
+### v0.37.0
 | Feature/Bugfix | Original Tier | RICE Score | Epic |
-| :--- | :--- | :--- |:---|
-| **Architect Enhanced Job Data Model** | Tier 3 | 12000 | E01 |
-| **Architect Structured Salary Fields** | Tier 2 | N/A | E02 |
+| :--- | :--- | :--- | :--- |
+| **UI: Update profile page with new salary fields** | Tier 1 | 12000 | E02 |
 
 ### Previous Versions
-*Items from v0.35.0 and earlier are documented in the `CHANGELOG.md`.*
+*Items from v0.36.0 and earlier are documented in the `CHANGELOG.md`.*

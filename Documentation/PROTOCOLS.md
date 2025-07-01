@@ -1,4 +1,4 @@
-# Transparent Talent: Operational Protocols v2.4
+# Transparent Talent: Operational Protocols v2.5
 
 ## System Instructions (Core Operating Principles)
 *   **Full-File Output Mandate:** When providing file content for replacement, the AI **must** output the *entire*, complete, and untruncated code. Abbreviating with comments is a critical failure.
@@ -48,7 +48,7 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
 
 ### Frontend Development & Deployment Protocol v1.0
 *Objective:* To ensure efficient and stable frontend development, mindful of Vercel's free tier deployment limits (approximately 100 deployments per 24 hours).
-*Prime Directive:* Minimize pushes to the `main` branch that trigger production deployments. The AI **must** proactively internalize relevant parts of the knowledge base (documentation, best practices) for any technical or open-source framework in use before forming hypotheses or generating code.
+*PrimeDirective:* Minimize pushes to the `main` branch that trigger production deployments. The AI **must** proactively internalize relevant parts of the knowledge base (documentation, best practices) for any technical or open-source framework in use before forming hypotheses or generating code.
 
 *Workflow:*
 1.  **Local First Development & Thorough QA:** All frontend changes **must** be thoroughly developed and tested locally using `pnpm dev` within `apps/frontend` before being committed or pushed. Ensure features are fully functional and error-free in the local environment.
@@ -62,6 +62,18 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
     *   Run `npx shadcn@latest add <component-name>` (e.g., `npx shadcn@latest add collapsible`). The `shadcn-ui` CLI is deprecated.
     *   **Mandate: Always prefer to use official Shadcn UI components** over custom implementations or workarounds where a suitable Shadcn component exists. If a Shadcn component behaves unexpectedly, the first step is to consult its official documentation and examples for proper usage, especially regarding `value` props for controlled components (e.g., `Select` components often expect `""` to show a placeholder, not `undefined`).
     *   **Confirm successful installation locally** before proceeding with code that uses the new component or pushing changes.
+
+### Task Handoff Protocol v1.0
+*   **Objective:** To ensure a seamless transition of work from a "Pro Breakdown" session to a "Flash Execute" session by creating a self-contained, explicit set of instructions.
+*   **Trigger:** At the conclusion of a "Pro Breakdown" session, immediately after the architectural work (like a DB migration) is complete and before the `END_PROMPT`.
+*   **Workflow:**
+    1.  **Acknowledge Breakdown Completion:** The Pro model will state that the architectural planning is complete.
+    2.  **Generate Handoff Brief:** The Pro model will generate a new, temporary markdown document named `TASK_HANDOFF.md`. This document will contain:
+        *   **Objective:** A clear, one-sentence goal for the task.
+        *   **Acceptance Criteria:** A bulleted list of what must be true for the task to be considered complete.
+        *   **Relevant Files:** A list of all files that need to be modified.
+        *   **Contextual Snippets:** The exact SQL scripts that were run, and the `\d <table_name>` output for any modified tables. This provides the Flash model with all necessary schema information without needing the full chat history.
+    3.  **Instruct User:** The Pro model will instruct the user to save this `TASK_HANDOFF.md` file and provide it as the *primary context* for the next Flash session.
 
 ### Clerk Interaction Protocol v1.0
 *Objective:* To prevent debugging cycles and ensure correctness when modifying authentication code related to the `@clerk/nextjs` library.
@@ -119,7 +131,7 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
 ### Backlog Content Protocol v1.0
 *   **Objective:** To streamline the `BACKLOG.md` file and reduce token cost.
 *   **Prime Directive:** When generating `BACKLOG.md` during an `END_PROMPT` cycle, the AI will perform the following:
-    *   **Soft Checkpoint:** If the `END_PROMPT` is triggered as a soft checkpoint, the AI will only update `BACKLOG.md` to include any new "To Do" ideas that were curated during the session and need to be tiered/prioritized.
+    *   **Soft Checkpoint:** If the `END_PROMPT` is triggered as a soft checkpoint, the AI will only update `BACKLOG.md` to include any new "To Do" ideas that were curated during the session and need to jump the line.
     *   **Full `END_PROMPT`:** If the `END_PROMPT` is a full cycle, the AI will only include items with a "To Do" status, removing the "Completed" section and moving "Done" items to the `CHANGELOG.md`'s completed section.
 
 ### Changelog Output Protocol v1.0

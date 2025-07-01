@@ -3,6 +3,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.37.0 - 2025-07-03 - Structured User Profile Salary Fields
+
+This release implements the frontend changes for structured user salary preferences, aligning the UI with the recently migrated backend data model.
+
+### Added
+-   **UI:** Updated the User Profile page (`/dashboard/profile`) to replace the single "Desired Annual Compensation" text input with two new input fields: "Desired Minimum Annual Salary" (`desired_salary_min`) and "Desired Maximum Annual Salary" (`desired_salary_max`).
+-   **UI:** Implemented automatic formatting of salary numbers with commas for display (e.g., `150000` to `150,000`).
+-   **UI:** Enabled parsing of user input to accept numbers with or without commas, converting them to clean integers for backend submission.
+
+### Changed
+-   **Frontend:** Modified the `handleChange` function in `profile/page.tsx` to correctly handle the new integer-based salary fields, including parsing formatted input and ensuring `null` values for empty fields.
+-   **Frontend:** Changed the `type` attribute of the salary input fields from `number` to `text` to allow for custom formatting and comma input.
+
+### Fixed
+-   **UI:** Removed the `step` attribute from the salary input fields to allow free-form numerical entry.
+
 ## v0.36.0 - 2025-07-03 - Job Matching Architecture & Salary Data Model
 
 This release completes the high-level architectural design for the "Jobs For You" recommendation engine and refactors the underlying user profile data model for improved robustness and scalability. This work deconstructs two major epics into a clear, sequenced set of implementation tasks.
