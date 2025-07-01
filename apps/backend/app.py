@@ -15,11 +15,19 @@ def create_app():
     from . import database
     database.init_app(app)
 
-    from .routes import profile, jobs, admin, onboarding
-    app.register_blueprint(profile.profile_bp, url_prefix='/api')
-    app.register_blueprint(jobs.jobs_bp, url_prefix='/api')
-    app.register_blueprint(admin.admin_bp, url_prefix='/api')
-    app.register_blueprint(onboarding.onboarding_bp, url_prefix='/api')
+    # Import all blueprints
+    from .routes.profile import profile_bp
+    from .routes.jobs import jobs_bp
+    from .routes.admin import admin_bp
+    from .routes.onboarding import onboarding_bp
+    from .routes.recommendations import reco_bp
+    
+    # Register all blueprints with the consistent '/api' prefix
+    app.register_blueprint(profile_bp, url_prefix='/api')
+    app.register_blueprint(jobs_bp, url_prefix='/api')
+    app.register_blueprint(admin_bp, url_prefix='/api')
+    app.register_blueprint(onboarding_bp, url_prefix='/api')
+    app.register_blueprint(reco_bp, url_prefix='/api') # Now consistent with others
 
     @app.route('/')
     def index(): return "Backend server is running."

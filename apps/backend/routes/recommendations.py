@@ -1,0 +1,26 @@
+# Path: apps/backend/routes/recommendations.py
+
+from flask import Blueprint, jsonify, g, current_app
+from ..auth import token_required
+from ..services.job_matching_service import JobMatchingService
+
+# Removed url_prefix, it will be handled in app.py for consistency
+reco_bp = Blueprint('reco_bp', __name__)
+
+@reco_bp.route('/jobs/recommendations', methods=['GET'])
+@token_required
+def get_job_recommendations():
+    """
+    Returns a ranked list of job recommendations for the authenticated user.
+    """
+    user_id = g.current_user['id']
+    
+    try:
+        service = JobMatchingService(current_app.logger)
+        recommendations = service.get_recommendations(user_id)
+        
+        return jsonify(recommendations), 200
+
+    except Exception as e:
+        current_app.logger.error(f"An unexpected error occurred in get_job_recommendations for user_id {user_id}: {e}")
+        return jsonify({"error": "An internal server error occurred while fetching recommendations."}), 500
