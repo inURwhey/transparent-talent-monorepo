@@ -3,6 +3,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.41.0 - 2025-07-03 - Frontend Bugfixes & UX Polish
+
+This release addresses several bugs and user experience issues identified after the initial launch of the "Jobs For You" recommendation module, and refines the core application routing.
+
+### Changed
+-   **Backend Routes:** Refactored all Flask Blueprints to have their `url_prefix` defined centrally in `app.py`. This resolves a series of `404` errors and subsequent CORS failures that were making the dashboard inaccessible.
+-   **Onboarding Flow:** The dashboard page (`page.tsx`) no longer redirects incomplete users. Instead, it loads and conditionally renders CTAs, providing a better user context.
+-   **Job Submission Logic:** The backend (`jobs.py`) now gates AI analysis. Jobs submitted by users with incomplete profiles are tracked, but a `job_analyses` record is not created, providing an incentive to complete the profile.
+
+### Fixed
+-   **Critical Bug (CORS/404):** Resolved a major regression bug that was blocking all API calls from the frontend due to incorrect blueprint registration and failed CORS preflight checks.
+-   **"Jobs For You" State:** The recommendation module now correctly refetches its data after a user tracks a job, ensuring the list stays up-to-date without a manual refresh.
+-   **Profile Completion CTA:** The logic for displaying the "Complete Your Profile" CTA in the "Jobs For You" module and the "Unlock AI Grade" CTA in the tracker table is now fully functional.
+
 ## v0.40.0 - 2025-07-03 - "Jobs For You" Frontend Architecture
 
 This release completes the architectural design for the frontend module that will display job recommendations to the user. This work creates a clear, component-based implementation plan.
