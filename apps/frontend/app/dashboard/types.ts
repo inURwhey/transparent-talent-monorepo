@@ -73,4 +73,15 @@ export interface TrackedJob {
   ai_analysis: AIAnalysis | null;
 }
 
+// --- NEW INTERFACE FOR JOB RECOMMENDATIONS ---
+export interface RecommendedJob {
+  id: number;
+  job_title: string;
+  company_name: string;
+  job_url: string;
+  match_score: number;
+  job_modality: string | null;
+  deduced_job_level: string | null;
+}
+
 export type UpdatePayload = Partial<Omit<TrackedJob, 'tracked_job_id' | 'job_id' | 'job_title' | 'company_name' | 'job_url' | 'created_at' | 'job_posting_status' | 'last_checked_at' | 'ai_analysis'>>;

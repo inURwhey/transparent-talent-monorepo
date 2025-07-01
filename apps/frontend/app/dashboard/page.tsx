@@ -8,9 +8,11 @@ import { PaginationState } from '@tanstack/react-table';
 import Link from 'next/link';
 
 import { useTrackedJobsApi } from './hooks/useTrackedJobsApi';
+import { useJobRecommendationsApi } from '../../hooks/useJobRecommendationsApi'; // <-- Import new hook
 import { DataTable } from './data-table';
 import { getColumns } from './components/columns';
 import { JobSubmissionForm } from './components/JobSubmissionForm';
+import JobsForYou from './components/JobsForYou'; // <-- Import new component
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,8 +23,9 @@ const ACTIVE_PIPELINE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEG
 export default function UserDashboard() {
   const router = useRouter();
   const { trackedJobs, isLoading: isLoadingJobs, error: jobsError, actions } = useTrackedJobsApi();
+  const { data: recommendedJobs, isLoading: isLoadingRecs, error: recsError } = useJobRecommendationsApi(); // <-- Use new hook
   const { isLoaded: isUserLoaded, user } = useUser();
-  const { getToken } = useAuth(); // Needed for profile check
+  const { getToken } = useAuth();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -44,7 +47,7 @@ export default function UserDashboard() {
             const profileData: Profile = await response.json();
             setProfile(profileData);
             if (!profileData.has_completed_onboarding) {
-                router.push('/welcome'); // <--- Changed from '/dashboard/profile' to '/welcome'
+                router.push('/welcome');
             }
         } catch (error) { console.error("Failed to check onboarding status:", error); }
     };
@@ -107,16 +110,27 @@ export default function UserDashboard() {
   
   return (
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white p-6 rounded-lg shadow-md mb-8 flex justify-between items-center">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <div className="bg-white p-6 rounded-lg shadow-md flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-800">{user?.fullName || 'Your Dashboard'}</h1>
               <p className="text-lg text-gray-600 mt-2">Welcome back.</p>
             </div>
             <Link href="/dashboard/profile" passHref><Button>Edit Profile</Button></Link>
         </div>
+
+        {/* New Jobs For You Module */}
+        <JobsForYou 
+          jobs={recommendedJobs} 
+          isLoading={isLoadingRecs} 
+          error={recsError} 
+          onTrack={handleJobSubmit}
+          isSubmitting={isSubmitting}
+        />
+
         <JobSubmissionForm onSubmit={handleJobSubmit} isSubmitting={isSubmitting} submissionError={submissionError} />
-        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+        
+        <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">My Job Tracker</h2>
           <div className="mb-4">
               <Label htmlFor="filterStatus">Filter by Status:</Label>
