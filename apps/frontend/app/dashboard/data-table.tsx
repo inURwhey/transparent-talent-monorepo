@@ -13,7 +13,8 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  PaginationState, // Import PaginationState
+  getExpandedRowModel, // <-- Import for expandable rows
+  PaginationState,
 } from "@tanstack/react-table"
 import { ChevronDown } from "lucide-react"
 
@@ -33,30 +34,32 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { RowSubComponent } from "./components/columns" // <-- Import the sub-component
+import { type CompanyProfile } from "./types" // <-- Import CompanyProfile type
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
-  // New props for pagination
   pagination: PaginationState;
   setPagination: React.Dispatch<React.SetStateAction<PaginationState>>;
-  totalCount: number; // Total number of items across all pages
+  totalCount: number;
+  // --- ADDED PROP ---
+  fetchCompanyProfile: (companyId: number) => Promise<CompanyProfile | null>;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
-  pagination, // Destructure new prop
-  setPagination, // Destructure new prop
-  totalCount, // Destructure new prop
+  pagination,
+  setPagination,
+  totalCount,
+  fetchCompanyProfile, // <-- Destructure new prop
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+  const [expanded, setExpanded] = React.useState({}) // State for expanded rows
 
   const table = useReactTable({
     data,
@@ -64,22 +67,25 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(), // This enables pagination features
+    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getExpandedRowModel: getExpandedRowModel(), // <-- Enable expanded rows
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    // Connect external pagination state
+    onExpandedChange: setExpanded, // <-- Handle expanded state
+    getRowCanExpand: () => true, // <-- All rows can be expanded
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
-      pagination, // Pass external pagination state
+      pagination,
+      expanded, // <-- Pass expanded state to the table
     },
-    onPaginationChange: setPagination, // Allow TanStack Table to update external state
-    manualPagination: true, // Tell TanStack Table that we handle pagination logic on the server
-    rowCount: totalCount, // Pass the total count from the server for correct pagination display
+    onPaginationChange: setPagination,
+    manualPagination: true,
+    rowCount: totalCount,
   })
 
   return (
@@ -143,19 +149,28 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                // Use React.Fragment to render the row and its sub-component
+                <React.Fragment key={row.id}>
+                  <TableRow data-state={row.getIsSelected() && "selected"}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {/* --- NEW: RENDER EXPANDED ROW --- */}
+                  {row.getIsExpanded() && (
+                    <TableRow>
+                      {/* Important: colSpan should be the number of columns */}
+                      <TableCell colSpan={columns.length}>
+                        <RowSubComponent row={row as any} fetchCompanyProfile={fetchCompanyProfile} />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
               ))
             ) : (
               <TableRow>
@@ -170,7 +185,6 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      {/* Conditionally render pagination controls only if there are pages */}
       {table.getPageCount() > 0 && (
         <div className="flex items-center justify-end space-x-2 py-4">
           <div className="flex-1 text-sm text-muted-foreground">

@@ -99,8 +99,17 @@ export default function UserDashboard() {
   }, [trackedJobs, filterStatus]);
 
   useEffect(() => { setPagination(prev => ({ ...prev, pageIndex: 0 })); }, [filterStatus]);
-
-  const columns = useMemo(() => getColumns({ handleStatusChange, handleRemoveJob, handleToggleExcited }), [handleStatusChange, handleRemoveJob, handleToggleExcited]);
+  
+  // --- FIX: Pass all required actions, including fetchCompanyProfile, to getColumns ---
+  const columns = useMemo(
+    () => getColumns({
+        handleStatusChange,
+        handleRemoveJob,
+        handleToggleExcited,
+        fetchCompanyProfile: actions.fetchCompanyProfile
+    }),
+    [handleStatusChange, handleRemoveJob, handleToggleExcited, actions.fetchCompanyProfile]
+  );
 
   const isLoading = !isUserLoaded || !profile;
   if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>;
@@ -148,7 +157,15 @@ export default function UserDashboard() {
                   </SelectContent>
               </Select>
           </div>
-          <DataTable columns={columns} data={filteredTrackedJobs} pagination={pagination} setPagination={setPagination} totalCount={filteredTrackedJobs.length} />
+          {/* --- FIX: Pass fetchCompanyProfile down to the DataTable component --- */}
+          <DataTable 
+            columns={columns} 
+            data={filteredTrackedJobs} 
+            pagination={pagination} 
+            setPagination={setPagination} 
+            totalCount={filteredTrackedJobs.length}
+            fetchCompanyProfile={actions.fetchCompanyProfile}
+          />
         </div>
       </div>
     </main>

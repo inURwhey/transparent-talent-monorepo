@@ -1,8 +1,9 @@
 // Path: apps/frontend/app/dashboard/components/columns.tsx
 "use client"
 
-import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal } from "lucide-react"
+import React, { useState, useEffect, useCallback } from 'react';
+import { ColumnDef, Row } from "@tanstack/react-table"
+import { ArrowUpDown, MoreHorizontal, ChevronRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -20,46 +21,90 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import UnlockAIGradeCTA from "./UnlockAIGradeCTA" // <-- Import new component
+import UnlockAIGradeCTA from "./UnlockAIGradeCTA"
+import { type TrackedJob, type CompanyProfile } from '../types';
 
-// --- TYPE DEFINITIONS ---
-// Keep types in sync with page.tsx
-interface AIAnalysis {
-  position_relevance_score: number;
-  environment_fit_score: number;
-  matrix_rating: string; // Ensure this is explicitly defined as a string for display
-}
-interface TrackedJob {
-  tracked_job_id: number;
-  job_title: string;
-  company_name: string;
-  job_url: string;
-  status: string;
-  applied_at: string | null;
-  created_at: string; // The date the job was saved
-  is_excited: boolean;
-  job_posting_status: string; // Added from 'jobs' table
-  last_checked_at: string | null; // Added from 'jobs' table
-  status_reason: string | null; // Added for 'tracked_jobs' table
-  ai_analysis: AIAnalysis | null;
-}
-
-// --- PROPS FOR THE GETCOLUMNS FUNCTION ---
 interface GetColumnsProps {
   handleStatusChange: (trackedJobId: number, newStatus: string) => void;
   handleRemoveJob: (trackedJobId: number) => void;
   handleToggleExcited: (trackedJobId: number, isExcited: boolean) => void;
+  fetchCompanyProfile: (companyId: number) => Promise<CompanyProfile | null>;
 }
 
-// Define status groups for coloring
 const SUCCESS_STATUSES = ['OFFER_ACCEPTED'];
 const NEGATIVE_TERMINAL_STATUSES = ['REJECTED', 'EXPIRED'];
 const NEUTRAL_TERMINAL_STATUSES = ['WITHDRAWN'];
 const ACTIVE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS'];
 
-// This function generates the column definitions.
-// It takes callbacks as arguments to keep the column logic separate from the page logic.
-export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleExcited }: GetColumnsProps): ColumnDef<TrackedJob>[] => [
+const RowSubComponent = ({ row, fetchCompanyProfile }: { row: Row<TrackedJob>, fetchCompanyProfile: GetColumnsProps['fetchCompanyProfile'] }) => {
+  const [profile, setProfile] = useState<CompanyProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const loadProfile = useCallback(async () => {
+    if (!row.original.company_id) return;
+    setIsLoading(true);
+    const fetchedProfile = await fetchCompanyProfile(row.original.company_id);
+    setProfile(fetchedProfile);
+    setIsLoading(false);
+  }, [fetchCompanyProfile, row.original.company_id]);
+
+  useEffect(() => {
+    if(row.getIsExpanded()) {
+        loadProfile();
+    }
+  }, [row.getIsExpanded(), loadProfile]);
+
+  return (
+    <div className="p-4 bg-gray-50/50 border-l-4 border-blue-500">
+        <h3 className="text-lg font-semibold text-gray-800 mb-2">Company Snapshot</h3>
+        {isLoading && (
+            <div className="flex items-center text-gray-500">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <span>Loading company profile...</span>
+            </div>
+        )}
+        {!isLoading && !profile && (
+            <p className="text-gray-500 text-sm">No company profile has been generated yet.</p>
+        )}
+        {!isLoading && profile && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="space-y-1">
+                    <p className="font-semibold text-gray-600">Industry</p>
+                    <p className="text-gray-800">{profile.industry || 'N/A'}</p>
+                </div>
+                <div className="space-y-1">
+                    <p className="font-semibold text-gray-600">Employee Count</p>
+                    <p className="text-gray-800">{profile.employee_count_range || 'N/A'}</p>
+                </div>
+                <div className="space-y-1 col-span-1 md:col-span-2">
+                    <p className="font-semibold text-gray-600">Business Model</p>
+                    <p className="text-gray-800">{profile.primary_business_model || 'N/A'}</p>
+                </div>
+                <div className="space-y-1 col-span-1 md:col-span-2">
+                    <p className="font-semibold text-gray-600">Stated Mission</p>
+                    <p className="text-gray-800 italic">"{profile.publicly_stated_mission || 'N/A'}"</p>
+                </div>
+            </div>
+        )}
+    </div>
+  );
+};
+
+export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleExcited, fetchCompanyProfile }: GetColumnsProps): ColumnDef<TrackedJob>[] => [
+  {
+    id: "expander",
+    header: () => null,
+    cell: ({ row }) => (
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => row.toggleExpanded()}
+        disabled={!row.getCanExpand()}
+      >
+        <ChevronRight className={`h-4 w-4 transition-transform ${row.getIsExpanded() ? 'rotate-90' : ''}`} />
+      </Button>
+    ),
+  },
   {
     id: "select",
     header: ({ table }) => (<Checkbox checked={table.getIsAllPageRowsSelected()} onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)} />),
@@ -77,30 +122,20 @@ export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleEx
     header: "Status",
     cell: ({ row }) => {
       const status = row.original.status;
-      let textColor = "text-gray-700"; // Default or neutral color
-
-      if (SUCCESS_STATUSES.includes(status)) {
-        textColor = "text-green-600 font-semibold";
-      } else if (NEGATIVE_TERMINAL_STATUSES.includes(status)) {
-        textColor = "text-red-600 font-semibold";
-      } else if (NEUTRAL_TERMINAL_STATUSES.includes(status)) {
-        textColor = "text-gray-600";
-      } else if (ACTIVE_STATUSES.includes(status)) {
-        textColor = "text-blue-600";
-      }
-
+      let textColor = "text-gray-700";
+      if (SUCCESS_STATUSES.includes(status)) { textColor = "text-green-600 font-semibold"; }
+      else if (NEGATIVE_TERMINAL_STATUSES.includes(status)) { textColor = "text-red-600 font-semibold"; }
+      else if (NEUTRAL_TERMINAL_STATUSES.includes(status)) { textColor = "text-gray-600"; }
+      else if (ACTIVE_STATUSES.includes(status)) { textColor = "text-blue-600"; }
       return (
         <Select
           value={status}
           onValueChange={(newValue) => handleStatusChange(row.original.tracked_job_id, newValue)}
         >
           <SelectTrigger className="w-[180px] bg-gray-50">
-            {/* The SelectValue here will display the actual `status` value, so apply color */}
             <SelectValue className={textColor} placeholder="Select Status" />
           </SelectTrigger>
           <SelectContent>
-            {/* Update SelectItem values to match backend ENUM exactly (all caps) */}
-            {/* The classNames here apply color to the dropdown items themselves */}
             <SelectItem value="SAVED" className={ACTIVE_STATUSES.includes('SAVED') ? "text-blue-600" : ""}>Saved</SelectItem>
             <SelectItem value="APPLIED" className={ACTIVE_STATUSES.includes('APPLIED') ? "text-blue-600" : ""}>Applied</SelectItem>
             <SelectItem value="INTERVIEWING" className={ACTIVE_STATUSES.includes('INTERVIEWING') ? "text-blue-600" : ""}>Interviewing</SelectItem>
@@ -115,28 +150,20 @@ export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleEx
     },
   },
   {
-    accessorKey: "status_reason", // NEW COLUMN: Status Reason for Tracked Job
+    accessorKey: "status_reason",
     header: "Status Reason",
-    cell: ({ row }) => {
-      const reason = row.original.status_reason;
-      return <div className="text-sm text-muted-foreground">{reason || "-"}</div>;
-    },
+    cell: ({ row }) => (<div className="text-sm text-muted-foreground">{row.original.status_reason || "-"}</div>),
   },
   {
-    accessorKey: "job_posting_status", // NEW COLUMN: Job Posting Status
+    accessorKey: "job_posting_status",
     header: "Job Post Status",
     cell: ({ row }) => {
       const status = row.original.job_posting_status;
       const lastChecked = row.original.last_checked_at;
       const formattedDate = lastChecked ? new Date(lastChecked).toLocaleDateString() : 'N/A';
-      
       let textColor = "text-gray-700";
-      if (status === "Active") {
-        textColor = "text-green-600";
-      } else if (status && status.includes("Expired")) {
-        textColor = "text-red-600";
-      }
-
+      if (status === "Active") { textColor = "text-green-600"; }
+      else if (status && status.includes("Expired")) { textColor = "text-red-600"; }
       return (
         <div className={`font-medium ${textColor}`}>
           {status || "Unknown"}
@@ -146,19 +173,15 @@ export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleEx
     },
   },
   {
-    accessorKey: "ai_grade", // Changed accessorKey to reflect new display
-    header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>AI Grade<ArrowUpDown className="ml-2 h-4 w-4" /></Button>), // Changed header text
+    accessorKey: "ai_grade",
+    header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>AI Grade<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
     cell: ({ row }) => {
       const analysis = row.original.ai_analysis;
-      if (!analysis || !analysis.matrix_rating) {
-        // If no analysis, show the CTA to complete profile
-        return <UnlockAIGradeCTA />;
-      }
+      if (!analysis || !analysis.matrix_rating) { return <UnlockAIGradeCTA />; }
       return <div className="text-center font-medium">{analysis.matrix_rating}</div>
     },
     sortingFn: (rowA, rowB) => {
-      // Simple alphabetical sort for letter grades for now
-      const gradeA = rowA.original.ai_analysis?.matrix_rating || 'Z'; // Sort empty grades last
+      const gradeA = rowA.original.ai_analysis?.matrix_rating || 'Z';
       const gradeB = rowB.original.ai_analysis?.matrix_rating || 'Z';
       return gradeA.localeCompare(gradeB);
     }
@@ -166,27 +189,14 @@ export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleEx
   {
     accessorKey: "is_excited",
     header: "Excited?",
-    cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={row.original.is_excited}
-          onCheckedChange={(checked: boolean) => {
-            handleToggleExcited(row.original.tracked_job_id, checked);
-          }}
-        />
-      </div>
-    ),
+    cell: ({ row }) => (<div className="flex items-center justify-center"> <Checkbox checked={row.original.is_excited} onCheckedChange={(checked: boolean) => { handleToggleExcited(row.original.tracked_job_id, checked); }} /> </div>),
     enableSorting: true,
     enableHiding: true,
   },
   {
     accessorKey: "created_at",
     header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Date Saved<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
-    cell: ({ row }) => {
-      const savedAt = row.original.created_at;
-      if (!savedAt) { return <div className="text-center">-</div>; }
-      return new Date(savedAt).toLocaleDateString();
-    }
+    cell: ({ row }) => (new Date(row.original.created_at).toLocaleDateString())
   },
   {
     accessorKey: "applied_at",
@@ -215,4 +225,6 @@ export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleEx
       )
     },
   },
-]
+];
+
+export { RowSubComponent };

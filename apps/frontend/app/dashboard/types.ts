@@ -51,6 +51,7 @@ export interface AIAnalysis {
 export interface TrackedJob {
   tracked_job_id: number;
   job_id: number;
+  company_id: number; // <-- ADDED
   job_title: string;
   company_name: string;
   job_url: string;
@@ -70,16 +71,29 @@ export interface TrackedJob {
   ai_analysis: AIAnalysis | null;
 }
 
-// --- NEW INTERFACE FOR JOB RECOMMENDATIONS ---
+// --- NEW INTERFACE FOR COMPANY PROFILE ---
+export interface CompanyProfile {
+    id: number;
+    company_id: number;
+    industry: string | null;
+    employee_count_range: string | null;
+    publicly_stated_mission: string | null;
+    primary_business_model: string | null;
+    researched_at: string;
+    ai_model_version: string;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface RecommendedJob {
   id: number;
   job_title: string;
   company_name: string;
   job_url: string;
   match_score: number;
-  matrix_rating: string | null; // <-- ADDED THIS PROPERTY
+  matrix_rating: string | null;
   job_modality: string | null;
   deduced_job_level: string | null;
 }
 
-export type UpdatePayload = Partial<Omit<TrackedJob, 'tracked_job_id' | 'job_id' | 'job_title' | 'company_name' | 'job_url' | 'created_at' | 'job_posting_status' | 'last_checked_at' | 'ai_analysis'>>;
+export type UpdatePayload = Partial<Omit<TrackedJob, 'tracked_job_id' | 'job_id' | 'company_id' | 'job_title' | 'company_name' | 'job_url' | 'created_at' | 'job_posting_status' | 'last_checked_at' | 'ai_analysis'>>;

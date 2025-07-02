@@ -1,13 +1,12 @@
-// Path: apps/frontend/app/dashboard/hooks/useTrackedJobsApi.ts
+// Path: apps/frontend/hooks/useTrackedJobsApi.ts
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
-import { type TrackedJob, type UpdatePayload } from '../types';
+import { type TrackedJob, type UpdatePayload, type CompanyProfile } from '../types';
 
 export function useTrackedJobsApi() {
   const { getToken, isLoaded: isUserLoaded } = useAuth();
-  // Reverted: Always point to the single production API URL
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
@@ -80,5 +79,22 @@ export function useTrackedJobsApi() {
     }
   }, [apiBaseUrl, authedFetch, trackedJobs]);
 
-  return { trackedJobs, isLoading, error, actions: { submitNewJob, updateTrackedJob, removeTrackedJob }};
+  const fetchCompanyProfile = useCallback(async (companyId: number): Promise<CompanyProfile | null> => {
+    try {
+      const response = await authedFetch(`${apiBaseUrl}/api/companies/${companyId}/profile`);
+      if (response.status === 404) {
+        return null;
+      }
+      if (!response.ok) {
+        throw new Error('Failed to fetch company profile.');
+      }
+      return await response.json();
+    } catch (err) {
+      console.error("Error fetching company profile:", err);
+      return null;
+    }
+  }, [apiBaseUrl, authedFetch]);
+
+
+  return { trackedJobs, isLoading, error, actions: { submitNewJob, updateTrackedJob, removeTrackedJob, fetchCompanyProfile }};
 }
