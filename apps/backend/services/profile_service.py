@@ -130,7 +130,7 @@ class ProfileService:
                     SELECT t.job_id
                     FROM tracked_jobs t
                     LEFT JOIN job_analyses a ON t.job_id = a.job_id AND a.user_id = t.user_id
-                    WHERE t.user_id = %s AND a.id IS NULL;
+                    WHERE t.user_id = %s AND a.job_id IS NULL;
                 """, (user_id,))
                 
                 jobs_to_analyze = cursor.fetchall()
