@@ -3,6 +3,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.44.0 - 2025-07-02 - UX Refinements & Final Onboarding Fixes
+
+This release completes the stabilization of the new user experience by refining UI interactions and resolving the final bug in the onboarding data lifecycle. The application is now fully stable with a robust and intuitive user flow.
+
+### Added
+- **Backlog:** Added new architectural epics to define User, Company, and Job lifecycles to parallel the existing Data Lifecycle documentation.
+
+### Changed
+- **UI/UX:** The main job submission button on the dashboard is now context-aware. It displays "Track" for users with incomplete profiles and "Analyze" for users who have completed onboarding, setting clear expectations.
+- **UI/UX:** Refined the "Required Fields" indicators on the profile page to be more subtle and align with standard web conventions.
+
+### Fixed
+- **Critical Bug (Data Loss):** Resolved the final bug in the onboarding flow where parsing a resume could overwrite previously user-entered data. The backend now performs a true "enrich-if-empty" merge, preserving user data as the source of truth.
+
 ## v0.43.0 - 2025-07-02 - Onboarding Lifecycle Hardening & Stability
 This release resolves a series of critical, interconnected bugs that affected the entire new user onboarding and job submission lifecycle. The application is now fully stable, and the logic for completing a user profile and triggering AI analysis is robust, resilient, and non-destructive.
 

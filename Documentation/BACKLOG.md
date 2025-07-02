@@ -1,4 +1,4 @@
-# Transparent Talent: Product Backlog & Roadmap v1.28
+# Transparent Talent: Product Backlog & Roadmap v1.29
 
 ## Column Definitions
 *   **AI Model:** The complexity required from the AI. (Flash, Pro [Breakdown/Execute], Creative, N/A)
@@ -14,6 +14,7 @@
 | E02| **New User Experience** | Refine and stabilize the entire new user journey, from sign-up through onboarding and profile completion. | In Progress |
 | E03| **Monetization & Subscriptions** | Define and implement user subscription tiers to gate access to premium AI features. | Not Started |
 | E04| **User Relationship Management** | Build a lightweight, integrated CRM for managing professional contacts and leveraging the user's network. | Not Started |
+| E05| **System Lifecycles** | Formally define and document the state machines and lifecycles for core system entities (Users, Companies, Jobs) to guide future development. | Not Started |
 
 ---
 
@@ -27,7 +28,6 @@
 ## Tier 2: Core User Experience & Differentiation
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **UI/UX: Job submission button text should be 'Track' for incomplete profiles**| E02 | 1000 | 2 | 100% | 0.05 | **40000** | N/A | S | **To Do** |
 | **UI/UX: Change "Desired Job Title" to "Desired Job Title(s)"** | E02 | 1000 | 1 | 100% | 0.05 | **20000** | N/A | S | **To Do** |
 | **UI/UX: Add "Upload New Resume" component to dashboard** | E02 | 1000 | 3 | 100% | 0.2 | **15000** | Flash | S | **To Do** |
 | **UI/UX: Add filler text to "preferred work location" dropdown & conditional logic for remote preference.**| E02 | 1000 | 1 | 100% | 0.1 | **10000** | Flash | S | **To Do** |
@@ -55,6 +55,14 @@
 
 ---
 
+## Documentation & Architecture
+| Task | Description | Priority | Epic |
+|:---|:---|:---|:---|
+| **Documentation: Define User Lifecycle** | Create `USER_LIFECYCLE.md` with a Mermaid diagram to map the user journey from visitor to fully onboarded and active user. | High | E05 |
+| **Documentation: Define Company & Job Lifecycles** | Create documents and diagrams for how company and job entities are created, updated, and managed within the system. | Medium | E05 |
+
+---
+
 ## Technical Debt & Research
 | Task | Description | Priority |
 |:---|:---|:---|
@@ -74,6 +82,11 @@
 ---
 
 ## Completed Features & Bugfixes
+### v0.44.0
+| Feature/Bugfix | Original Tier | RICE Score | Epic |
+| :--- | :--- | :--- | :--- |
+| **UI/UX: Job submission button text should be 'Track' for incomplete profiles** | Tier 2 | 40000 | E02 |
+
 ### v0.43.0
 | Feature/Bugfix | Original Tier | RICE Score | Epic |
 | :--- | :--- | :--- | :--- |
