@@ -1,99 +1,129 @@
 # Path: apps/backend/services/tracked_job_service.py
-
 from ..database import get_db
+from psycopg2.extras import RealDictCursor
+import psycopg2
 
 class TrackedJobService:
     def __init__(self, logger):
-        """
-        Initializes the TrackedJob Service.
-        Args:
-            logger: The Flask app's logger instance for logging messages.
-        """
         self.logger = logger
-        self.allowed_fields = [
-            'status', 'notes', 'is_excited', 'status_reason', 
-            'applied_at', 'first_interview_at', 'offer_received_at', 
+        self.db_connection = get_db()
+
+    def update_job(self, user_id, tracked_job_id, data):
+        allowed_fields = [
+            'status', 'is_excited', 'user_notes', 'status_reason',
+            'applied_at', 'first_interview_at', 'offer_received_at',
             'resolved_at', 'next_action_at', 'next_action_notes'
         ]
-
-    def update_job(self, user_id: int, tracked_job_id: int, payload: dict):
-        """
-        Updates a tracked job for a specific user.
-        """
-        fields_to_update = {k: v for k, v in payload.items() if k in self.allowed_fields}
         
-        if not fields_to_update:
-            self.logger.warning("Update called with no valid fields for tracked_job_id %s", tracked_job_id)
-            raise ValueError("No valid fields to update.")
+        # Filter out any fields from the payload that are not allowed to be updated
+        update_data = {k: v for k, v in data.items() if k in allowed_fields}
 
-        set_clauses = [f"{field} = %s" for field in fields_to_update.keys()]
-        params = list(fields_to_update.values())
+        if not update_data:
+            raise ValueError("No valid fields provided for update.")
+
+        # Build the SET part of the SQL query dynamically
+        set_clause = ", ".join([f"{field} = %s" for field in update_data.keys()])
+        
+        # The parameters must be in the same order as the fields in the SET clause
+        params = list(update_data.values())
         params.append(tracked_job_id)
         params.append(user_id)
-        
-        db = get_db()
-        with db.cursor() as cursor:
-            update_sql = f"UPDATE tracked_jobs SET {', '.join(set_clauses)} WHERE id = %s AND user_id = %s RETURNING id;"
-            
-            cursor.execute(update_sql, tuple(params))
-            updated_row = cursor.fetchone()
-            
-            if not updated_row:
-                self.logger.warning("Update tracked_job_id %s for user_id %s failed (not found or no permission).", tracked_job_id, user_id)
-                return None
-            
-            db.commit()
-            self.logger.info("Successfully updated tracked_job_id %s for user_id %s.", tracked_job_id, user_id)
-            
-            return self._get_formatted_job_by_id(cursor, updated_row['id'], user_id)
 
-    def _get_formatted_job_by_id(self, cursor, tracked_job_id: int, user_id: int):
-        """
-        Private helper to fetch and format a single tracked job.
-        """
-        cursor.execute("""
-            SELECT 
-                j.id as job_id, j.company_name, j.job_title, j.job_url, j.source, j.found_at,
-                j.status as job_posting_status, j.last_checked_at,
-                t.id as tracked_job_id, t.status, t.notes, t.applied_at, t.created_at, t.is_excited, t.status_reason,
-                t.first_interview_at, t.offer_received_at, t.resolved_at, t.next_action_at, t.next_action_notes,
-                ja.position_relevance_score, ja.environment_fit_score, ja.hiring_manager_view,
-                ja.matrix_rating, ja.summary as ai_summary, ja.qualification_gaps, ja.recommended_testimonials
-            FROM jobs j
-            JOIN tracked_jobs t ON j.id = t.job_id
-            LEFT JOIN job_analyses ja ON j.id = ja.job_id AND t.user_id = ja.user_id
+        query = f"UPDATE tracked_jobs SET {set_clause}, updated_at = NOW() WHERE id = %s AND user_id = %s RETURNING id;"
+
+        try:
+            with self.db_connection.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(query, tuple(params))
+                updated_row = cursor.fetchone()
+                if updated_row:
+                    self.db_connection.commit()
+                    self.logger.info(f"Successfully updated tracked_job {tracked_job_id} for user {user_id}.")
+                    # Fetch and return the full, formatted job data
+                    return self._get_formatted_job_by_id(cursor, tracked_job_id, user_id)
+                else:
+                    self.logger.warning(f"Update failed: Tracked job {tracked_job_id} not found for user {user_id}.")
+                    return None
+        except psycopg2.Error as e:
+            self.db_connection.rollback()
+            self.logger.error(f"Database error during tracked job update: {e}")
+            raise
+
+    def _get_formatted_job_by_id(self, cursor, tracked_job_id, user_id):
+        query = """
+            SELECT
+                t.id as tracked_job_id,
+                t.status,
+                t.is_excited,
+                t.created_at,
+                t.applied_at,
+                t.first_interview_at,
+                t.offer_received_at,
+                t.resolved_at,
+                t.next_action_at,
+                t.next_action_notes,
+                t.user_notes,
+                t.status_reason,
+                j.id as job_id,
+                j.company_id, -- <-- ADD THIS LINE
+                j.job_title,
+                j.company_name,
+                j.job_url,
+                j.status as job_posting_status,
+                j.last_checked_at,
+                a.position_relevance_score,
+                a.environment_fit_score,
+                a.hiring_manager_view,
+                a.matrix_rating,
+                a.summary,
+                a.qualification_gaps,
+                a.recommended_testimonials
+            FROM tracked_jobs t
+            JOIN jobs j ON t.job_id = j.id
+            LEFT JOIN job_analyses a ON t.job_id = a.job_id AND t.user_id = a.user_id
             WHERE t.id = %s AND t.user_id = %s;
-        """, (tracked_job_id, user_id))
-        
-        row = cursor.fetchone()
-        return self._format_job_row(row) if row else None
+        """
+        cursor.execute(query, (tracked_job_id, user_id))
+        job = cursor.fetchone()
 
-    def _format_job_row(self, row) -> dict:
-        """
-        Private helper to format a database row into the standard JSON structure.
-        """
-        if not row: return None
-        
-        job = {
-            "tracked_job_id": row["tracked_job_id"], "job_id": row["job_id"],
-            "job_title": row["job_title"], "company_name": row["company_name"],
-            "job_url": row["job_url"], "status": row["status"],
-            "user_notes": row["notes"], "created_at": row["created_at"],
-            "is_excited": row["is_excited"], "job_posting_status": row["job_posting_status"],
-            "last_checked_at": row["last_checked_at"], "status_reason": row["status_reason"],
-            "applied_at": row["applied_at"], "first_interview_at": row["first_interview_at"],
-            "offer_received_at": row["offer_received_at"], "resolved_at": row["resolved_at"],
-            "next_action_at": row["next_action_at"], "next_action_notes": row["next_action_notes"],
+        if not job:
+            self.logger.warning(f"No tracked job found with ID {tracked_job_id} for user {user_id}")
+            return None
+
+        formatted_job = {
+            "tracked_job_id": job['tracked_job_id'],
+            "job_id": job['job_id'],
+            "company_id": job['company_id'], # <-- ADD THIS LINE
+            "job_title": job['job_title'],
+            "company_name": job['company_name'],
+            "job_url": job['job_url'],
+            "status": job['status'],
+            "user_notes": job['user_notes'],
+            "created_at": job['created_at'].isoformat() if job['created_at'] else None,
+            "is_excited": job['is_excited'],
+            "job_posting_status": job['job_posting_status'],
+            "last_checked_at": job['last_checked_at'].isoformat() if job['last_checked_at'] else None,
+            "status_reason": job['status_reason'],
+            "applied_at": job['applied_at'].isoformat() if job['applied_at'] else None,
+            "first_interview_at": job['first_interview_at'].isoformat() if job['first_interview_at'] else None,
+            "offer_received_at": job['offer_received_at'].isoformat() if job['offer_received_at'] else None,
+            "resolved_at": job['resolved_at'].isoformat() if job['resolved_at'] else None,
+            "next_action_at": job['next_action_at'].isoformat() if job['next_action_at'] else None,
+            "next_action_notes": job['next_action_notes'],
             "ai_analysis": None
         }
-        if row["position_relevance_score"] is not None:
-            job["ai_analysis"] = {
-                "position_relevance_score": row["position_relevance_score"],
-                "environment_fit_score": row["environment_fit_score"],
-                "hiring_manager_view": row["hiring_manager_view"],
-                "matrix_rating": row["matrix_rating"],
-                "summary": row["ai_summary"],
-                "qualification_gaps": row["qualification_gaps"],
-                "recommended_testimonials": row["recommended_testimonials"]
+
+        if job['matrix_rating']:
+            formatted_job['ai_analysis'] = {
+                'position_relevance_score': job['position_relevance_score'],
+                'environment_fit_score': job['environment_fit_score'],
+                'hiring_manager_view': job['hiring_manager_view'],
+                'matrix_rating': job['matrix_rating'],
+                'summary': job['summary'],
+                'qualification_gaps': job['qualification_gaps'],
+                'recommended_testimonials': job['recommended_testimonials']
             }
-        return job
+        
+        return formatted_job
+
+    def _get_active_pipeline_statuses_tuple(self):
+        return ('SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS')
