@@ -3,8 +3,6 @@
 from psycopg2.extras import DictCursor, Json
 from ..database import get_db
 from decimal import Decimal
-# The circular import is removed from here.
-# from ..services.job_service import JobService
 from ..config import config
 
 class ProfileService:
@@ -24,6 +22,14 @@ class ProfileService:
             "conflict_resolution_style", "communication_preference", "change_tolerance"
         ]
 
+    def _get_active_resume_text(self, cursor, user_id: int) -> str:
+        cursor.execute(
+            "SELECT raw_text FROM resume_submissions WHERE user_id = %s AND is_active = TRUE ORDER BY submitted_at DESC LIMIT 1",
+            (user_id,)
+        )
+        resume_row = cursor.fetchone()
+        return resume_row['raw_text'] if resume_row else ""
+
     def get_profile(self, user_id: int):
         db = get_db()
         with db.cursor() as cursor:
@@ -39,38 +45,47 @@ class ProfileService:
             return self._format_profile(profile, cursor.description)
 
     def get_profile_for_analysis(self, user_id: int):
-        profile = self.get_profile(user_id)
-        analysis_columns = [
-            "short_term_career_goal", "ideal_role_description", "core_strengths",
-            "skills_to_avoid", "preferred_industries", "industries_to_avoid",
-            "desired_title", "non_negotiable_requirements", "deal_breakers",
-            "preferred_work_style", "is_remote_preferred",
-            "desired_salary_min", "desired_salary_max"
-        ]
-        profile_labels = {
-            "short_term_career_goal": "Short-Term Career Goal", "ideal_role_description": "Ideal Role",
-            "core_strengths": "Core Strengths", "skills_to_avoid": "Skills To Avoid",
-            "preferred_industries": "Preferred Industries", "industries_to_avoid": "Industries To Avoid",
-            "desired_title": "Desired Title", "non_negotiable_requirements": "Non-Negotiables",
-            "deal_breakers": "Deal Breakers", "preferred_work_style": "Preferred Work Style",
-            "is_remote_preferred": "Remote Preference",
-            "desired_salary_min": "Desired Minimum Salary",
-            "desired_salary_max": "Desired Maximum Salary"
-        }
-        profile_parts = []
-        for col in analysis_columns:
-            value = profile.get(col)
-            if col == 'is_remote_preferred':
-                if value: profile_parts.append(f"- {profile_labels[col]}: Yes, remote is preferred.")
-                else: profile_parts.append(f"- {profile_labels[col]}: No, remote is not preferred.")
-            elif col in ['desired_salary_min', 'desired_salary_max']:
-                if value is not None:
-                    profile_parts.append(f"- {profile_labels[col]}: {int(value)}")
-            elif value and str(value).strip():
-                profile_parts.append(f"- {profile_labels[col]}: {value}")
-        if len(profile_parts) <= 1:
-             raise ValueError("User profile is too sparse. Please fill out your profile to enable analysis.")
-        return "\n".join(profile_parts)
+        db = get_db()
+        with db.cursor() as cursor:
+            # Fetch both profile and active resume
+            profile = self.get_profile(user_id)
+            resume_text = self._get_active_resume_text(cursor, user_id)
+
+            if not resume_text:
+                raise ValueError("User has no active resume. Analysis cannot be performed.")
+
+            analysis_columns = [
+                "short_term_career_goal", "ideal_role_description", "core_strengths",
+                "skills_to_avoid", "preferred_industries", "industries_to_avoid",
+                "desired_title", "non_negotiable_requirements", "deal_breakers",
+                "preferred_work_style", "is_remote_preferred",
+                "desired_salary_min", "desired_salary_max"
+            ]
+            profile_labels = {
+                "short_term_career_goal": "Short-Term Career Goal", "ideal_role_description": "Ideal Role",
+                "core_strengths": "Core Strengths", "skills_to_avoid": "Skills To Avoid",
+                "preferred_industries": "Preferred Industries", "industries_to_avoid": "Industries To Avoid",
+                "desired_title": "Desired Title", "non_negotiable_requirements": "Non-Negotiables",
+                "deal_breakers": "Deal Breakers", "preferred_work_style": "Preferred Work Style",
+                "is_remote_preferred": "Remote Preference",
+                "desired_salary_min": "Desired Minimum Salary",
+                "desired_salary_max": "Desired Maximum Salary"
+            }
+            profile_parts = []
+            for col in analysis_columns:
+                value = profile.get(col)
+                if col == 'is_remote_preferred':
+                    if value: profile_parts.append(f"- {profile_labels[col]}: Yes, remote is preferred.")
+                elif value and str(value).strip():
+                    profile_parts.append(f"- {profile_labels[col]}: {value}")
+            
+            if len(profile_parts) == 0:
+                raise ValueError("User profile is too sparse. Please fill out your profile to enable analysis.")
+            
+            # Combine profile and resume into a single context string
+            profile_context = "\n".join(profile_parts)
+            full_context = f"USER PROFILE & PREFERENCES:\n---\n{profile_context}\n---\n\nUSER RESUME:\n---\n{resume_text}\n---"
+            return full_context
 
     def update_profile(self, user_id: int, data: dict):
         fields_to_update = []
@@ -117,7 +132,6 @@ class ProfileService:
             raise
 
     def trigger_reanalysis_for_user(self, user_id: int):
-        # Import JobService here, inside the method, to break the circular dependency.
         from ..services.job_service import JobService
         
         self.logger.info(f"Checking for jobs to re-analyze for user_id: {user_id}")
@@ -125,6 +139,12 @@ class ProfileService:
         job_service = JobService(self.logger)
         
         try:
+            try:
+                user_profile_text = self.get_profile_for_analysis(user_id)
+            except ValueError as e:
+                self.logger.warning(f"Skipping re-analysis for user {user_id}: {e}")
+                return {"message": "Profile saved, but is still too sparse for re-analysis."}
+
             with db.cursor() as cursor:
                 cursor.execute("""
                     SELECT t.job_id
@@ -138,8 +158,6 @@ class ProfileService:
 
                 if not jobs_to_analyze:
                     return {"message": "No jobs needed re-analysis."}
-
-                user_profile_text = self.get_profile_for_analysis(user_id)
 
                 for job_row in jobs_to_analyze:
                     job_id = job_row['job_id']
@@ -174,6 +192,7 @@ class ProfileService:
 
     def _format_profile(self, profile_row: DictCursor, description) -> dict:
         if not profile_row: return {}
+        # ... (rest of function is unchanged)
         profile_dict = {}
         string_fields = [
             'full_name', 'current_location', 'linkedin_profile_url', 'resume_url',
@@ -190,7 +209,7 @@ class ProfileService:
             value = profile_row[col_name]
             if isinstance(value, Decimal):
                 profile_dict[col_name] = float(value)
-            elif col_name in ['desired_salary_min', 'desired_salary_max']: # No latitude/longitude here
+            elif col_name in ['desired_salary_min', 'desired_salary_max']:
                  profile_dict[col_name] = int(value) if value is not None else None
             elif col_name in string_fields and value is None:
                 profile_dict[col_name] = ""
