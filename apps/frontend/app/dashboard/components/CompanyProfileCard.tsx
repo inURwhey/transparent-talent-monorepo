@@ -8,50 +8,42 @@ import { type CompanyProfile } from '../types';
 interface CompanyProfileCardProps {
     companyId: number;
     fetchCompanyProfile: (companyId: number) => Promise<CompanyProfile | null>;
+    isExpanded: boolean; // Add a prop to know if the row is expanded
 }
 
-export default function CompanyProfileCard({ companyId, fetchCompanyProfile }: CompanyProfileCardProps) {
+export default function CompanyProfileCard({ companyId, fetchCompanyProfile, isExpanded }: CompanyProfileCardProps) {
     const [profile, setProfile] = useState<CompanyProfile | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        let isMounted = true; // Flag to track if the component is mounted
+        // Only fetch if the row is expanded and we haven't already fetched the data.
+        // This prevents re-fetching on every render.
+        if (isExpanded && !profile && !isLoading && !error) {
+            const loadProfile = async () => {
+                if (!companyId) {
+                    setIsLoading(false);
+                    return;
+                }
+                
+                setIsLoading(true);
+                setError(null);
 
-        const loadProfile = async () => {
-            if (!companyId) {
-                setIsLoading(false);
-                return;
-            };
-            
-            setIsLoading(true);
-            setError(null);
-
-            try {
-                const fetchedProfile = await fetchCompanyProfile(companyId);
-                if (isMounted) { // Only update state if the component is still mounted
+                try {
+                    const fetchedProfile = await fetchCompanyProfile(companyId);
                     setProfile(fetchedProfile);
-                }
-            } catch (err) {
-                if (isMounted) {
+                } catch (err) {
                     setError("Failed to load company data.");
-                }
-                console.error(err);
-            } finally {
-                if (isMounted) {
+                    console.error(err);
+                } finally {
                     setIsLoading(false);
                 }
-            }
-        };
+            };
 
-        loadProfile();
-
-        // Cleanup function to run when the component unmounts
-        return () => {
-            isMounted = false;
-        };
-    // The dependency array ensures this effect runs only when companyId changes.
-    }, [companyId, fetchCompanyProfile]);
+            loadProfile();
+        }
+    // Dependency array now includes `isExpanded` to trigger the fetch.
+    }, [companyId, fetchCompanyProfile, isExpanded, profile, isLoading, error]);
 
     return (
         <div className="p-4 bg-gray-50/50 border-l-4 border-blue-500">

@@ -34,7 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import CompanyProfileCard from "./components/CompanyProfileCard" // <-- Import the new component
+import CompanyProfileCard from "./components/CompanyProfileCard"
 import { type TrackedJob, type CompanyProfile } from "./types" 
 
 interface DataTableProps<TData, TValue> {
@@ -46,7 +46,7 @@ interface DataTableProps<TData, TValue> {
   fetchCompanyProfile: (companyId: number) => Promise<CompanyProfile | null>;
 }
 
-export function DataTable<TData extends TrackedJob, TValue>({ // Ensure TData extends TrackedJob
+export function DataTable<TData extends TrackedJob, TValue>({
   columns,
   data,
   pagination,
@@ -164,7 +164,8 @@ export function DataTable<TData extends TrackedJob, TValue>({ // Ensure TData ex
                       <TableCell colSpan={columns.length}>
                         <CompanyProfileCard 
                             companyId={row.original.company_id} 
-                            fetchCompanyProfile={fetchCompanyProfile} 
+                            fetchCompanyProfile={fetchCompanyProfile}
+                            isExpanded={row.getIsExpanded()}
                         />
                       </TableCell>
                     </TableRow>
