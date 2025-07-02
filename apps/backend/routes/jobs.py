@@ -46,6 +46,8 @@ def submit_job():
                     new_job_data = service._get_formatted_job_by_id(cursor, tracked_job_id, user_id)
                     return jsonify(new_job_data), 201
             
+            # --- START: CORRECTED AUTOMATION LOGIC ---
+            
             basic_details = job_service.get_basic_job_details(job_url)
             company_name_guess = basic_details.get('company_name', 'Unknown Company')
 
@@ -58,23 +60,25 @@ def submit_job():
                 company_id = cursor.fetchone()['id']
                 db.commit()
             
+            # **FIX**: Company research now happens for ALL new job submissions, outside the user onboarding check.
+            company_profile = job_service.research_and_get_company_profile(company_id)
+            company_profile_text = json.dumps(company_profile, indent=2, default=str) if company_profile else "No company profile available."
+
             user_profile = profile_service.get_profile(user_id)
             perform_ai_analysis = user_profile.get('has_completed_onboarding', False)
         
             analysis_result = None
             if perform_ai_analysis:
-                current_app.logger.info(f"User {user_id} is onboarded. Enriching data and performing full analysis.")
-                
-                company_profile = job_service.research_and_get_company_profile(company_id)
-                # --- FIX: Added default=str to handle datetime serialization ---
-                company_profile_text = json.dumps(company_profile, indent=2, default=str) if company_profile else "No company profile available."
-                
+                current_app.logger.info(f"User {user_id} is onboarded. Performing full analysis with enriched context.")
                 user_profile_text = profile_service.get_profile_for_analysis(user_id)
+                # The company_profile_text is now available to be passed in.
                 job_data = job_service.get_job_details_and_analysis(job_url, user_profile_text, company_profile_text)
                 analysis_result = job_data['analysis']
             else:
                 current_app.logger.info(f"User {user_id} is not onboarded. Using basic job details.")
                 analysis_result = basic_details
+            
+            # --- END: CORRECTED AUTOMATION LOGIC ---
 
             company_name = analysis_result.get('company_name', company_name_guess)
             job_title = analysis_result.get('job_title', 'Unknown Title')
@@ -85,6 +89,7 @@ def submit_job():
             job_modality = analysis_result.get('job_modality') if perform_ai_analysis else None
             deduced_job_level = analysis_result.get('deduced_job_level') if perform_ai_analysis else None
 
+            # Find or create company again, in case AI analysis corrected the name
             cursor.execute("SELECT id FROM companies WHERE LOWER(name) = LOWER(%s)", (company_name,))
             company_row = cursor.fetchone()
             if company_row:
@@ -140,6 +145,7 @@ def submit_job():
         current_app.logger.error(f"An unexpected error occurred in submit_job route: {e}")
         return jsonify({"error": "An internal server error occurred."}), 500
 
+# Other endpoints are unchanged
 @jobs_bp.route('/tracked-jobs', methods=['GET'])
 @token_required
 def get_tracked_jobs():
