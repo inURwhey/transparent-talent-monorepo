@@ -10,7 +10,6 @@ import re
 
 onboarding_bp = Blueprint('onboarding_bp', __name__)
 
-# Define fields that can be reasonably parsed from a resume
 RESUME_PARSABLE_FIELDS = [
     "full_name",
     "current_location",
@@ -39,6 +38,10 @@ def parse_resume():
         
         profile_service.create_or_update_active_resume_submission(user_id, resume_text, 'welcome-page-v1')
         
+        # --- Start: Get Current Profile to Avoid Overwriting ---
+        current_profile = profile_service.get_profile(user_id)
+        # --- End: Get Current Profile ---
+        
         json_schema = {field: "string (or null)" for field in RESUME_PARSABLE_FIELDS}
         json_schema_str = json.dumps(json_schema, indent=2)
 
@@ -66,12 +69,18 @@ def parse_resume():
         cleaned_response = re.sub(r'```json\s*|\s*```', '', response.text.strip())
         parsed_data = json.loads(cleaned_response)
         
-        # Smart Merging: Filter out null values so we don't overwrite existing data.
-        update_payload = {k: v for k, v in parsed_data.items() if v is not None}
+        # --- Start: Simple "Only Apply if Empty" Logic ---
+        update_payload = {}
+        for key, value in parsed_data.items():
+            # Only apply the AI's value if it's not null AND the user hasn't already provided a value for that field.
+            if value is not None and not current_profile.get(key):
+                update_payload[key] = value
+        # --- End: Simple "Only Apply if Empty" Logic ---
 
-        current_app.logger.info(f"Successfully parsed resume for user_id: {user_id}. Updating with non-null fields: {list(update_payload.keys())}")
+        current_app.logger.info(f"Successfully parsed resume for user_id: {user_id}. Updating with non-clobbering fields: {list(update_payload.keys())}")
         
-        profile_service.update_profile(user_id, update_payload)
+        if update_payload:
+            profile_service.update_profile(user_id, update_payload)
         
         profile_service.check_and_trigger_onboarding_completion(user_id, ONBOARDING_REQUIRED_FIELDS)
 
