@@ -14,11 +14,13 @@ class Config:
     CLERK_SECRET_KEY = os.getenv('CLERK_SECRET_KEY')
     CLERK_ISSUER_URL = os.getenv('CLERK_ISSUER_URL')
 
-    # --- THE FIX ---
     # We now map over the split list and call .strip() on each item
     # to remove any leading or trailing whitespace.
     raw_parties = os.getenv('CLERK_AUTHORIZED_PARTY', '')
     CLERK_AUTHORIZED_PARTY = [party.strip() for party in raw_parties.split(',')]
+
+    # --- NEW LINE TO FIX ADMIN ACCESS ---
+    CLERK_ADMIN_USER_IDS = os.getenv('CLERK_ADMIN_USER_IDS', '')
 
     ANALYSIS_PROTOCOL_VERSION = '2.0'
     JOB_POSTING_MAX_AGE_DAYS = 60
