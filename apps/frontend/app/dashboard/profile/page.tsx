@@ -124,10 +124,10 @@ export default function UserProfilePage() {
             if (!response.ok) throw new Error((await response.json()).error || 'Failed to save profile.');
             const updatedProfile: Profile = await response.json();
             setProfile(updatedProfile);
-            setSuccessMessage("Profile updated successfully!");
+            setSuccessMessage("Profile updated successfully! Redirecting to dashboard...");
             setTimeout(() => {
-                setSuccessMessage(null);
-            }, 3000);
+                window.location.assign('/dashboard');
+            }, 1500);
         } catch (err: any) { 
             console.error("Error updating profile:", err);
             setError(err.message); 
@@ -175,7 +175,6 @@ export default function UserProfilePage() {
                 <div className="bg-white p-8 rounded-lg shadow-md">
                     <div className="flex justify-between items-center mb-6">
                         <h1 className="text-3xl font-bold text-gray-800">Your Profile</h1>
-                        <Link href="/dashboard" passHref><Button variant="outline">Back to Dashboard</Button></Link>
                     </div>
                     {!profile.has_completed_onboarding && (
                         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-md" role="alert">
@@ -183,8 +182,6 @@ export default function UserProfilePage() {
                             <p>To find your best-fit opportunities, please submit a resume (at the bottom of this page) and fill out all fields marked with a <span className="text-red-500 font-bold">*</span>.</p>
                         </div>
                     )}
-                    {error && <div className="bg-red-100 border-l-4 border-red-400 text-red-700 p-4 mb-4" role="alert"><strong className="font-bold">Error! </strong>{error}</div>}
-                    {successMessage && <div className="bg-green-100 border-l-4 border-green-400 text-green-700 p-4 mb-4" role="alert"><strong className="font-bold">Success! </strong>{successMessage}</div>}
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <Collapsible open={openSections.workStyle} onOpenChange={() => toggleSection('workStyle')} className="border rounded-md shadow-sm">
                             <CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Work Style & Preferences{openSections.workStyle ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
@@ -193,6 +190,7 @@ export default function UserProfilePage() {
                                     <Select name="work_style_preference" value={profile.work_style_preference || ''} onValueChange={(v) => handleChange('work_style_preference',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select a work style..." /></SelectTrigger>
                                         <SelectContent>
+                                            <SelectItem value="null">No Preference</SelectItem>
                                             <SelectItem value="An ambiguous environment where I can create my own structure.">An ambiguous environment where I can create my own structure.</SelectItem>
                                             <SelectItem value="A structured environment with clearly defined tasks.">A structured environment with clearly defined tasks.</SelectItem>
                                         </SelectContent>
@@ -202,6 +200,7 @@ export default function UserProfilePage() {
                                     <Select name="conflict_resolution_style" value={profile.conflict_resolution_style || ''} onValueChange={(v) => handleChange('conflict_resolution_style',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select a conflict style..." /></SelectTrigger>
                                         <SelectContent>
+                                            <SelectItem value="null">No Preference</SelectItem>
                                             <SelectItem value="Have a direct, open debate to resolve the issue quickly.">Have a direct, open debate to resolve the issue quickly.</SelectItem>
                                             <SelectItem value="Build consensus with stakeholders before presenting a solution.">Build consensus with stakeholders before presenting a solution.</SelectItem>
                                         </SelectContent>
@@ -211,6 +210,7 @@ export default function UserProfilePage() {
                                     <Select name="communication_preference" value={profile.communication_preference || ''} onValueChange={(v) => handleChange('communication_preference',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select a communication style..." /></SelectTrigger>
                                         <SelectContent>
+                                            <SelectItem value="null">No Preference</SelectItem>
                                             <SelectItem value="Detailed written documentation (e.g., docs, wikis, Notion).">Detailed written documentation (e.g., docs, wikis, Notion).</SelectItem>
                                             <SelectItem value="Real-time synchronous meetings (e.g., Zoom, Slack huddles).">Real-time synchronous meetings (e.g., Zoom, Slack huddles).</SelectItem>
                                         </SelectContent>
@@ -220,6 +220,7 @@ export default function UserProfilePage() {
                                     <Select name="change_tolerance" value={changeToleranceBackendToFrontendMap[profile.change_tolerance ?? ''] || ''} onValueChange={(v) => handleChange('change_tolerance',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select your preference for change..." /></SelectTrigger>
                                         <SelectContent>
+                                            <SelectItem value="null">No Preference</SelectItem>
                                             <SelectItem value="Priorities are stable and I can focus on a long-term roadmap.">Priorities are stable and I can focus on a long-term roadmap.</SelectItem>
                                             <SelectItem value="The team is nimble and priorities pivot often based on new data.">The team is nimble and priorities pivot often based on new data.</SelectItem>
                                         </SelectContent>
@@ -309,7 +310,15 @@ export default function UserProfilePage() {
                                 <div><Label htmlFor="personality_gallup_strengths">Gallup Strengths (Top 5)</Label><Textarea id="personality_gallup_strengths" value={profile.personality_gallup_strengths || ''} onChange={(e) => handleChange('personality_gallup_strengths', e.target.value)} rows={3} /></div>
                             </CollapsibleContent>
                         </Collapsible>
-                        <Button type="submit" disabled={isSaving} className="w-full bg-indigo-600 hover:bg-indigo-700 mt-6">{isSaving ? 'Saving...' : 'Save Profile'}</Button>
+                        
+                        <div className="pt-4 space-y-4">
+                             {error && <div className="bg-red-100 border-l-4 border-red-400 text-red-700 p-4" role="alert"><strong className="font-bold">Error! </strong>{error}</div>}
+                             {successMessage && <div className="bg-green-100 border-l-4 border-green-400 text-green-700 p-4" role="alert"><strong className="font-bold">Success! </strong>{successMessage}</div>}
+                            <div className="flex items-center justify-end space-x-4">
+                                <Link href="/dashboard" passHref><Button variant="outline">Back to Dashboard</Button></Link>
+                                <Button type="submit" disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">{isSaving ? 'Saving...' : 'Save Profile'}</Button>
+                            </div>
+                        </div>
                     </form>
                 </div>
 
