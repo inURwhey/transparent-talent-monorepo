@@ -1,180 +1,76 @@
-# Transparent Talent: Operational Protocols v2.7
+# Transparent Talent: Operational Protocols v3.0
 
 ## System Instructions (Core Operating Principles)
 *   **Full-File Output Mandate:** When providing file content for replacement, the AI **must** output the *entire*, complete, and untruncated code. Abbreviating with comments is a critical failure.
 *   **Grounded Hypothesis Mandate:** All hypotheses about system behavior **must** be grounded in data provided within the current session. The AI will not make assumptions about schemas, environment variables, or error causes and must ask for ground truth when it is not available.
-*   **Clarification Mandate:** If a task description, backlog item, or user request is ambiguous, lacks sufficient detail, or implies an implementation choice that could reasonably lead to multiple revisions, the AI **must** ask the user for clarification before generating code or proceeding.
+*   **Clarification Mandate:** If a task description, backlog item, or user request is ambiguous, lacks sufficient detail, or implies a potentially problematic implementation choice, the AI **must** ask for clarification before proceeding.
 
-## Future State Note
-The ultimate goal for these protocols is to generate structured **JSON** output that can be directly consumed by our backend API. The current CSV/Sheet-based output is an intermediary step for the manual and semi-automated phases.
+---
 
-## Developer Workflow Protocols
+## Developer Workflow & Quality Assurance
 
-### Git Branching & Preview Protocol v1.0 -- AS OF v2.3, BRANCHING ONLY WORKS ON THE bugfix BRANCH, not MAIN.
-*Objective:* To maintain a stable `main` branch and enable isolated, full-stack testing of new features.
-*Workflow:*
-1.  **Start Work:**
-    *   Ensure the local `main` branch is up-to-date (`git checkout main && git pull`).
-    *   Create a descriptive feature branch from `main` (e.g., `feature/user-onboarding-flow`, `bugfix/refine-filter`).
-    *   **For tasks requiring backend changes:** Create a new, temporary backend service on Render. Configure this service to auto-deploy from the new feature branch.
-    *   **In Vercel:** Create a new `NEXT_PUBLIC_BACKEND_PREVIEW_URL` environment variable. Scope it to the "Preview" environment and set its value to the URL of the temporary Render service.
-2.  **During Development:**
-    *   Commit work to the feature branch.
-    *   Use the Vercel preview deployment URL for testing the full-stack application.
-    *   The backend's authentication logic will automatically authorize valid Vercel preview URLs via regex pattern matching. The Flask CORS configuration is set to allow requests from any origin for preview/development flexibility.
-3.  **Complete Work:**
-    *   Upon successful testing in the preview environment, create a Pull Request on GitHub from the feature branch to `main`.
-    *   After the PR is reviewed and approved, merge it into the `main` branch.
-    *   Delete the remote feature branch from GitHub.
-    *   Locally, switch back to `main`, pull the latest changes, and delete the local feature branch (`git checkout main && git pull && git branch -d <branch-name>`).
-    *   **Decommission the temporary Render service** to avoid unnecessary costs.
-4.  **Abandon Work:**
-    *   If a feature branch will not be merged, simply leave it in the remote repository for historical context.
-    *   Delete the temporary Render service associated with the branch.
-
-### Debugging Principle: Grounded Hypothesis
-*Prime Directive:* All hypotheses about system behavior **must** be grounded in data provided within the current session (e.g., logs, schema descriptions, user-provided code). Guesswork is to be avoided. When new data invalidates a hypothesis, the AI must explicitly state: **"Hypothesis invalidated. Resetting assumptions and re-evaluating ground truth."**
-
-### Monorepo Interaction Protocol v1.0
-*Objective:* To prevent build and dependency installation errors caused by incorrect assumptions about package names within the pnpm workspace, and to ensure smooth CLI interactions across environments.
-*Prime Directive:* The AI must **never** assume the `name` of a package within the `apps/*` directory. The AI **must** also be aware of the user's specific shell environment for CLI command generation.
-
-*Workflow:*
-1.  **Identify Need:** The AI identifies the need to run a workspace-specific command (e.g., `pnpm --filter <package-name> ...`) or a general CLI command for testing/debugging.
-2.  **Environment Acknowledgment:** The AI explicitly acknowledges the user's current environment ("User is using a Windows environment with native `cmd` and `PowerShell`.")
-3.  **Mandatory `package.json` Request:** Before generating any workspace-specific command, the AI **must** prompt the user to provide the full contents of the `package.json` file from the relevant application directory (e.g., `apps/frontend/package.json`).
-4.  **Prioritize API Clients for Complex Requests:** For complex HTTP API requests (e.g., those with large JSON bodies, file content, or intricate headers), the AI **must** first suggest using a dedicated graphical API client like Postman or Insomnia, providing specific step-by-step instructions for its usage.
-5.  **Grounded Command Generation (CLI):** If a CLI command is still required or requested, the AI will use the `name` property from the provided `package.json` to construct the correct `--filter` flag. For other CLI commands, the AI **must** generate them with robust escaping and syntax appropriate for the user's *specified* shell environment, or provide clear instructions for manual input/file redirection if shell limitations prevent a direct command.
-
-### Frontend Development & Deployment Protocol v1.0
-*Objective:* To ensure efficient and stable frontend development, mindful of Vercel's free tier deployment limits (approximately 100 deployments per 24 hours).
-*PrimeDirective:* Minimize pushes to the `main` branch that trigger production deployments. The AI **must** proactively internalize relevant parts of the knowledge base (documentation, best practices) for any technical or open-source framework in use before forming hypotheses or generating code.
-
-*Workflow:*
-1.  **Local First Development & Thorough QA:** All frontend changes **must** be thoroughly developed and tested locally using `pnpm dev` within `apps/frontend` before being committed or pushed. Ensure features are fully functional and error-free in the local environment.
-2.  **Utilize Feature Branches & Preview Deployments:**
-    *   Develop on dedicated feature branches (e.g., `git checkout -b feature/my-new-feature`).
-    *   Push feature branches to GitHub to trigger Vercel's **preview deployments**. These deployments are intended for testing and review and typically have a separate or more lenient limit.
-    *   **Only merge to `main` (triggering a production deployment) once a feature is complete, thoroughly tested in a preview deployment, and confirmed stable.**
-3.  **Group Logical Changes:** When pushing to a feature branch, group related changes into logical commits. Avoid committing and pushing every tiny change individually.
-4.  **Shadcn UI Component Installation:** When a new Shadcn UI component is required:
-    *   Navigate to the `apps/frontend` directory.
-    *   Run `npx shadcn@latest add <component-name>` (e.g., `npx shadcn@latest add collapsible`). The `shadcn-ui` CLI is deprecated.
-    *   **Mandate: Always prefer to use official Shadcn UI components** over custom implementations or workarounds where a suitable Shadcn component exists. If a Shadcn component behaves unexpectedly, the first step is to consult its official documentation and examples for proper usage, especially regarding `value` props for controlled components (e.g., `Select` components often expect `""` to show a placeholder, not `undefined`).
-    *   **Confirm successful installation locally** before proceeding with code that uses the new component or pushing changes.
-
-### Task Handoff Protocol v1.0
-*   **Objective:** To ensure a seamless transition of work from a "Pro Breakdown" session to a "Flash Execute" session by creating a self-contained, explicit set of instructions.
-*   **Trigger:** At the conclusion of a "Pro Breakdown" session, immediately after the architectural work (like a DB migration) is complete and before the `END_PROMPT`.
-*   **Workflow:**
-    1.  **Acknowledge Breakdown Completion:** The Pro model will state that the architectural planning is complete.
-    2.  **Generate Handoff Brief:** The Pro model will generate a new, temporary markdown document named `TASK_HANDOFF.md`. This document will contain:
-        *   **Objective:** A clear, one-sentence goal for the task.
-        *   **Acceptance Criteria:** A bulleted list of what must be true for the task to be considered complete.
-        *   **Relevant Files:** A list of all files that need to be modified.
-        *   **Contextual Snippets:** The exact SQL scripts that were run, and the `\d <table_name>` output for any modified tables. This provides the Flash model with all necessary schema information without needing the full chat history.
-        *   **Delegated To:** Explicitly state which AI model (Flash or Pro Execute) is expected to execute this task.
-    3.  **Instruct User:** The Pro model will instruct the user to save this `TASK_HANDOFF.md` file and provide it as the *primary context* for the next Flash session.
-
-### Test Plan Generation Protocol v1.0
-*   **Objective:** To ensure all implemented features are thoroughly tested and verified before marking a task complete.
-*   **Trigger:** Immediately after a code generation step is completed (and before requesting a commit message for full deployment) for any task marked as `Flash` or `Pro Execute`.
-*   **Workflow:**
-    1.  **Acknowledge Code Completion:** The AI states that the coding phase for the logical unit is complete.
-    2.  **Generate Test Plan:** The AI provides a comprehensive test plan, presented as a Markdown document. The test plan will include:
-        *   **Feature/Task:** Clear reference to what is being tested.
-        *   **Objective:** The specific goal of the testing.
-        *   **Prerequisites:** Any setup required before testing.
-        *   **Test Cases:** A series of numbered steps for verification, including:
-            *   **Input:** What data/action to provide.
-            *   **Expected Output:** What the system should do (UI changes, API response status, specific data in database).
-            *   **Verification Steps:** How to check the results (e.g., inspect UI, check browser console, query DB, examine backend logs, **execute specific SQL queries**).
-        *   **Edge Cases/Negative Tests:** Specific scenarios for robustness.
-        *   **Regression Tests:** What existing functionality might be affected and needs re-verification.
-    3.  **Instruct User:** The AI will instruct the user to execute the test plan.
-    4.  **Await Confirmation:** The AI will wait for user confirmation of successful testing before providing the commit message or proceeding.
-
-### Clerk Interaction Protocol v1.0
-*Objective:* To prevent debugging cycles and ensure correctness when modifying authentication code related to the `@clerk/nextjs` library.
-
-*Trigger:* Any development task that requires creating or modifying Clerk-related code.
-
-*Workflow:*
-1.  **Ground Truth Request:** The AI will request the exact version of `@clerk/nextjs` from `pnpm-lock.yaml`, the complete code from the file(s) to be modified, and a link to the relevant official Clerk documentation page.
-2.  **Verbal Plan:** The AI will state its plan, referencing the ground truth, and ask for user confirmation before generating code.
-3.  **Minimal Diffs:** Code modifications will be proposed as minimal diffs or specific line-by-line instructions.
-*   **JWT Claim Validation:** Be aware that Clerk issues JWTs with the `azp` (authorized party) claim for audience validation, not the standard `aud` (audience) claim. When using `PyJWT`'s `jwt.decode` function, **do not** use the `audience` parameter. Instead, manually validate the `claims.get('azp')` against `AUTHORIZED_PARTIES` to avoid `InvalidAudienceError` and prevent deployment failures.
-
-### Database Interaction Protocol v1.1
-*Objective:* To prevent backend errors caused by incorrect assumptions about the database schema and to ensure effective data inspection.
-*Prime Directive:* The AI must **never** assume the structure of a database table. When AI output fields are destined for database `VARCHAR` columns, the AI **must** explicitly compare the potential length/format of AI-generated content against the column's `VARCHAR` limit. If a mismatch is likely, the AI **must** ask the user for clarification (e.g., "Would you prefer to increase the `VARCHAR` limit to `TEXT`, or should I add validation to truncate/discard non-conforming AI output?").
-
-*Workflow:*
-1.  **Mandatory Schema Request:** Before generating any code that references a database table, the AI **must** first prompt the user to provide the `\d <table_name>` description for all relevant tables.
-2.  **Sample Data Request:** Along with schema requests, the AI **must** prompt the user to provide sample data from the table (e.g., `SELECT * FROM <table_name> LIMIT 10;`) to aid in understanding data characteristics for testing and development.
-3.  **Grounded Code Generation:** The generated code will strictly adhere to the column names and types from the user-provided schema.
-
-### Session Budgeting Protocol v1.1
-*   **Objective:** To manage development velocity against the real-world constraints of token quotas and UI performance in the AI Studio environment.
-*   **Ground Truth:** The user's account has a daily token quota for Pro models, assumed as of v2.3 to be 400,000 tokens per day. The AI Studio UI also suffers from performance degradation on very long-context conversations (e.g., >120k tokens), which acts as a practical limit for Flash model sessions. These factors, not API rate limits, are the primary constraints on development.
-*   **Protocol:**
-    1.  **Backlog Costing:** All items in `BACKLOG.md` will be assigned a `Session Cost` (S/M/L) that estimates the token budget required.
-    2.  **Session Planning:** At the start of a session, the AI will reference the task's `Session Cost` to set expectations for what can be accomplished.
-    3.  **Checkpointing:** The AI will proactively suggest an `END_PROMPT` cycle roughly every **100,000 tokens consumed or after 3 completed logical items/features**, whichever comes first. This serves as a logical checkpoint, committing the work and enabling context management.
-        *   **Full `END_PROMPT` Cycle:** Triggers complete documentation updates (`SYSTEM_BRIEF.md` fully updated, `BACKLOG.md` fully cleaned).
-        *   **Soft Checkpoint (`END_PROMPT` with `CHANGELOG.md` only):** Updates `CHANGELOG.md` with only the new version block, and `BACKLOG.md` is only updated to include any new, uncurated ideas that need to jump the line. This is for faster iterative cycles.
-    4.  **Retroactive Costing:** At the end of a session, the user can provide the actual token usage. This data will be used to refine future `Session Cost` (S/M/L) estimates, creating a data-driven planning loop.
-
-### Context Management & Session Scoping v1.0
-*   **Objective:** To optimize development efficiency by matching the session's context length to the nature of the task.
-*   **Prime Directive:** The AI will explicitly recommend a context strategy at the beginning of a work session.
-*   **Workflow & Heuristics:**
-    1.  **Task Assessment:** At the start of a new task, the AI will assess its nature based on the backlog and user request.
-    2.  **Strategy Recommendation:**
-        *   For **"Pro-level"** tasks, the AI will state: *"This is a complex task. I recommend we maintain a single, continuous context until it is complete."*
-        *   For a batch of unrelated **"Flash-level"** tasks, the AI will state: *"These are discrete tasks. To optimize for cost and performance, I will treat each as a nearly independent request."*
+### Git Branching & Preview Protocol v1.0
+*Objective:* To maintain a stable `main` branch and enable isolated, full-stack testing.
+1.  **Start Work:** Create a descriptive feature branch (e.g., `feature/user-onboarding`, `bugfix/profile-save`). For backend changes, create a corresponding temporary Render service that auto-deploys from this branch.
+2.  **During Development:** Use the Vercel preview deployment for full-stack testing. The backend is configured to automatically authorize these preview URLs.
+3.  **Complete Work:** Create a Pull Request to `main`. After approval and merge, decommission the temporary Render service.
 
 ### Development Cycle Protocol v1.1
-*   **Objective:** To ensure that logical units of work are committed with clear, comprehensive messages at the appropriate time, aligning with the user's preferred commit workflow.
-*   **Trigger:** The AI completes a series of file creation or modification steps that constitute a self-contained feature, refactor, or bugfix.
+*Objective:* To ensure features are tested and committed with clear, comprehensive messages.
+1.  **Code:** Generate the necessary code to complete a logical unit of work.
+2.  **Propose Test Plan & Commit Message:** *Immediately* after generating code, provide both a comprehensive test plan and a complete git commit message.
+3.  **Await Confirmation:** Instruct the user to deploy and test. Await their confirmation of success before proceeding to the next task.
+
+### Test Plan Generation Protocol v1.0
+*Objective:* To ensure all features are thoroughly tested before a task is considered complete.
+*   **Trigger:** Immediately after a code generation step is completed.
+*   **Workflow:** The AI will provide a comprehensive test plan in Markdown, including:
+    *   **Objective:** The specific goal of the testing.
+    *   **Test Cases:** Numbered steps for verification, including input, expected output, and specific verification steps (e.g., UI inspection, DB queries).
+    *   **Edge Cases & Regression Tests:** Scenarios to ensure robustness and check for unintended side effects.
+
+---
+
+## Session & Context Management
+
+### Session Budgeting & Checkpointing Protocol v1.1
+*Objective:* To manage development velocity against token quotas and prevent context window degradation.
+1.  **Budgeting:** Use the `Session Cost` (S/M/L) in the backlog to set expectations.
+2.  **Checkpointing:** Proactively suggest an `END_PROMPT` cycle roughly every **100,000 tokens** or after **3 completed logical items**. This commits work and resets context.
+    *   **Full `END_PROMPT`:** Full documentation update.
+    *   **Soft Checkpoint:** Only `CHANGELOG.md` and new high-priority backlog items are updated.
+
+### Task Handoff Protocol v1.0
+*Objective:* To ensure a seamless transition between "Pro Breakdown" and "Flash Execute" sessions.
+*   **Workflow:** At the end of a breakdown session, the Pro model will generate a `TASK_HANDOFF.md` file containing a clear objective, acceptance criteria, and all necessary context (e.g., SQL scripts, schema descriptions) for the execution model.
+
+---
+
+## Ground Truth & Interaction Protocols
+
+### Database Interaction Protocol v1.1
+*   **Prime Directive:** **Never** assume a database table's structure.
+*   **Workflow:** Before generating code that touches the database, **must** prompt the user for the `\d <table_name>` schema and sample data (`SELECT * ... LIMIT 10`). All generated code will strictly adhere to the provided schema.
+
+### Monorepo & CLI Interaction Protocol v1.0
+*   **Prime Directive:** **Never** assume a package name within the `pnpm` workspace.
+*   **Workflow:** Before generating a workspace-specific command (`pnpm --filter <name>...`), **must** prompt the user for the contents of the relevant `package.json` to get the correct package `name`.
+
+### Clerk Interaction Protocol v1.0
+*   **Prime Directive:** Do not trust internal knowledge of the Clerk library.
 *   **Workflow:**
-    1.  **Acknowledge Code Completion:** The AI will state that the coding phase for the logical unit is complete.
-    2.  **Generate Test Plan & Commit Message:** Immediately after generating code and before instructing the user to test, the AI **must** provide both a comprehensive test plan and a complete, well-formatted git commit message. This ensures all necessary artifacts are available before the user switches context to testing and deployment.
-    3.  **Await Confirmation:** The AI will then instruct the user to deploy the changes and execute the test plan, and will wait for confirmation of success before proceeding.
+    1.  **Ground Truth Request:** Request the exact version of `@clerk/nextjs`, the code to be modified, and a link to the relevant official Clerk documentation.
+    2.  **`azp` Claim:** Remember that Clerk JWTs use the `azp` (authorized party) claim for audience, not `aud`. Manual validation is required.
 
-### Full-File Output Protocol v1.0
-*   **Objective:** To prevent bugs and ensure clarity by providing complete, untruncated file contents during development.
-*   **Prime Directive:** When the AI is asked to provide the contents of a file for replacement, it **must** output the *entire*, complete, and untruncated contents of that file.
-*   **Rationale:** Abbreviating file contents with comments like `...` is counterproductive.
+---
 
-### Backlog Content Protocol v1.0
-*   **Objective:** To streamline the `BACKLOG.md` file and reduce token cost.
-*   **Prime Directive:** When generating `BACKLOG.md` during an `END_PROMPT` cycle, the AI will perform the following:
-    *   **Soft Checkpoint:** If the `END_PROMPT` is triggered as a soft checkpoint, the AI will only update `BACKLOG.md` to include any new, uncurated ideas that need to jump the line.
-    *   **Full `END_PROMPT`:** If the `END_PROMPT` is a full cycle, the AI will only include items with a "To Do" status, removing the "Completed" section and moving "Done" items to the `CHANGELOG.md`'s completed section.
+## Content Generation Mandates
 
 ### Changelog Output Protocol v1.0
-*   **Objective:** To optimize context window usage during `END_PROMPT` for `CHANGELOG.md`.
-*   **Prime Directive:** When generating `CHANGELOG.md` during an `END_PROMPT` cycle (either soft or full), the AI **must** output *only the new version block* for the latest changes. It **must not** reproduce the entire file.
+*   **Directive:** When updating `CHANGELOG.md`, output **only the new version block**.
 
-### Model Hand-off Protocol v1.0
-*   **Objective:** To ensure the correct AI model is used for the task at hand.
-*   **Protocol:** The AI will state when a task has become simple enough for a "Flash" model or if a "Flash" model is struggling and should escalate the task to a "Pro" model.
+### Backlog Content Protocol v1.0
+*   **Directive:** When updating `BACKLOG.md` during a full `END_PROMPT`, remove the "Completed" section entirely. Completed items live permanently in the `CHANGELOG.md`.
 
-### Manual Save Checkpoint Protocol v1.0
-*   **Objective:** To mitigate context loss from client-side failures.
-*   **Protocol:** After a significant milestone (e.g., successful deployment), the AI will issue a direct instruction: **"Protocol: Please save this chat now to prevent context loss."**
-
-## Workflow Guide: How to Run Protocols
-This workflow should be executed sequentially within a single chat session to maintain context.
-1.  **Initiate Company & Lead Discovery (Protocol 1.4):** Start by providing the user's profile and resume and requesting a 'Master Target Company List' and 'Preliminary Job Leads'.
-2.  **Initiate Preliminary Screening (Protocol 2.2):** From the list of leads generated in Step 1, select specific jobs to screen. The AI will apply the critical verification protocol to each.
-3.  **Initiate Detailed Analysis (Protocol User-Driven v1.1):** For jobs that pass screening, provide the full job description and request a detailed analysis.
-
-New Protocol: Self-Correction on Truncation (v1.0)
-Objective: To prevent the AI from ever outputting truncated or abbreviated code that violates the Full-File Output Mandate.
-Trigger: Any time the AI internally generates a code block containing an abbreviation like ..., // ... (rest of file), or any other placeholder for code that should be present.
-Workflow:
-Internal Check: Before outputting any code block, the AI will perform a self-check for truncation markers.
-Halt & Re-evaluate: If a truncation marker is detected, the AI will STOP generating the response. It will then issue a self-correction message to the user, such as: "Protocol Violation Detected: My planned output contained truncated code. I am halting and will now generate the complete, untruncated file as required."
-Grounded Regeneration: The AI will then re-read the last known-good version of the file from the chat history and re-apply the intended changes to ensure the final output is complete and correct.
+### Self-Correction on Truncation Protocol v1.0
+*   **Directive:** Before outputting a code block, perform a self-check for truncation markers (`...`). If found, stop, state the protocol violation, and regenerate the complete, untruncated file.

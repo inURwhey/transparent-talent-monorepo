@@ -1,4 +1,4 @@
-# Transparent Talent: Product Backlog & Roadmap v1.30
+# Transparent Talent: Product Backlog & Roadmap v1.31
 
 ## Column Definitions
 *   **AI Model:** The complexity required from the AI. (Flash, Pro [Breakdown/Execute], Creative, N/A)
@@ -28,7 +28,6 @@
 ## Tier 2: Core User Experience & Differentiation
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **UI/UX: Add "Upload New Resume" component to dashboard** | E02 | 1000 | 3 | 100% | 0.2 | **15000** | Flash | S | **To Do** |
 | **UI/UX: Add filler text to "preferred work location" dropdown & conditional logic for remote preference.**| E02 | 1000 | 1 | 100% | 0.1 | **10000** | Flash | S | **To Do** |
 | **Feature: Intelligent Duplicate Resume Handling (Reactivation/Discard)** | E02 | 1000 | 2 | 90% | 0.5 | **9000** | Flash | M | **To Do** |
 | **UI/UX: Prompt Users with Incomplete Profiles to Update** | E02 | 1000 | 2 | 90% | 0.25 | **8000** | Flash | S | **To Do** |
@@ -58,6 +57,7 @@
 | Task | Description | Priority | Epic |
 |:---|:---|:---|:---|
 | **Documentation: Define User Lifecycle** | Create `USER_LIFECYCLE.md` with a Mermaid diagram to map the user journey from visitor to fully onboarded and active user. | High | E05 |
+| **Documentation: Create Style Guide** | Create `STYLE_GUIDE.md` to codify recurring design patterns, component usage, and UI/UX decisions to ensure consistency. | Medium | - |
 | **Documentation: Define Company & Job Lifecycles** | Create documents and diagrams for how company and job entities are created, updated, and managed within the system. | Medium | E05 |
 
 ---
@@ -77,32 +77,3 @@
 | **Marketing: LinkedIn Company Profile** | Create and maintain an official company profile on LinkedIn. |
 | **BizDev: User Recruitment (Colleges, 'Never Search Alone')** | Establish partnerships or outreach programs with university career centers and job search communities to recruit early-adopter users. |
 | **Marketing: Empathetic Outreach to Laid-off Employees** | Create and execute a marketing campaign that offers genuine help and resources to individuals recently affected by company layoffs. |
-
----
-
-## Completed Features & Bugfixes
-### v0.45.0
-| Feature/Bugfix | Original Tier | RICE Score | Epic |
-| :--- | :--- | :--- | :--- |
-| **UI/UX: Change "Desired Job Title" to "Desired Job Title(s)"** | Tier 2 | 20000 | E02 |
-
-### v0.44.0
-| Feature/Bugfix | Original Tier | RICE Score | Epic |
-| :--- | :--- | :--- | :--- |
-| **UI/UX: Job submission button text should be 'Track' for incomplete profiles** | Tier 2 | 40000 | E02 |
-
-### v0.43.0
-| Feature/Bugfix | Original Tier | RICE Score | Epic |
-| :--- | :--- | :--- | :--- |
-| **Fix (Critical): Stabilize Onboarding & Re-analysis Lifecycle** | Bug Bash | N/A | E02 |
-| **Fix (Critical): Resolve Backend Deployment & CORS Failures** | Bug Bash | N/A | - |
-
-### v0.42.0
-| Feature/Bugfix | Original Tier | RICE Score | Epic |
-| :--- | :--- | :--- | :--- |
-| **UI: Implement "Jobs For You" Dashboard Module** | Tier 1 | 6000 | E01 |
-| **Fix: Stale recommendations and AI Grade CTAs after user actions** | Bug Bash | N/A | E01/E02 |
-| **Fix: Inability to re-track deleted jobs** | Bug Bash | N/A | - |
-| **Fix: Data integrity for incomplete user job submissions** | Bug Bash | N/A | E02 |
-
-*Items from v0.41.0 and earlier are documented in the `CHANGELOG.md`.*

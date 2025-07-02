@@ -3,6 +3,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.46.0 - 2025-07-03 - Dashboard & Profile UX Refactor
+
+This release implements significant UX and layout improvements based on user feedback, creating a more intuitive and consistent experience.
+
+### Changed
+- **UI/UX:** Relocated the "Update Your Resume" form from the main dashboard to the `/dashboard/profile` page, logically grouping all profile-editing actions together.
+- **UI/UX:** Refactored the "Analyze a New Job" form on the dashboard. The layout now matches the resume form, with the primary action button below the input field.
+- **UI/UX:** Added dynamic, context-aware descriptive text to the job submission form to better explain its function ("Track" vs. "Analyze") based on the user's onboarding status.
+
+### Added
+- **Backlog:** Added "Create `STYLE_GUIDE.md`" to the backlog to codify recurring design patterns and UI/UX decisions.
+
 ## v0.45.0 - 2025-07-02 - Profile UX Refinement
 
 This release implements a high-value UX improvement on the user profile page based on its RICE score.
