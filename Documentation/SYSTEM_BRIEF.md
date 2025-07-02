@@ -1,4 +1,4 @@
-# Transparent Talent: System Brief v2.13
+# Transparent Talent: System Brief v2.14
 
 ## 1. Core Vision & Business Model
 *   **Problem:** The job market is inefficient, opaque, and biased.
@@ -15,9 +15,8 @@
 *   **Architecture Style:** Decoupled three-tier application, managed in a **monorepo**. The backend now follows a service-oriented architecture with an application factory pattern.
 
 ## 3. Current Project Status
-*   **"Jobs For You" Module (v1) Live:** A new module on the user dashboard now displays a ranked list of personalized job recommendations, fetched from a new backend matching service. Core functionality is live, with UI/UX polish pending.
-*   **Intelligent Onboarding Flow:** The system now intelligently gates AI features based on profile completion. Users with incomplete profiles can track jobs but are shown CTAs to complete their profile to unlock AI analysis and recommendations, creating a more compelling user journey.
-*   **Backend Stability Hardened:** Critical bugs related to data integrity, state synchronization, and edge cases (like re-tracking jobs) have been resolved, making the backend services significantly more robust.
+*   **Onboarding Lifecycle Hardened:** The entire new user experience, from sign-up and job submission to profile completion, is now stable and robust. Critical bugs related to data integrity, state synchronization, and edge cases (like re-tracking jobs or resume parsing overwriting data) have been resolved. The system now correctly requires a completed profile and a resume submission to unlock AI features, and reliably triggers re-analysis of jobs post-onboarding.
+*   **"Jobs For You" Module (v1) Live:** A module on the user dashboard now displays a ranked list of personalized job recommendations, fetched from a backend matching service. Core functionality is live, with UI/UX polish pending.
 *   **Application is stable and functional on its production domain.**
 
 ## 4. Immediate Backlog & Next Steps

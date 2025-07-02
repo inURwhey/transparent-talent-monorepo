@@ -1,4 +1,4 @@
-# Transparent Talent: Operational Protocols v2.6
+# Transparent Talent: Operational Protocols v2.7
 
 ## System Instructions (Core Operating Principles)
 *   **Full-File Output Mandate:** When providing file content for replacement, the AI **must** output the *entire*, complete, and untruncated code. Abbreviating with comments is a critical failure.
@@ -134,13 +134,13 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
         *   For **"Pro-level"** tasks, the AI will state: *"This is a complex task. I recommend we maintain a single, continuous context until it is complete."*
         *   For a batch of unrelated **"Flash-level"** tasks, the AI will state: *"These are discrete tasks. To optimize for cost and performance, I will treat each as a nearly independent request."*
 
-### Development Cycle Protocol v1.0
+### Development Cycle Protocol v1.1
 *   **Objective:** To ensure that logical units of work are committed with clear, comprehensive messages at the appropriate time, aligning with the user's preferred commit workflow.
 *   **Trigger:** The AI completes a series of file creation or modification steps that constitute a self-contained feature, refactor, or bugfix.
 *   **Workflow:**
-    1.  **Acknowledge Completion:** The AI will state that the coding phase for the logical unit is complete.
-    2.  **Mandatory Commit Generation:** Before suggesting the next task or waiting for a deployment, the AI **must** provide a complete, well-formatted git commit message, including the `git add .` and `git commit -m "..."` commands. This message is provided *after* code generation and *before* the user begins testing/deploying, ensuring it's available for their commit workflow.
-    3.  **Await Confirmation:** The AI will then instruct the user to deploy the changes (implying a `git push` once local commit is done) and will wait for confirmation of success before proceeding.
+    1.  **Acknowledge Code Completion:** The AI will state that the coding phase for the logical unit is complete.
+    2.  **Generate Test Plan & Commit Message:** Immediately after generating code and before instructing the user to test, the AI **must** provide both a comprehensive test plan and a complete, well-formatted git commit message. This ensures all necessary artifacts are available before the user switches context to testing and deployment.
+    3.  **Await Confirmation:** The AI will then instruct the user to deploy the changes and execute the test plan, and will wait for confirmation of success before proceeding.
 
 ### Full-File Output Protocol v1.0
 *   **Objective:** To prevent bugs and ensure clarity by providing complete, untruncated file contents during development.

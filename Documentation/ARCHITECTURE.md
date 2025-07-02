@@ -2,7 +2,10 @@
 
 Transparent Talent is architected as a modern, decoupled, three-tier full-stack application, augmented by external services for authentication and generative AI. This is a professional and highly scalable design.
 
-
+## Core Data Philosophy: User Truth vs. AI Interpretation
+A foundational principle of the system is the separation of user-provided data from AI-generated interpretations.
+*   **User as Source of Truth:** Data entered directly by a user into their profile is considered their ground truth and is never automatically overwritten.
+*   **AI as Enrichment Layer:** AI processes, like resume parsing, serve to enrich the user's profile by filling in empty fields. The long-term vision is to evolve this into an "AI Suggested Edits" model, where the AI's interpretations are presented to the user for explicit approval before being saved, thus preserving both data sources.
 
 ## Tier 1: The Frontend (Client)
 

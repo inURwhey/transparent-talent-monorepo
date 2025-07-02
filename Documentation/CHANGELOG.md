@@ -3,6 +3,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.43.0 - 2025-07-02 - Onboarding Lifecycle Hardening & Stability
+This release resolves a series of critical, interconnected bugs that affected the entire new user onboarding and job submission lifecycle. The application is now fully stable, and the logic for completing a user profile and triggering AI analysis is robust, resilient, and non-destructive.
+
+### Added
+- **Backend: Centralized Onboarding Logic:** Created a new, centralized service method (`check_and_trigger_onboarding_completion`) to reliably check user onboarding status from multiple endpoints.
+- **Backend: Non-Destructive Resume Parsing:** Implemented "merge, don't overwrite" logic in the resume parsing endpoint. The AI now only fills profile fields that are empty, preserving user-entered data as the source of truth.
+
+### Changed
+- **Architecture:** The definition of a "complete" user profile now correctly requires both a set of required text fields and an active resume submission.
+- **Architecture:** The user's manually entered data is now formally treated as the "source of truth," with AI parsing acting as a non-destructive enrichment step.
+- **UI/UX:** Refined the profile page to use subtle `*` indicators for required fields and a single, clear instructional banner for a cleaner user experience.
+
+### Fixed
+- **Critical Bug (Deployment):** Resolved a fatal circular import error between services that was preventing all backend deployments.
+- **Critical Bug (Data Integrity):** Fixed a `duplicate key value` database error that occurred when multiple incomplete users submitted jobs from the same company.
+- **Critical Bug (Data Loss):** Corrected the resume parsing logic to prevent it from overwriting existing, user-entered profile data with `null` values.
+- **Critical Bug (Stale UI):** Resolved the issue where "Unlock w/ Profile" would not update after a user completed all onboarding steps. The re-analysis trigger and frontend reload now work correctly.
+- **Critical Bug (SQL):** Fixed a `column a.id does not exist` SQL error in the `trigger_reanalysis_for_user` service method.
+
 ## v0.42.0 - 2025-07-03 - Full-Stack Bug Bash & "Jobs For You" v1
 
 This release marks a significant stabilization and feature implementation effort. It resolves a complex series of interconnected bugs across the frontend and backend, and successfully launches the V1 of the "Jobs For You" recommendation module on the user dashboard.
