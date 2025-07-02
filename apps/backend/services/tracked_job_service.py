@@ -15,16 +15,13 @@ class TrackedJobService:
             'resolved_at', 'next_action_at', 'next_action_notes'
         ]
         
-        # Filter out any fields from the payload that are not allowed to be updated
         update_data = {k: v for k, v in data.items() if k in allowed_fields}
 
         if not update_data:
             raise ValueError("No valid fields provided for update.")
 
-        # Build the SET part of the SQL query dynamically
         set_clause = ", ".join([f"{field} = %s" for field in update_data.keys()])
         
-        # The parameters must be in the same order as the fields in the SET clause
         params = list(update_data.values())
         params.append(tracked_job_id)
         params.append(user_id)
@@ -38,7 +35,6 @@ class TrackedJobService:
                 if updated_row:
                     self.db_connection.commit()
                     self.logger.info(f"Successfully updated tracked_job {tracked_job_id} for user {user_id}.")
-                    # Fetch and return the full, formatted job data
                     return self._get_formatted_job_by_id(cursor, tracked_job_id, user_id)
                 else:
                     self.logger.warning(f"Update failed: Tracked job {tracked_job_id} not found for user {user_id}.")
@@ -61,10 +57,9 @@ class TrackedJobService:
                 t.resolved_at,
                 t.next_action_at,
                 t.next_action_notes,
-                t.user_notes,
                 t.status_reason,
                 j.id as job_id,
-                j.company_id, -- <-- ADD THIS LINE
+                j.company_id, -- Ensures company_id is fetched
                 j.job_title,
                 j.company_name,
                 j.job_url,
@@ -92,12 +87,12 @@ class TrackedJobService:
         formatted_job = {
             "tracked_job_id": job['tracked_job_id'],
             "job_id": job['job_id'],
-            "company_id": job['company_id'], # <-- ADD THIS LINE
+            "company_id": job['company_id'], # Ensures company_id is in the response
             "job_title": job['job_title'],
             "company_name": job['company_name'],
             "job_url": job['job_url'],
             "status": job['status'],
-            "user_notes": job['user_notes'],
+            "user_notes": None, # FIX: Removed non-existent column, returning None as placeholder
             "created_at": job['created_at'].isoformat() if job['created_at'] else None,
             "is_excited": job['is_excited'],
             "job_posting_status": job['job_posting_status'],
