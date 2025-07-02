@@ -36,13 +36,15 @@ def create_app():
     from .routes.admin import admin_bp
     from .routes.onboarding import onboarding_bp
     from .routes.recommendations import reco_bp
-    
+    from .routes.companies import companies_bp # <-- ADDED IMPORT
+
     # Register all blueprints with a consistent /api prefix
     app.register_blueprint(profile_bp, url_prefix='/api')
     app.register_blueprint(jobs_bp, url_prefix='/api')
     app.register_blueprint(admin_bp, url_prefix='/api')
     app.register_blueprint(onboarding_bp, url_prefix='/api')
     app.register_blueprint(reco_bp, url_prefix='/api')
+    app.register_blueprint(companies_bp, url_prefix='/api') # <-- ADDED REGISTRATION
 
     # The manual CORS middleware has been removed in favor of Flask-CORS.
 
