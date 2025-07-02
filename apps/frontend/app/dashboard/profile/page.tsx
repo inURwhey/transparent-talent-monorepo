@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronUp, MapPin, XCircle } from 'lucide-react';
 import { type Profile } from '@/app/dashboard/types';
-import { ResumeUploadForm } from '../components/ResumeUploadForm'; // Import the form
+import { ResumeUploadForm } from '../components/ResumeUploadForm';
 
 const ONBOARDING_REQUIRED_FIELDS: (keyof Profile)[] = [
     'work_style_preference',
@@ -163,13 +163,14 @@ export default function UserProfilePage() {
         updateProfileData({ latitude: null, longitude: null, current_location: '' });
     }, [updateProfileData]);
 
-    const getSelectDisplayValue = useCallback((field: keyof Profile) => {
+    const getSelectDisplayValue = useCallback((field: keyof Profile): string => {
         if (!profile) return '';
         const backendValue = profile[field];
+        if (backendValue === null) return 'null';
         if (field === 'change_tolerance') {
             return changeToleranceBackendToFrontendMap[backendValue as string] || '';
         }
-        return (backendValue as string) || '';
+        return String(backendValue) || '';
     }, [profile]);
 
     const isRequired = (field: keyof Profile) => !profile?.has_completed_onboarding && ONBOARDING_REQUIRED_FIELDS.includes(field);
@@ -263,9 +264,38 @@ export default function UserProfilePage() {
                         </Collapsible>
                         <Collapsible open={openSections.workEnv} onOpenChange={() => toggleSection('workEnv')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Work Environment & Requirements{openSections.workEnv ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                             <CollapsibleContent className="p-4 pt-0 space-y-4">
-                                <div><Label htmlFor="preferred_work_style_select">Preferred Work Location</Label><Select value={profile.preferred_work_style || ''} onValueChange={(v) => handleChange('preferred_work_style', v)}><SelectTrigger id="preferred_work_style_select"><SelectValue placeholder="Select a preference..."/></SelectTrigger><SelectContent><SelectItem value="On-site">On-site</SelectItem><SelectItem value="Hybrid">Hybrid</SelectItem><SelectItem value="Remote">Remote</SelectItem></SelectContent></Select></div>
-                                {(profile.preferred_work_style === 'Hybrid' || !profile.preferred_work_style) && (<div className="flex items-center space-x-2 pl-1 pt-2"><Checkbox id="is_remote_preferred" checked={!!profile.is_remote_preferred} onCheckedChange={(checked) => handleCheckboxChange('is_remote_preferred', !!checked)} /><Label htmlFor="is_remote_preferred" className="font-normal">I prefer remote work generally.</Label></div>)}
-                                <div><Label htmlFor="preferred_company_size">Preferred Company Size</Label><Select value={profile.preferred_company_size || ''} onValueChange={(value) => handleChange('preferred_company_size', value)}><SelectTrigger><SelectValue placeholder="No Preference" /></SelectTrigger><SelectContent><SelectItem value="Startup (1-50 employees)">Startup (1-50 employees)</SelectItem><SelectItem value="Small (51-200 employees)">Small (51-200 employees)</SelectItem><SelectItem value="Medium (201-1000 employees)">Medium (201-1000 employees)</SelectItem><SelectItem value="Large (1001-10000 employees)">Large (1001-10000 employees)</SelectItem><SelectItem value="Enterprise (10000+ employees)">Enterprise (10000+ employees)</SelectItem></SelectContent></Select></div>
+                                <div>
+                                    <Label htmlFor="preferred_work_style_select">Preferred Work Location</Label>
+                                    <Select value={getSelectDisplayValue('preferred_work_style')} onValueChange={(v) => handleChange('preferred_work_style', v)}>
+                                        <SelectTrigger id="preferred_work_style_select"><SelectValue placeholder="Select a preference..."/></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="null">No Preference</SelectItem>
+                                            <SelectItem value="On-site">On-site</SelectItem>
+                                            <SelectItem value="Hybrid">Hybrid</SelectItem>
+                                            <SelectItem value="Remote">Remote</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                {(profile.preferred_work_style === 'Hybrid' || profile.preferred_work_style === null) && (
+                                    <div className="flex items-center space-x-2 pl-1 pt-2">
+                                        <Checkbox id="is_remote_preferred" checked={!!profile.is_remote_preferred} onCheckedChange={(checked) => handleCheckboxChange('is_remote_preferred', !!checked)} />
+                                        <Label htmlFor="is_remote_preferred" className="font-normal">I have a strong preference for the remote part of Hybrid.</Label>
+                                    </div>
+                                )}
+                                <div>
+                                    <Label htmlFor="preferred_company_size">Preferred Company Size</Label>
+                                    <Select value={getSelectDisplayValue('preferred_company_size')} onValueChange={(value) => handleChange('preferred_company_size', value)}>
+                                        <SelectTrigger><SelectValue placeholder="No Preference" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="null">No Preference</SelectItem>
+                                            <SelectItem value="Startup (1-50 employees)">Startup (1-50 employees)</SelectItem>
+                                            <SelectItem value="Small (51-200 employees)">Small (51-200 employees)</SelectItem>
+                                            <SelectItem value="Medium (201-1000 employees)">Medium (201-1000 employees)</SelectItem>
+                                            <SelectItem value="Large (1001-10000 employees)">Large (1001-10000 employees)</SelectItem>
+                                            <SelectItem value="Enterprise (10000+ employees)">Enterprise (10000+ employees)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                                 <div><Label htmlFor="ideal_work_culture">Ideal Work Culture</Label><Textarea id="ideal_work_culture" value={profile.ideal_work_culture || ''} onChange={(e) => handleChange('ideal_work_culture', e.target.value)} rows={3} /></div>
                                 <div><Label htmlFor="disliked_work_culture">Disliked Work Culture</Label><Textarea id="disliked_work_culture" value={profile.disliked_work_culture || ''} onChange={(e) => handleChange('disliked_work_culture', e.target.value)} rows={3} /></div>
                                 <div><Label htmlFor="non_negotiable_requirements">Non-Negotiable Requirements</Label><Textarea id="non_negotiable_requirements" value={profile.non_negotiable_requirements || ''} onChange={(e) => handleChange('non_negotiable_requirements', e.target.value)} rows={3} /></div>
