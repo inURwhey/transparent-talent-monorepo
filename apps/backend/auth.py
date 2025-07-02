@@ -1,5 +1,6 @@
 # Path: apps/backend/auth.py
 import os
+import re
 from functools import wraps
 from flask import request, jsonify, g, current_app
 import jwt
@@ -35,11 +36,13 @@ def token_required(f):
             public_key = RSAAlgorithm.from_jwk(rsa_key)
             claims = jwt.decode(token, public_key, algorithms=["RS256"], issuer=config.CLERK_ISSUER_URL, options={"verify_aud": False})
 
+            # --- REVERTED AZP CHECK ---
+            # Reverting to the simpler, ground-truth logic provided by the user.
             authorized_party = claims.get('azp')
-            # Handle both string and list for authorized parties
-            if not authorized_party or not any(re.fullmatch(pattern, authorized_party) if isinstance(pattern, re.Pattern) else pattern == authorized_party for pattern in config.CLERK_AUTHORIZED_PARTY):
+            if not authorized_party or authorized_party not in config.CLERK_AUTHORIZED_PARTY:
                 current_app.logger.warning(f"JWT validation failed: Invalid authorized party (azp): {authorized_party}")
                 raise jwt.exceptions.InvalidAudienceError(f"Invalid authorized party: {authorized_party}")
+            # --- END OF REVERTED LOGIC ---
             
             clerk_user_id = claims.get('sub')
             if not clerk_user_id: raise Exception("Token is missing 'sub' (subject) claim.")
@@ -66,7 +69,6 @@ def token_required(f):
         except jwt.ExpiredSignatureError:
             return jsonify({"message": "Token has expired!"}), 401
         except jwt.exceptions.InvalidAudienceError as e:
-            # More specific logging for this common error
             return jsonify({"message": f"JWT validation failed: {e}"}), 401
         except Exception as e:
             current_app.logger.error(f"An unexpected error occurred during token validation: {e}")
@@ -88,7 +90,6 @@ def admin_required(f):
 
         admin_ids = [id.strip() for id in config.CLERK_ADMIN_USER_IDS.split(',')]
         
-        # g.current_user is a dict-like object from fetchone(), set by @token_required
         user_clerk_id = g.current_user.get('clerk_user_id') if hasattr(g, 'current_user') and g.current_user else None
         
         if not user_clerk_id or user_clerk_id not in admin_ids:
