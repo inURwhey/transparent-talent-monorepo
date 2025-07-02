@@ -3,7 +3,8 @@
 from psycopg2.extras import DictCursor, Json
 from ..database import get_db
 from decimal import Decimal
-from ..services.job_service import JobService
+# The circular import is removed from here.
+# from ..services.job_service import JobService
 from ..config import config
 
 class ProfileService:
@@ -116,6 +117,9 @@ class ProfileService:
             raise
 
     def trigger_reanalysis_for_user(self, user_id: int):
+        # Import JobService here, inside the method, to break the circular dependency.
+        from ..services.job_service import JobService
+        
         self.logger.info(f"Checking for jobs to re-analyze for user_id: {user_id}")
         db = get_db()
         job_service = JobService(self.logger)
@@ -138,7 +142,7 @@ class ProfileService:
                 user_profile_text = self.get_profile_for_analysis(user_id)
 
                 for job_row in jobs_to_analyze:
-                    job_id = job_row['job_id'] # Corrected key from 'id' to 'job_id'
+                    job_id = job_row['job_id']
                     try:
                         self.logger.info(f"Re-analyzing job_id {job_id} for user_id {user_id}")
                         job_data = job_service.analyze_existing_job(job_id, user_profile_text)
