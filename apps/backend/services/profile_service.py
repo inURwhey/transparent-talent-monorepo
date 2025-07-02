@@ -8,7 +8,6 @@ from ..config import config
 class ProfileService:
     def __init__(self, logger):
         self.logger = logger
-        # This list of fields is now defined in routes/profile.py and passed in
         self.allowed_fields = [
             "full_name", "current_location", "linkedin_profile_url", "resume_url",
             "short_term_career_goal", "long_term_career_goals", 
