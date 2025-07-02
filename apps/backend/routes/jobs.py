@@ -29,7 +29,6 @@ def submit_job():
     
     try:
         with db.cursor() as cursor:
-            # Check if this job URL already exists in our jobs table
             cursor.execute("SELECT id FROM jobs WHERE job_url = %s", (job_url,))
             job_row = cursor.fetchone()
 
@@ -47,14 +46,9 @@ def submit_job():
                     new_job_data = service._get_formatted_job_by_id(cursor, tracked_job_id, user_id)
                     return jsonify(new_job_data), 201
             
-            # --- START: AUTOMATED COMPANY RESEARCH & DATA ENRICHMENT ---
-            
-            # Step 1: Get initial company name from lightweight scrape.
-            # This is necessary to find or create the company record.
             basic_details = job_service.get_basic_job_details(job_url)
             company_name_guess = basic_details.get('company_name', 'Unknown Company')
 
-            # Step 2: Find or create the company to get a stable company_id.
             cursor.execute("SELECT id FROM companies WHERE LOWER(name) = LOWER(%s)", (company_name_guess,))
             company_row = cursor.fetchone()
             if company_row:
@@ -62,10 +56,8 @@ def submit_job():
             else:
                 cursor.execute("INSERT INTO companies (name) VALUES (%s) RETURNING id", (company_name_guess,))
                 company_id = cursor.fetchone()['id']
-                # Commit immediately so the company record is available for the next step.
                 db.commit()
             
-            # Step 3: Check for user's onboarding status to decide on analysis type.
             user_profile = profile_service.get_profile(user_id)
             perform_ai_analysis = user_profile.get('has_completed_onboarding', False)
         
@@ -73,22 +65,17 @@ def submit_job():
             if perform_ai_analysis:
                 current_app.logger.info(f"User {user_id} is onboarded. Enriching data and performing full analysis.")
                 
-                # Step 3a: Proactively research company if needed. This is best-effort.
                 company_profile = job_service.research_and_get_company_profile(company_id)
-                company_profile_text = json.dumps(company_profile, indent=2) if company_profile else "No company profile available."
+                # --- FIX: Added default=str to handle datetime serialization ---
+                company_profile_text = json.dumps(company_profile, indent=2, default=str) if company_profile else "No company profile available."
                 
-                # Step 3b: Run the full job analysis with the enriched company context.
                 user_profile_text = profile_service.get_profile_for_analysis(user_id)
                 job_data = job_service.get_job_details_and_analysis(job_url, user_profile_text, company_profile_text)
                 analysis_result = job_data['analysis']
             else:
                 current_app.logger.info(f"User {user_id} is not onboarded. Using basic job details.")
-                # For non-onboarded users, we still use the basic scrape details.
                 analysis_result = basic_details
 
-            # --- END: AUTOMATED COMPANY RESEARCH & DATA ENRICHMENT ---
-
-            # Use the most accurate name/title from the full analysis if available, otherwise fall back to the scrape.
             company_name = analysis_result.get('company_name', company_name_guess)
             job_title = analysis_result.get('job_title', 'Unknown Title')
             
@@ -98,7 +85,6 @@ def submit_job():
             job_modality = analysis_result.get('job_modality') if perform_ai_analysis else None
             deduced_job_level = analysis_result.get('deduced_job_level') if perform_ai_analysis else None
 
-            # Update the company_id in case the AI analysis corrected the company name
             cursor.execute("SELECT id FROM companies WHERE LOWER(name) = LOWER(%s)", (company_name,))
             company_row = cursor.fetchone()
             if company_row:
@@ -153,8 +139,6 @@ def submit_job():
         db.rollback()
         current_app.logger.error(f"An unexpected error occurred in submit_job route: {e}")
         return jsonify({"error": "An internal server error occurred."}), 500
-
-# --- OTHER ENDPOINTS ARE UNCHANGED ---
 
 @jobs_bp.route('/tracked-jobs', methods=['GET'])
 @token_required

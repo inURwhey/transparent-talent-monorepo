@@ -7,7 +7,6 @@ import re
 from ..config import config
 from ..database import get_db
 
-# This version helps track which version of our prompt/logic generated the data.
 COMPANY_RESEARCH_PROTOCOL_VERSION = "1.0"
 
 class JobService:
@@ -29,20 +28,14 @@ class JobService:
         self.VALID_JOB_LEVELS = {'Entry', 'Mid', 'Senior', 'Staff', 'Principal', 'Manager', 'Director', 'VP', 'C-Suite'}
 
     def research_and_get_company_profile(self, company_id: int):
-        """
-        Checks if a company profile exists. If not, triggers AI research to create one.
-        Returns the company profile data dictionary. This is a best-effort service.
-        """
         db = get_db()
         with db.cursor() as cursor:
-            # 1. Check if a profile already exists
             cursor.execute("SELECT * FROM company_profiles WHERE company_id = %s", (company_id,))
             profile = cursor.fetchone()
             if profile:
                 self.logger.info(f"Found existing company profile for company_id: {company_id}")
                 return dict(profile)
 
-            # 2. If no profile, get company name to start research
             self.logger.info(f"No profile found for company_id: {company_id}. Initiating AI research.")
             cursor.execute("SELECT name FROM companies WHERE id = %s", (company_id,))
             company = cursor.fetchone()
@@ -53,7 +46,6 @@ class JobService:
             company_name = company.get('name')
             prompt = self._build_company_research_prompt(company_name)
 
-            # 3. Call AI for research
             try:
                 if not self.model:
                     self.logger.error(f"Cannot research company {company_name}: AI model not configured.")
@@ -67,7 +59,6 @@ class JobService:
                 self.logger.error(f"Company research AI call failed for {company_name}: {e}")
                 return None
             
-            # 4. Save the new profile to the database
             try:
                 cursor.execute(
                     """
@@ -88,10 +79,6 @@ class JobService:
                 return None
 
     def get_basic_job_details(self, job_url: str):
-        """
-        Lightweight scraper to get only the essential details (title, company)
-        for users with incomplete profiles, to avoid creating generic placeholders.
-        """
         self.logger.info(f"Performing lightweight scrape for URL: {job_url}")
         try:
             headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
@@ -154,6 +141,7 @@ class JobService:
             if not job_row: raise ValueError(f"Job with id {job_id} not found.")
             
             company_profile = self.research_and_get_company_profile(job_row['company_id'])
+            # --- FIX: Added default=str to handle datetime serialization ---
             company_profile_text = json.dumps(company_profile, indent=2, default=str) if company_profile else "No company profile available."
             
             return self.get_job_details_and_analysis(job_row['job_url'], user_profile_text, company_profile_text)
