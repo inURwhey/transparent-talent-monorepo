@@ -28,6 +28,7 @@ def submit_job():
     db = get_db()
     
     try:
+        # --- All DB operations will be in a single transaction ---
         with db.cursor() as cursor:
             cursor.execute("SELECT id FROM jobs WHERE job_url = %s", (job_url,))
             job_row = cursor.fetchone()
@@ -41,55 +42,48 @@ def submit_job():
                     current_app.logger.info(f"User {user_id} is re-tracking existing job_id {job_id}.")
                     cursor.execute("INSERT INTO tracked_jobs (user_id, job_id) VALUES (%s, %s) RETURNING id;", (user_id, job_id))
                     tracked_job_id = cursor.fetchone()['id']
-                    db.commit()
+                    db.commit() # Commit here is OK because it's a self-contained, final action.
                     service = TrackedJobService(current_app.logger)
                     new_job_data = service._get_formatted_job_by_id(cursor, tracked_job_id, user_id)
                     return jsonify(new_job_data), 201
             
-            # --- START: CORRECTED AUTOMATION LOGIC ---
+            # --- Start: Gather All Data Before Writing ---
             
             basic_details = job_service.get_basic_job_details(job_url)
             company_name_guess = basic_details.get('company_name', 'Unknown Company')
 
-            cursor.execute("SELECT id FROM companies WHERE LOWER(name) = LOWER(%s)", (company_name_guess,))
-            company_row = cursor.fetchone()
-            if company_row:
-                company_id = company_row['id']
-            else:
-                cursor.execute("INSERT INTO companies (name) VALUES (%s) RETURNING id", (company_name_guess,))
-                company_id = cursor.fetchone()['id']
-                db.commit()
-            
-            # **FIX**: Company research now happens for ALL new job submissions, outside the user onboarding check.
-            company_profile = job_service.research_and_get_company_profile(company_id)
-            company_profile_text = json.dumps(company_profile, indent=2, default=str) if company_profile else "No company profile available."
-
             user_profile = profile_service.get_profile(user_id)
             perform_ai_analysis = user_profile.get('has_completed_onboarding', False)
-        
+
+            # Check for existing company to get an ID for research
+            cursor.execute("SELECT id FROM companies WHERE LOWER(name) = LOWER(%s)", (company_name_guess,))
+            company_row = cursor.fetchone()
+            company_id = company_row['id'] if company_row else None
+
+            # If company doesn't exist, we can't get an ID for research yet.
+            # We'll create it later inside the write block.
+
+            company_profile_text = "No company profile available."
+            if company_id:
+                # This call now happens within the main transaction context
+                company_profile = job_service.research_and_get_company_profile(company_id)
+                company_profile_text = json.dumps(company_profile, indent=2, default=str) if company_profile else "No company profile available."
+            
             analysis_result = None
             if perform_ai_analysis:
-                current_app.logger.info(f"User {user_id} is onboarded. Performing full analysis with enriched context.")
+                current_app.logger.info(f"User {user_id} is onboarded. Performing full analysis.")
                 user_profile_text = profile_service.get_profile_for_analysis(user_id)
-                # The company_profile_text is now available to be passed in.
                 job_data = job_service.get_job_details_and_analysis(job_url, user_profile_text, company_profile_text)
                 analysis_result = job_data['analysis']
             else:
-                current_app.logger.info(f"User {user_id} is not onboarded. Using basic job details.")
+                current_app.logger.info(f"User {user_id} is not onboarded. Using basic details.")
                 analysis_result = basic_details
-            
-            # --- END: CORRECTED AUTOMATION LOGIC ---
 
+            # --- Start: Write All Data in One Atomic Block ---
+            
             company_name = analysis_result.get('company_name', company_name_guess)
             job_title = analysis_result.get('job_title', 'Unknown Title')
             
-            salary_min = analysis_result.get('salary_min') if perform_ai_analysis else None
-            salary_max = analysis_result.get('salary_max') if perform_ai_analysis else None
-            required_experience_years = analysis_result.get('required_experience_years') if perform_ai_analysis else None
-            job_modality = analysis_result.get('job_modality') if perform_ai_analysis else None
-            deduced_job_level = analysis_result.get('deduced_job_level') if perform_ai_analysis else None
-
-            # Find or create company again, in case AI analysis corrected the name
             cursor.execute("SELECT id FROM companies WHERE LOWER(name) = LOWER(%s)", (company_name,))
             company_row = cursor.fetchone()
             if company_row:
@@ -97,16 +91,20 @@ def submit_job():
             else:
                 cursor.execute("INSERT INTO companies (name) VALUES (%s) RETURNING id", (company_name,))
                 company_id = cursor.fetchone()['id']
+                # If we just created the company, we couldn't have researched it earlier.
+                # We do a best-effort research here. This is a rare edge case.
+                job_service.research_and_get_company_profile(company_id)
+
+            salary_min = analysis_result.get('salary_min') if perform_ai_analysis else None
+            salary_max = analysis_result.get('salary_max') if perform_ai_analysis else None
+            required_experience_years = analysis_result.get('required_experience_years') if perform_ai_analysis else None
+            job_modality = analysis_result.get('job_modality') if perform_ai_analysis else None
+            deduced_job_level = analysis_result.get('deduced_job_level') if perform_ai_analysis else None
 
             cursor.execute("""
-                INSERT INTO jobs (company_id, company_name, job_title, job_url, source, status, last_checked_at,
-                                  salary_min, salary_max, required_experience_years, job_modality, deduced_job_level)
+                INSERT INTO jobs (company_id, company_name, job_title, job_url, source, status, last_checked_at, salary_min, salary_max, required_experience_years, job_modality, deduced_job_level)
                 VALUES (%s, %s, %s, %s, %s, 'Active', NOW(), %s, %s, %s, %s, %s)
-                ON CONFLICT (job_url) DO UPDATE SET 
-                    job_title = EXCLUDED.job_title, status = 'Active', last_checked_at = NOW(),
-                    salary_min = EXCLUDED.salary_min, salary_max = EXCLUDED.salary_max,
-                    required_experience_years = EXCLUDED.required_experience_years,
-                    job_modality = EXCLUDED.job_modality, deduced_job_level = EXCLUDED.deduced_job_level
+                ON CONFLICT (job_url) DO UPDATE SET job_title = EXCLUDED.job_title
                 RETURNING id;
             """, (company_id, company_name, job_title, job_url, 'User Submission', salary_min, salary_max, required_experience_years, job_modality, deduced_job_level))
             job_id = cursor.fetchone()['id']
@@ -115,15 +113,13 @@ def submit_job():
                 cursor.execute("""
                     INSERT INTO job_analyses (job_id, user_id, analysis_protocol_version, position_relevance_score, environment_fit_score, hiring_manager_view, matrix_rating, summary, qualification_gaps, recommended_testimonials)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (job_id, user_id) DO UPDATE SET
-                        analysis_protocol_version = EXCLUDED.analysis_protocol_version, position_relevance_score = EXCLUDED.position_relevance_score,
-                        environment_fit_score = EXCLUDED.environment_fit_score, hiring_manager_view = EXCLUDED.hiring_manager_view,
-                        matrix_rating = EXCLUDED.matrix_rating, summary = EXCLUDED.summary, qualification_gaps = EXCLUDED.qualification_gaps,
-                        recommended_testimonials = EXCLUDED.recommended_testimonials, updated_at = NOW();
+                    ON CONFLICT (job_id, user_id) DO UPDATE SET analysis_protocol_version = EXCLUDED.analysis_protocol_version;
                 """, (job_id, user_id, config.ANALYSIS_PROTOCOL_VERSION, analysis_result.get('position_relevance_score'), analysis_result.get('environment_fit_score'), analysis_result.get('hiring_manager_view'), analysis_result.get('matrix_rating'), analysis_result.get('summary'), Json(analysis_result.get('qualification_gaps', [])), Json(analysis_result.get('recommended_testimonials', []))))
 
             cursor.execute("INSERT INTO tracked_jobs (user_id, job_id) VALUES (%s, %s) RETURNING id;", (user_id, job_id))
             tracked_job_id = cursor.fetchone()['id']
+            
+            # --- Final, single commit for the entire transaction ---
             db.commit()
 
             service = TrackedJobService(current_app.logger)
@@ -132,20 +128,17 @@ def submit_job():
 
     except ValueError as e: return jsonify({"error": str(e)}), 400
     except (requests.exceptions.RequestException, ConnectionError) as e: return jsonify({"error": f"Service Error: {str(e)}"}), 503
-    except psycopg2.IntegrityError as e:
-        db.rollback()
-        current_app.logger.error(f"DATABASE INTEGRITY ERROR in submit_job route: {e}")
-        return jsonify({"error": "This job may already exist or could not be saved due to a data conflict."}), 409
     except psycopg2.Error as e:
-        db.rollback()
+        if db: db.rollback()
         current_app.logger.error(f"DATABASE ERROR in submit_job route: {e}")
         return jsonify({"error": "A database error occurred."}), 500
     except Exception as e:
-        db.rollback()
+        if db: db.rollback()
         current_app.logger.error(f"An unexpected error occurred in submit_job route: {e}")
         return jsonify({"error": "An internal server error occurred."}), 500
 
-# Other endpoints are unchanged
+
+# --- Other Endpoints Unchanged ---
 @jobs_bp.route('/tracked-jobs', methods=['GET'])
 @token_required
 def get_tracked_jobs():
