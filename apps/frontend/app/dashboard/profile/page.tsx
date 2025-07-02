@@ -13,9 +13,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronUp, MapPin, XCircle } from 'lucide-react';
-import { type Profile } from '@/app/dashboard/types'; // <-- Corrected path alias
+import { type Profile } from '@/app/dashboard/types';
 
-// ... rest of file is unchanged, but I will provide it in full to prevent truncation errors.
 const ONBOARDING_REQUIRED_FIELDS: (keyof Profile)[] = [
     'work_style_preference',
     'conflict_resolution_style',
@@ -123,14 +122,15 @@ export default function UserProfilePage() {
             setProfile(updatedProfile);
             setSuccessMessage("Profile updated successfully! Redirecting to dashboard...");
             setTimeout(() => {
-                router.push('/dashboard');
+                // Use window.location.assign for a full page reload to ensure dashboard data is fresh.
+                window.location.assign('/dashboard');
             }, 1500);
         } catch (err: any) { 
             console.error("Error updating profile:", err);
             setError(err.message); 
             setIsSaving(false);
         }
-    }, [apiBaseUrl, authedFetch, router]);
+    }, [apiBaseUrl, authedFetch]);
     
     const handleSubmit = useCallback((e: FormEvent) => {
         e.preventDefault();
@@ -284,7 +284,7 @@ export default function UserProfilePage() {
                         <CollapsibleContent className="p-4 pt-0 space-y-4">
                             <div><Label htmlFor="personality_adjectives">Describe Yourself in a Few Adjectives</Label><Input id="personality_adjectives" type="text" value={profile.personality_adjectives || ''} onChange={(e) => handleChange('personality_adjectives', e.target.value)} /></div>
                             <div><Label htmlFor="personality_16_personalities">16 Personalities (e.g., INTJ)</Label><Input id="personality_16_personalities" type="text" value={profile.personality_16_personalities || ''} onChange={(e) => handleChange('personality_16_personalities', e.target.value)} /></div>
-                            <div><Label htmlFor="personality_disc">DISC Profile</Label><Input id="personality_disc" type="text" value={profile.personality_disc || ''} onChange={(e) => handleChange('personality_disc', e.target.value)} /></div>
+                            <div><Label htmlFor="personality_disc">DISC Profile</Label><Input id="personality_disc" type="text" value={profile.personality_disc || ''} onChange={(e) => handleChange('personality_disc', e.g.target.value)} /></div>
                             <div><Label htmlFor="personality_gallup_strengths">Gallup Strengths (Top 5)</Label><Textarea id="personality_gallup_strengths" value={profile.personality_gallup_strengths || ''} onChange={(e) => handleChange('personality_gallup_strengths', e.target.value)} rows={3} /></div>
                         </CollapsibleContent>
                     </Collapsible>
