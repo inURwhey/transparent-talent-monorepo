@@ -21,3 +21,6 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# Scripts environment variables
+/scripts/.env
