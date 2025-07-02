@@ -15,12 +15,12 @@
 *   **Architecture Style:** Decoupled three-tier application, managed in a **monorepo**. The backend now follows a service-oriented architecture with an application factory pattern.
 
 ## 3. Current Project Status
-*   **V1 Job Matching Service Implemented:** The backend now has a functional `GET /api/jobs/recommendations` endpoint that returns a ranked list of job suggestions based on a V1 matching algorithm. This service provides the API foundation for the "Jobs For You" dashboard module.
-*   **Structured Job Data Ingestion Live:** The backend successfully extracts and stores structured data (salary range, experience years, modality, job level) from AI analysis into the `jobs` table.
-*   **User Profile Salary Fields Updated:** The frontend UI for the user profile page now correctly handles structured integer inputs for desired minimum and maximum annual salary.
-*   **Application is stable and functional on its production domain.** The end-to-end new user onboarding flow is stable, and all major UI and authentication bugs have been resolved.
+*   **"Jobs For You" Module (v1) Live:** A new module on the user dashboard now displays a ranked list of personalized job recommendations, fetched from a new backend matching service. Core functionality is live, with UI/UX polish pending.
+*   **Intelligent Onboarding Flow:** The system now intelligently gates AI features based on profile completion. Users with incomplete profiles can track jobs but are shown CTAs to complete their profile to unlock AI analysis and recommendations, creating a more compelling user journey.
+*   **Backend Stability Hardened:** Critical bugs related to data integrity, state synchronization, and edge cases (like re-tracking jobs) have been resolved, making the backend services significantly more robust.
+*   **Application is stable and functional on its production domain.**
 
 ## 4. Immediate Backlog & Next Steps
-1.  **UI: Implement "Jobs For You" Dashboard Module:** Build the frontend component to display the job recommendations from the new API endpoint. (RICE: 6000)
+1.  **Backend: Re-process malformed job data:** Create an admin endpoint to clean up historical job data that was saved with placeholder titles. (RICE: 4000)
 2.  **Feature: User-set Reminders & Next Action Notifications:** Implement CRM-like functionality for users to set reminders for their tracked jobs. (RICE: 4000)
 3.  **UI/UX: Change "Desired Job Title" to "Desired Job Title(s)":** A simple text change on the profile page. (RICE: 20000)

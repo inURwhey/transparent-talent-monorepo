@@ -1,4 +1,4 @@
-# Transparent Talent: Product Backlog & Roadmap v1.26
+# Transparent Talent: Product Backlog & Roadmap v1.27
 
 ## Column Definitions
 *   **AI Model:** The complexity required from the AI. (Flash, Pro [Breakdown/Execute], Creative, N/A)
@@ -12,13 +12,15 @@
 |:---|:---|:---|:---|
 | E01| **"Jobs For You" Module** | Implement an end-to-end job recommendation engine, from enhancing backend data to displaying ranked results on the user dashboard. | In Progress |
 | E02| **New User Experience** | Refine and stabilize the entire new user journey, from sign-up through onboarding and profile completion. | In Progress |
+| E03| **Monetization & Subscriptions** | Define and implement user subscription tiers to gate access to premium AI features. | Not Started |
+| E04| **User Relationship Management** | Build a lightweight, integrated CRM for managing professional contacts and leveraging the user's network. | Not Started |
 
 ---
 
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **UI: Implement "Jobs For You" Dashboard Module** | E01 | 1000 | 3 | 100% | 0.5 | **6000** | Flash | M | **To Do** |
+| **Backend: Re-process malformed job data** | - | 1000 | 2 | 100% | **4000** | Flash | S | **To Do** |
 | **Feature: User-set Reminders & Next Action Notifications** | - | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 | **Bugfix: Profile Save Fails Randomly (Likely Render Instance Spin-down)** | - | 1000 | 1 | 70% | 0.5 | **1400** | Flash | S | **To Do** |
 
@@ -32,27 +34,27 @@
 | **UI/UX: Prompt Users with Incomplete Profiles to Update** | E02 | 1000 | 2 | 90% | 0.25 | **8000** | Flash | S | **To Do** |
 | **UI/UX: Job Reactivation Flow for Inactive Tracked Jobs** | - | 1000 | 2 | 100% | 0.25 | **5000** | Flash | S | **To Do** |
 | **Feature: Resume File Upload & Parsing** | E02 | 1000 | 3 | 90% | 0.5 | **5400** | Pro | M | **To Do** |
+| **Feature: Contacts CRM (LinkedIn Import)** | E04 | 1000 | 3 | 90% | 0.75 | **3600** | Pro Execute| L | **To Do** |
 | **UI/UX: Modularize Profile Page Components** | E02 | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 | **Feature: Bulk Reprocess Relevancy** | - | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 | **UI/UX: Implement Autosave for Profile and Resume Pages** | E02 | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI/UX: Enhance Profile Completion UX** | E02 | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI/UX: Multi-step Archiving/Hiding Workflow for Tracked Jobs** | - | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI: Transparent Relevance Scorecard** | E01 | 1000 | 3 | 100% | 1.0 | **3000** | Flash | M | **To Do** |
-| **Feature: AI-Generated Application Assets (Resume/Cover Letter)** | - | 1000 | 3 | 90% | 1.0 | **2700** | Pro | L | **To Do** |
-| **Feature: Bulk Job Submission (CSV/URLs)** | - | 500 | 3 | 90% | 1.0 | **1350** | Pro | M | **To Do** |
 | **Feature: User Feedback Loop** | E01 | 1000 | 3 | 100% | 2.5 | **1200** | Pro | L | **To Do** |
-| **Feature: Connect Resume Processing with Roles Data Type** | E02 | 1000 | 3 | 80% | 1.0 | **2400** | Pro | M | **To Do** |
-| **UI/UX: Implement Dynamic Page Titles for SEO** | - | 1000 | 1 | 100% | 0.25 | **4000** | N/A | S | **To Do** |
 
-*Note: Tier 3 and 4 items remain unchanged but would be linked to Epics as they are prioritized.*
+*Note: Further tiers omitted for brevity.*
 
 ---
 
 ## Completed Features & Bugfixes
-### v0.39.0
+### v0.42.0
 | Feature/Bugfix | Original Tier | RICE Score | Epic |
 | :--- | :--- | :--- | :--- |
-| **Backend: Implement V1 JobMatchingService** | Tier 1 | 6000 | E01 |
+| **UI: Implement "Jobs For You" Dashboard Module** | Tier 1 | 6000 | E01 |
+| **Fix: Stale recommendations and AI Grade CTAs after user actions** | Bug Bash | N/A | E01/E02 |
+| **Fix: Inability to re-track deleted jobs** | Bug Bash | N/A | - |
+| **Fix: Data integrity for incomplete user job submissions** | Bug Bash | N/A | E02 |
 
 ### Previous Versions
-*Items from v0.38.0 and earlier are documented in the `CHANGELOG.md`.*
+*Items from v0.41.0 and earlier are documented in the `CHANGELOG.md`.*

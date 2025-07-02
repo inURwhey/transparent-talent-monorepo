@@ -3,6 +3,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.42.0 - 2025-07-03 - Full-Stack Bug Bash & "Jobs For You" v1
+
+This release marks a significant stabilization and feature implementation effort. It resolves a complex series of interconnected bugs across the frontend and backend, and successfully launches the V1 of the "Jobs For You" recommendation module on the user dashboard.
+
+### Added
+-   **Feature: "Jobs For You" Frontend Module:** Implemented the full frontend for the job recommendation module. This includes a new `useJobRecommendationsApi` hook for data fetching, a `JobsForYou.tsx` presentational component, and integration into the main dashboard page.
+-   **Feature: Conditional AI Gating:** The backend now intelligently gates AI analysis. Jobs submitted by users with incomplete profiles are tracked immediately, but the AI analysis is deferred until the profile is completed, at which point a new re-analysis process is automatically triggered.
+-   **Feature: Re-tracking Jobs:** Users can now re-track jobs they have previously deleted. The backend logic now correctly handles this edge case without causing a database conflict.
+-   **Backend: Data Integrity Validation:** Added robust post-parsing validation in `job_service.py` to ensure `job_title` and `company_name` are always present and valid after AI processing, preventing silent data corruption.
+-   **Protocols:** Added the `Self-Correction on Truncation` protocol to force the AI to prevent providing truncated code.
+
+### Changed
+-   **Backend:** Refactored all Flask blueprint routing to be consistent, resolving a major CORS/404 regression bug.
+-   **Backend:** The `JobMatchingService` now includes the `matrix_rating` (letter grade) in its API response to ensure UI consistency.
+-   **UI/UX:** The "Jobs For You" module now displays a clear "Complete Your Profile" call-to-action for users with incomplete profiles, instead of an empty state.
+-   **UI/UX:** The "AI Grade" in the "My Job Tracker" table now displays an "Unlock" CTA for jobs tracked before profile completion.
+-   **UI/UX:** The user is now redirected to the dashboard after saving their profile to ensure all page data is correctly synchronized and refetched.
+
+### Fixed
+-   **Critical Bug (Dashboard Inaccessible):** Resolved a CORS and 404 error that was blocking all API calls and making the dashboard unusable.
+-   **Critical Bug (Data Integrity):** Fixed a database constraint violation that occurred when multiple incomplete users submitted jobs, by implementing a lightweight scrape for basic job details.
+-   **Stale UI Data:** Fixed the bug where the "Jobs For You" module and the "AI Grade" CTA would not update after a user tracked a job or completed their profile.
+
 ## v0.41.0 - 2025-07-03 - Frontend Bugfixes & UX Polish
 
 This release addresses several bugs and user experience issues identified after the initial launch of the "Jobs For You" recommendation module, and refines the core application routing.

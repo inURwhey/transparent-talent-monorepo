@@ -150,7 +150,7 @@ The ultimate goal for these protocols is to generate structured **JSON** output 
 ### Backlog Content Protocol v1.0
 *   **Objective:** To streamline the `BACKLOG.md` file and reduce token cost.
 *   **Prime Directive:** When generating `BACKLOG.md` during an `END_PROMPT` cycle, the AI will perform the following:
-    *   **Soft Checkpoint:** If the `END_PROMPT` is triggered as a soft checkpoint, the AI will only update `BACKLOG.md` to include any new "To Do" ideas that were curated during the session and need to jump the line.
+    *   **Soft Checkpoint:** If the `END_PROMPT` is triggered as a soft checkpoint, the AI will only update `BACKLOG.md` to include any new, uncurated ideas that need to jump the line.
     *   **Full `END_PROMPT`:** If the `END_PROMPT` is a full cycle, the AI will only include items with a "To Do" status, removing the "Completed" section and moving "Done" items to the `CHANGELOG.md`'s completed section.
 
 ### Changelog Output Protocol v1.0
@@ -170,3 +170,11 @@ This workflow should be executed sequentially within a single chat session to ma
 1.  **Initiate Company & Lead Discovery (Protocol 1.4):** Start by providing the user's profile and resume and requesting a 'Master Target Company List' and 'Preliminary Job Leads'.
 2.  **Initiate Preliminary Screening (Protocol 2.2):** From the list of leads generated in Step 1, select specific jobs to screen. The AI will apply the critical verification protocol to each.
 3.  **Initiate Detailed Analysis (Protocol User-Driven v1.1):** For jobs that pass screening, provide the full job description and request a detailed analysis.
+
+New Protocol: Self-Correction on Truncation (v1.0)
+Objective: To prevent the AI from ever outputting truncated or abbreviated code that violates the Full-File Output Mandate.
+Trigger: Any time the AI internally generates a code block containing an abbreviation like ..., // ... (rest of file), or any other placeholder for code that should be present.
+Workflow:
+Internal Check: Before outputting any code block, the AI will perform a self-check for truncation markers.
+Halt & Re-evaluate: If a truncation marker is detected, the AI will STOP generating the response. It will then issue a self-correction message to the user, such as: "Protocol Violation Detected: My planned output contained truncated code. I am halting and will now generate the complete, untruncated file as required."
+Grounded Regeneration: The AI will then re-read the last known-good version of the file from the chat history and re-apply the intended changes to ensure the final output is complete and correct.
