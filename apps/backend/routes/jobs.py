@@ -59,24 +59,30 @@ def submit_job():
                 job_data = job_service.get_job_details_and_analysis(job_url, user_profile_text)
                 analysis_result = job_data['analysis']
             else:
-                current_app.logger.info(f"User {user_id} has not completed onboarding. Skipping AI analysis.")
-                analysis_result = {
-                    'company_name': 'Unknown Company (Profile Incomplete)',
-                    'job_title': 'Unknown Title (Profile Incomplete)'
-                }
+                current_app.logger.info(f"User {user_id} has not completed onboarding. Performing lightweight scrape.")
+                # Call the new lightweight scraper instead of creating a generic placeholder
+                analysis_result = job_service.get_basic_job_details(job_url)
 
             company_name = analysis_result.get('company_name', 'Unknown Company')
             job_title = analysis_result.get('job_title', 'Unknown Title')
+            
+            # Ensure we don't try to get AI-only fields if analysis was not performed
             salary_min = analysis_result.get('salary_min') if perform_ai_analysis else None
             salary_max = analysis_result.get('salary_max') if perform_ai_analysis else None
             required_experience_years = analysis_result.get('required_experience_years') if perform_ai_analysis else None
             job_modality = analysis_result.get('job_modality') if perform_ai_analysis else None
             deduced_job_level = analysis_result.get('deduced_job_level') if perform_ai_analysis else None
 
+            # Check for existing company and insert if new
             cursor.execute("SELECT id FROM companies WHERE LOWER(name) = LOWER(%s)", (company_name,))
             company_row = cursor.fetchone()
-            company_id = company_row['id'] if company_row else cursor.execute("INSERT INTO companies (name) VALUES (%s) RETURNING id", (company_name,)) and cursor.fetchone()['id']
-            
+            if company_row:
+                company_id = company_row['id']
+            else:
+                cursor.execute("INSERT INTO companies (name) VALUES (%s) RETURNING id", (company_name,))
+                company_id = cursor.fetchone()['id']
+
+            # Use ON CONFLICT to handle the edge case where another process inserts the same job_url
             cursor.execute("""
                 INSERT INTO jobs (company_id, company_name, job_title, job_url, source, status, last_checked_at,
                                   salary_min, salary_max, required_experience_years, job_modality, deduced_job_level)
@@ -120,6 +126,12 @@ def submit_job():
 
     except ValueError as e: return jsonify({"error": str(e)}), 400
     except (requests.exceptions.RequestException, ConnectionError) as e: return jsonify({"error": f"Service Error: {str(e)}"}), 503
+    except psycopg2.IntegrityError as e:
+        db.rollback()
+        current_app.logger.error(f"DATABASE INTEGRITY ERROR in submit_job route: {e}")
+        # This will now catch the "jobs_company_id_job_title_key" error if the lightweight scrape fails
+        # and two users submit the same URL that results in the same scraped title.
+        return jsonify({"error": "This job may already exist or could not be saved due to a data conflict."}), 409
     except psycopg2.Error as e:
         db.rollback()
         current_app.logger.error(f"DATABASE ERROR in submit_job route: {e}")
