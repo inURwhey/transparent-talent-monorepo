@@ -36,7 +36,9 @@ def token_required(f):
             claims = jwt.decode(token, public_key, algorithms=["RS256"], issuer=config.CLERK_ISSUER_URL, options={"verify_aud": False})
 
             authorized_party = claims.get('azp')
-            if not authorized_party or authorized_party not in config.CLERK_AUTHORIZED_PARTY:
+            # Handle both string and list for authorized parties
+            if not authorized_party or not any(re.fullmatch(pattern, authorized_party) if isinstance(pattern, re.Pattern) else pattern == authorized_party for pattern in config.CLERK_AUTHORIZED_PARTY):
+                current_app.logger.warning(f"JWT validation failed: Invalid authorized party (azp): {authorized_party}")
                 raise jwt.exceptions.InvalidAudienceError(f"Invalid authorized party: {authorized_party}")
             
             clerk_user_id = claims.get('sub')
@@ -63,9 +65,34 @@ def token_required(f):
 
         except jwt.ExpiredSignatureError:
             return jsonify({"message": "Token has expired!"}), 401
+        except jwt.exceptions.InvalidAudienceError as e:
+            # More specific logging for this common error
+            return jsonify({"message": f"JWT validation failed: {e}"}), 401
         except Exception as e:
             current_app.logger.error(f"An unexpected error occurred during token validation: {e}")
             return jsonify({"message": "An unexpected error occurred during token validation."}), 500
         
+        return f(*args, **kwargs)
+    return decorated
+
+def admin_required(f):
+    """
+    A decorator to ensure the user is an admin.
+    Must be used *after* @token_required.
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not hasattr(config, 'CLERK_ADMIN_USER_IDS') or not config.CLERK_ADMIN_USER_IDS:
+            current_app.logger.error("CLERK_ADMIN_USER_IDS is not set in the configuration.")
+            return jsonify({"message": "Server configuration error: Admin list not set."}), 500
+
+        admin_ids = [id.strip() for id in config.CLERK_ADMIN_USER_IDS.split(',')]
+        
+        # g.current_user is a dict-like object from fetchone(), set by @token_required
+        user_clerk_id = g.current_user.get('clerk_user_id') if hasattr(g, 'current_user') and g.current_user else None
+        
+        if not user_clerk_id or user_clerk_id not in admin_ids:
+            return jsonify({"message": "Admin access required."}), 403
+            
         return f(*args, **kwargs)
     return decorated
