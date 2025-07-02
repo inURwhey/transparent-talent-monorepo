@@ -3,6 +3,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.48.0 - 2025-07-02 - Automated Company Data Enrichment
+
+This release implements a significant backend feature that automatically researches and enriches company data, directly improving the core job relevancy engine. It also includes several critical bugfixes related to data integrity and edge case handling in the job submission process.
+
+### Added
+- **Feature: Automated Company Research:** The system now automatically triggers AI-driven research to create a `company_profile` the first time a job from a new company is submitted. This process is fully automated and runs for all users, enriching the platform's core dataset.
+- **AI Context:** The main job analysis prompt is now enhanced with the data from `company_profiles` (industry, mission, etc.), providing crucial context for a more accurate "Environment Fit" score.
+
+### Changed
+- **Architecture:** The job submission workflow in `routes/jobs.py` has been refactored to be a single, atomic transaction, preventing partial data writes.
+- **Architecture:** The "re-track job" functionality now correctly triggers a new analysis for an onboarded user if one doesn't already exist for them, ensuring a consistent user experience.
+
+### Fixed
+- **Critical Bug (Data Loss):** Fixed a bug where a premature `db.commit()` in the job submission route would break the transaction and cause the `company_profile` data to be silently lost.
+- **Critical Bug (Server Crash):** Resolved a `TypeError: Object of type datetime is not JSON serializable` that crashed the job submission endpoint.
+- **Critical Bug (SQL Error):** Corrected a SQL query that attempted to select a non-existent `id` column from the `job_analyses` table during the re-tracking process.
+
+### Protocols
+- **Added "Proactive Refactoring Suggestion":** The AI will now suggest refactoring overly large or complex files before modification.
+- **Updated "Database Interaction Protocol":** Added a "Known Schema Quirks" section to explicitly document the primary key of the `job_analyses` table.
+
 ## v0.47.0 - 2025-07-03 - Profile Page UX Polish
 
 This release implements several small but high-impact UX refinements on the user profile page, improving interactivity and creating a more intuitive layout.

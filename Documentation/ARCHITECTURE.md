@@ -19,6 +19,7 @@ A foundational principle of the system is the separation of user-provided data f
 *   **Technology:** Python with the Flask framework.
 *   **Purpose:** This is the "brain" of the application. It is responsible for all business logic, data processing, and security. It serves as the single, authoritative gateway to the database and other services.
 *   **How it Works:** It exposes a RESTful API with specific endpoints (e.g., `/api/users/profile`). It receives requests from the Frontend, validates the included JWT, interacts with the Database, calls external services, and sends back structured data (JSON) as a response.
+*   **Automated Data Enrichment:** The system intelligently enriches its own data. For example, when a job from a new company is submitted, the backend automatically triggers an AI research task to build a detailed company profile, ensuring that subsequent analyses have rich context.
 *   **Data Lifecycle Management:** The business logic for core entities follows a strictly defined state machine to ensure data integrity and predictable behavior. For a detailed breakdown of these state machines, see the **[Data Lifecycle Management](DATA_LIFECYCLE.md)** document.
 *   **Deployment:** Deployed as a web service on **Render**. It is connected to a production database and its deployment is automatically triggered by a git push to the `main` branch. Feature branch testing is supported by creating temporary, parallel backend services on Render that deploy from their respective branches.
 

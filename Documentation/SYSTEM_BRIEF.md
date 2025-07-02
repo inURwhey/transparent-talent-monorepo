@@ -15,11 +15,12 @@
 *   **Architecture Style:** Decoupled three-tier application, managed in a **monorepo**. The backend now follows a service-oriented architecture with an application factory pattern.
 
 ## 3. Current Project Status
-*   **Onboarding Lifecycle Hardened:** The entire new user experience, from sign-up and job submission to profile completion, is now stable and robust. Critical bugs related to data integrity, state synchronization, and edge cases (like re-tracking jobs or resume parsing overwriting data) have been resolved. The system now correctly requires a completed profile and a resume submission to unlock AI features, and reliably triggers re-analysis of jobs post-onboarding.
-*   **"Jobs For You" Module (v1) Live:** A module on the user dashboard now displays a ranked list of personalized job recommendations, fetched from a backend matching service. Core functionality is live, with UI/UX polish pending.
+*   **Automated Data Enrichment:** The system is now significantly more intelligent. It automatically researches new companies upon job submission, creating a rich profile of company data (industry, mission, etc.). This data is then fed directly into the core AI analysis prompt, substantially improving the accuracy of the "Environment Fit" calculation and strengthening the platform's primary value proposition.
+*   **Onboarding Lifecycle Hardened:** The entire new user experience, from sign-up and job submission to profile completion, is stable and robust. Critical bugs related to data integrity, state synchronization, and edge cases (like re-tracking jobs or resume parsing overwriting data) have been resolved.
+*   **"Jobs For You" Module (v1) Live:** A module on the user dashboard displays a ranked list of personalized job recommendations.
 *   **Application is stable and functional on its production domain.**
 
 ## 4. Immediate Backlog & Next Steps
-1.  **Backend: Re-process malformed job data:** Create an admin endpoint to clean up historical job data that was saved with placeholder titles. (RICE: 4000)
-2.  **Feature: User-set Reminders & Next Action Notifications:** Implement CRM-like functionality for users to set reminders for their tracked jobs. (RICE: 4000)
-3.  **UI/UX: Change "Desired Job Title" to "Desired Job Title(s)":** A simple text change on the profile page. (RICE: 20000)
+1.  **Architecture: Distinguish 'Unset' vs 'No Preference' in DB:** Migrate user profile preference fields from `TEXT` to `ENUM` types to differentiate between a field a user hasn't set versus one they explicitly have no preference for. This is critical for data integrity and improving the accuracy of the relevancy engine. (RICE: 4000)
+2.  **Backend: Re-process malformed job data:** Create an admin endpoint to clean up historical job data that was saved with placeholder titles. (RICE: 4000)
+3.  **Feature: User-set Reminders & Next Action Notifications:** Implement CRM-like functionality for users to set reminders for their tracked jobs. (RICE: 4000)

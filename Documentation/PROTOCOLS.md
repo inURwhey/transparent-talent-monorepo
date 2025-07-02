@@ -29,6 +29,15 @@
     *   **Test Cases:** Numbered steps for verification, including input, expected output, and specific verification steps (e.g., UI inspection, DB queries).
     *   **Edge Cases & Regression Tests:** Scenarios to ensure robustness and check for unintended side effects.
 
+### Proactive Refactoring Suggestion Protocol v1.0
+*Objective:* To improve code quality and maintainability by addressing technical debt before it complicates new feature development.
+*   **Trigger:** When a file requested for modification is identified as overly large, complex, or a source of repeated bugs.
+*   **Workflow:** Instead of proceeding with the modification, the AI will:
+    1.  **Pause:** State that the file's complexity is a potential issue.
+    2.  **Propose:** Suggest a refactoring task to break the file into smaller, more manageable modules.
+    3.  **Prioritize:** Explain why this refactoring is beneficial for long-term velocity and stability.
+    4.  **Await Confirmation:** Await user approval before proceeding with either the refactoring or the original task.
+
 ---
 
 ## Session & Context Management
@@ -51,6 +60,8 @@
 ### Database Interaction Protocol v1.1
 *   **Prime Directive:** **Never** assume a database table's structure.
 *   **Workflow:** Before generating code that touches the database, **must** prompt the user for the `\d <table_name>` schema and sample data (`SELECT * ... LIMIT 10`). All generated code will strictly adhere to the provided schema.
+*   **Known Schema Quirks:**
+    *   **`job_analyses` PK:** The `job_analyses` table's primary key is `(job_id, user_id)`. It does **not** have a separate `id` column. Queries to check for existence should use `SELECT 1` or `SELECT job_id`.
 
 ### Monorepo & CLI Interaction Protocol v1.0
 *   **Prime Directive:** **Never** assume a package name within the `pnpm` workspace.
