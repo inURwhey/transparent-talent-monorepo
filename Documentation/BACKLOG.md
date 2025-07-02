@@ -1,4 +1,4 @@
-# Transparent Talent: Product Backlog & Roadmap v1.31
+# Transparent Talent: Product Backlog & Roadmap v1.32
 
 ## Column Definitions
 *   **AI Model:** The complexity required from the AI. (Flash, Pro [Breakdown/Execute], Creative, N/A)
@@ -23,12 +23,12 @@
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Backend: Re-process malformed job data** | - | 1000 | 2 | 100% | 0.5 | **4000** | Flash | S | **To Do** |
 | **Feature: User-set Reminders & Next Action Notifications** | - | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
+| **Architecture: Distinguish 'Unset' vs 'No Preference' in DB** | E02 | 1000 | 2 | 100% | 0.5 | **4000** | Pro Breakdown | M | **To Do** |
 | **Bugfix: Profile Save Fails Randomly (Likely Render Instance Spin-down)** | - | 1000 | 1 | 70% | 0.5 | **1400** | Flash | S | **To Do** |
 
 ## Tier 2: Core User Experience & Differentiation
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **UI/UX: Add filler text to "preferred work location" dropdown & conditional logic for remote preference.**| E02 | 1000 | 1 | 100% | 0.1 | **10000** | Flash | S | **To Do** |
 | **Feature: Intelligent Duplicate Resume Handling (Reactivation/Discard)** | E02 | 1000 | 2 | 90% | 0.5 | **9000** | Flash | M | **To Do** |
 | **UI/UX: Prompt Users with Incomplete Profiles to Update** | E02 | 1000 | 2 | 90% | 0.25 | **8000** | Flash | S | **To Do** |
 | **Feature: Add Professional Designations/Certifications to Profile** | E02 | 1000 | 2 | 100% | 0.25 | **8000** | Flash | S | **To Do** |
@@ -50,6 +50,7 @@
 | **Feature: User-Facing Application Artifact Generation (Resumes, Cover Letters)** | E03 | 1000 | 3 | 90% | 1.5 | **1800** | Creative | L | **To Do** |
 | **Feature: Enhanced Company Profiles & Research** | - | 1000 | 3 | 80% | 2.0 | **1200** | Pro | L | **To Do** |
 | **Feature: User Feedback Loop** | E01 | 1000 | 3 | 100% | 2.5 | **1200** | Pro | L | **To Do** |
+| **Feature: Add Contract Work Preferences** | E02 | 1000 | 1 | 90% | 0.25 | **3600** | Flash | S | **To Do** |
 
 ---
 
@@ -77,3 +78,4 @@
 | **Marketing: LinkedIn Company Profile** | Create and maintain an official company profile on LinkedIn. |
 | **BizDev: User Recruitment (Colleges, 'Never Search Alone')** | Establish partnerships or outreach programs with university career centers and job search communities to recruit early-adopter users. |
 | **Marketing: Empathetic Outreach to Laid-off Employees** | Create and execute a marketing campaign that offers genuine help and resources to individuals recently affected by company layoffs. |
+| **Promotion: Basic tier free for 2025 for all Never Search Alone council members** | Offer a promotional deal to a key partner community to drive early adoption and gather targeted feedback. |

@@ -3,6 +3,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.47.0 - 2025-07-03 - Profile Page UX Polish
+
+This release implements several small but high-impact UX refinements on the user profile page, improving interactivity and creating a more intuitive layout.
+
+### Changed
+- **UI/UX:** "No Preference" is now a persistent, selectable state for dropdowns on the profile page, preventing the UI from incorrectly reverting to a placeholder.
+- **UI/UX:** The "remote preference" checkbox is now correctly shown only when "Hybrid" is selected as the preferred work location.
+- **UI/UX:** Co-located the "Save Profile" and "Back to Dashboard" buttons at the bottom of the profile form and moved feedback messages closer to the user's point of action.
+
+### Fixed
+- **UI/UX:** Resolved multiple TypeScript errors and UI state inconsistencies related to dropdown components on the profile page.
+
 ## v0.46.0 - 2025-07-03 - Dashboard & Profile UX Refactor
 
 This release implements significant UX and layout improvements based on user feedback, creating a more intuitive and consistent experience.
