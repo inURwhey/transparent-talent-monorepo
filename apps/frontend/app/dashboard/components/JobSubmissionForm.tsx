@@ -25,30 +25,38 @@ export function JobSubmissionForm({ isSubmitting, submissionError, onSubmit, isP
     }
   };
 
-  const buttonText = isProfileComplete ? 'Analyze' : 'Track';
+  const buttonText = isProfileComplete ? 'Analyze Job' : 'Track Job';
   const buttonSubmittingText = isProfileComplete ? 'Analyzing...' : 'Tracking...';
   const headerText = isProfileComplete ? 'Analyze a New Job' : 'Track a New Job';
+  const descriptionText = isProfileComplete 
+    ? "Paste a job URL to get a detailed AI analysis and relevance score based on your complete profile."
+    : "Your profile is incomplete. Paste a job URL to track it now. Complete your profile to unlock AI analysis.";
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-      <h2 className="text-2xl font-semibold text-gray-800 mb-4">{headerText}</h2>
-      <form onSubmit={handleSubmit}>
-        <Label htmlFor="jobUrl" className="block text-sm font-medium text-gray-700">Paste Job Posting URL</Label>
-        <div className="mt-1 flex rounded-md shadow-sm">
+    <div className="bg-white p-6 rounded-lg shadow-md h-full flex flex-col">
+      <h2 className="text-2xl font-semibold text-gray-800 mb-2">{headerText}</h2>
+      <p className="text-sm text-gray-600 mb-4">{descriptionText}</p>
+      <form onSubmit={handleSubmit} className="flex flex-col flex-grow">
+        <div className="flex-grow">
+          <Label htmlFor="jobUrl" className="block text-sm font-medium text-gray-700">
+            Job Posting URL
+          </Label>
           <Input
             type="url"
             name="jobUrl"
             id="jobUrl"
-            className="block w-full flex-1 rounded-none rounded-l-md border-gray-300 p-2"
+            className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             placeholder="https://www.linkedin.com/jobs/view/..."
             value={jobUrl}
             onChange={(e) => setJobUrl(e.target.value)}
             required
           />
+        </div>
+        <div className="mt-4">
           <Button
             type="submit"
-            className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:bg-indigo-300"
-            disabled={isSubmitting}
+            className="w-full bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:bg-indigo-300"
+            disabled={isSubmitting || !jobUrl.trim()}
           >
             {isSubmitting ? buttonSubmittingText : buttonText}
           </Button>
