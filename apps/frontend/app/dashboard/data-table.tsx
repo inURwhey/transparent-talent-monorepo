@@ -13,7 +13,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-  getExpandedRowModel, // <-- Import for expandable rows
+  getExpandedRowModel,
   PaginationState,
 } from "@tanstack/react-table"
 import { ChevronDown } from "lucide-react"
@@ -34,8 +34,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { RowSubComponent } from "./components/columns" // <-- Import the sub-component
-import { type CompanyProfile } from "./types" // <-- Import CompanyProfile type
+import CompanyProfileCard from "./components/CompanyProfileCard" // <-- Import the new component
+import { type TrackedJob, type CompanyProfile } from "./types" 
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -43,23 +43,22 @@ interface DataTableProps<TData, TValue> {
   pagination: PaginationState;
   setPagination: React.Dispatch<React.SetStateAction<PaginationState>>;
   totalCount: number;
-  // --- ADDED PROP ---
   fetchCompanyProfile: (companyId: number) => Promise<CompanyProfile | null>;
 }
 
-export function DataTable<TData, TValue>({
+export function DataTable<TData extends TrackedJob, TValue>({ // Ensure TData extends TrackedJob
   columns,
   data,
   pagination,
   setPagination,
   totalCount,
-  fetchCompanyProfile, // <-- Destructure new prop
+  fetchCompanyProfile,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
-  const [expanded, setExpanded] = React.useState({}) // State for expanded rows
+  const [expanded, setExpanded] = React.useState({})
 
   const table = useReactTable({
     data,
@@ -70,18 +69,18 @@ export function DataTable<TData, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getExpandedRowModel: getExpandedRowModel(), // <-- Enable expanded rows
+    getExpandedRowModel: getExpandedRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    onExpandedChange: setExpanded, // <-- Handle expanded state
-    getRowCanExpand: () => true, // <-- All rows can be expanded
+    onExpandedChange: setExpanded,
+    getRowCanExpand: () => true,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
       pagination,
-      expanded, // <-- Pass expanded state to the table
+      expanded,
     },
     onPaginationChange: setPagination,
     manualPagination: true,
@@ -149,7 +148,6 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                // Use React.Fragment to render the row and its sub-component
                 <React.Fragment key={row.id}>
                   <TableRow data-state={row.getIsSelected() && "selected"}>
                     {row.getVisibleCells().map((cell) => (
@@ -161,12 +159,13 @@ export function DataTable<TData, TValue>({
                       </TableCell>
                     ))}
                   </TableRow>
-                  {/* --- NEW: RENDER EXPANDED ROW --- */}
                   {row.getIsExpanded() && (
                     <TableRow>
-                      {/* Important: colSpan should be the number of columns */}
                       <TableCell colSpan={columns.length}>
-                        <RowSubComponent row={row as any} fetchCompanyProfile={fetchCompanyProfile} />
+                        <CompanyProfileCard 
+                            companyId={row.original.company_id} 
+                            fetchCompanyProfile={fetchCompanyProfile} 
+                        />
                       </TableCell>
                     </TableRow>
                   )}

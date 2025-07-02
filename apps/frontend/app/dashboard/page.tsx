@@ -1,38 +1,59 @@
 // Path: apps/frontend/app/dashboard/page.tsx
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
-import { PaginationState } from '@tanstack/react-table';
 import Link from 'next/link';
 
-import { useTrackedJobsApi } from './hooks/useTrackedJobsApi';
 import { useJobRecommendationsApi } from '../../hooks/useJobRecommendationsApi';
-import { DataTable } from './data-table';
-import { getColumns } from './components/columns';
 import { JobSubmissionForm } from './components/JobSubmissionForm';
 import JobsForYou from './components/JobsForYou';
+import JobTracker from './components/JobTracker'; // Import the new component
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { type UpdatePayload, type Profile } from './types';
-
-const ACTIVE_PIPELINE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS'];
+import { type Profile } from './types';
 
 export default function UserDashboard() {
-  const router = useRouter();
-  const { trackedJobs, isLoading: isLoadingJobs, error: jobsError, actions } = useTrackedJobsApi();
   const { data: recommendedJobs, isLoading: isLoadingRecs, error: recsError, refetch: refetchRecommendations } = useJobRecommendationsApi();
   const { isLoaded: isUserLoaded, user } = useUser();
   const { getToken } = useAuth();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
+  // State is now managed at a higher level
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active_pipeline' | 'closed_pipeline' | 'active_posting' | 'expired_posting'>('all');
+
+  // This is now the single source of truth for submitting a job.
+  // It will be passed down to both the JobSubmissionForm and JobsForYou components.
+  const handleJobSubmit = useCallback(async (jobUrl: string) => {
+    setIsSubmitting(true);
+    setSubmissionError(null);
+    try {
+        const token = await getToken();
+        if (!token) throw new Error("Authentication token is missing.");
+
+        const response = await fetch(`${apiBaseUrl}/api/jobs/submit`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ job_url: jobUrl })
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Failed to submit job.');
+        
+        // This is a bit of a hack. A better solution would involve a global state manager (like Zustand or Redux)
+        // to notify the JobTracker component to refetch its data. For now, a page reload is the simplest way.
+        window.location.reload();
+
+    } catch (error) {
+        setSubmissionError(error instanceof Error ? error.message : 'An unknown submission error occurred.');
+    } finally {
+        setIsSubmitting(false);
+    }
+  }, [getToken, apiBaseUrl]);
 
   useEffect(() => {
     const fetchInitialProfile = async () => {
@@ -51,69 +72,8 @@ export default function UserDashboard() {
     fetchInitialProfile();
   }, [isUserLoaded, getToken, apiBaseUrl, profile]);
 
-
-  const handleJobSubmit = useCallback(async (jobUrl: string) => {
-    setIsSubmitting(true);
-    setSubmissionError(null);
-    try {
-      await actions.submitNewJob(jobUrl);
-      setFilterStatus('all');
-      setPagination({ pageIndex: 0, pageSize: 10 });
-      await refetchRecommendations();
-    } catch (error) { setSubmissionError(error instanceof Error ? error.message : 'An unknown submission error occurred.'); } 
-    finally { setIsSubmitting(false); }
-  }, [actions, refetchRecommendations]);
-
-  const handleStatusChange = useCallback(async (trackedJobId: number, newStatus: string) => {
-    const currentJob = trackedJobs.find(job => job.tracked_job_id === trackedJobId);
-    if (!currentJob) return;
-    const payload: UpdatePayload = { status: newStatus };
-    const now = new Date().toISOString();
-    if (newStatus === 'APPLIED' && !currentJob.applied_at) payload.applied_at = now;
-    if (newStatus === 'INTERVIEWING' && !currentJob.first_interview_at) payload.first_interview_at = now;
-    if (newStatus === 'OFFER_NEGOTIATIONS' && !currentJob.offer_received_at) payload.offer_received_at = now;
-    if (!ACTIVE_PIPELINE_STATUSES.includes(newStatus) && !currentJob.resolved_at) payload.resolved_at = now;
-    if (ACTIVE_PIPELINE_STATUSES.includes(newStatus) && currentJob.resolved_at) payload.resolved_at = null;
-    await actions.updateTrackedJob(trackedJobId, payload);
-  }, [actions, trackedJobs]);
-
-  const handleToggleExcited = useCallback(async (trackedJobId: number, isExcited: boolean) => {
-    await actions.updateTrackedJob(trackedJobId, { is_excited: isExcited });
-  }, [actions]);
-
-  const handleRemoveJob = useCallback(async (trackedJobId: number) => {
-    if (window.confirm("Are you sure?")) await actions.removeTrackedJob(trackedJobId);
-  }, [actions]);
-
-  const filteredTrackedJobs = useMemo(() => {
-    if (filterStatus === 'all') return trackedJobs;
-    return trackedJobs.filter(job => {
-      switch (filterStatus) {
-        case 'active_pipeline': return ACTIVE_PIPELINE_STATUSES.includes(job.status);
-        case 'closed_pipeline': return !ACTIVE_PIPELINE_STATUSES.includes(job.status);
-        case 'active_posting': return job.job_posting_status === 'Active';
-        case 'expired_posting': return job.job_posting_status !== 'Active';
-        default: return true;
-      }
-    });
-  }, [trackedJobs, filterStatus]);
-
-  useEffect(() => { setPagination(prev => ({ ...prev, pageIndex: 0 })); }, [filterStatus]);
-  
-  // --- FIX: Pass all required actions, including fetchCompanyProfile, to getColumns ---
-  const columns = useMemo(
-    () => getColumns({
-        handleStatusChange,
-        handleRemoveJob,
-        handleToggleExcited,
-        fetchCompanyProfile: actions.fetchCompanyProfile
-    }),
-    [handleStatusChange, handleRemoveJob, handleToggleExcited, actions.fetchCompanyProfile]
-  );
-
   const isLoading = !isUserLoaded || !profile;
   if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>;
-  if (jobsError) return <div className="min-h-screen flex items-center justify-center text-center"><div><h2 className="text-xl font-semibold text-red-600">An Error Occurred</h2><p className="text-gray-600 mt-2">There was an issue loading your dashboard data.</p><p className="text-sm mt-4 text-red-700 font-mono bg-red-50 p-4 rounded-md"><strong>Error Details:</strong> {jobsError}</p></div></div>;
   
   return (
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
@@ -130,43 +90,20 @@ export default function UserDashboard() {
           jobs={recommendedJobs} 
           isLoading={isLoadingRecs} 
           error={recsError} 
-          onTrack={handleJobSubmit}
+          onTrack={handleJobSubmit} // Pass the unified submit handler
           isSubmitting={isSubmitting}
-          isProfileComplete={profile.has_completed_onboarding}
+          isProfileComplete={profile!.has_completed_onboarding}
         />
         
         <JobSubmissionForm 
-          onSubmit={handleJobSubmit} 
+          onSubmit={handleJobSubmit} // Pass the unified submit handler
           isSubmitting={isSubmitting} 
           submissionError={submissionError} 
-          isProfileComplete={profile.has_completed_onboarding}
+          isProfileComplete={profile!.has_completed_onboarding}
         />
         
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">My Job Tracker</h2>
-          <div className="mb-4">
-              <Label htmlFor="filterStatus">Filter by Status:</Label>
-              <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
-                  <SelectTrigger className="w-[220px]"><SelectValue placeholder="All Jobs"/></SelectTrigger>
-                  <SelectContent>
-                      <SelectItem value="all">All Jobs</SelectItem>
-                      <SelectItem value="active_pipeline">Active Pipeline</SelectItem>
-                      <SelectItem value="closed_pipeline">Closed Pipeline</SelectItem>
-                      <SelectItem value="active_posting">Active Job Postings</SelectItem>
-                      <SelectItem value="expired_posting">Expired Job Postings</SelectItem>
-                  </SelectContent>
-              </Select>
-          </div>
-          {/* --- FIX: Pass fetchCompanyProfile down to the DataTable component --- */}
-          <DataTable 
-            columns={columns} 
-            data={filteredTrackedJobs} 
-            pagination={pagination} 
-            setPagination={setPagination} 
-            totalCount={filteredTrackedJobs.length}
-            fetchCompanyProfile={actions.fetchCompanyProfile}
-          />
-        </div>
+        <JobTracker />
+        
       </div>
     </main>
   );
