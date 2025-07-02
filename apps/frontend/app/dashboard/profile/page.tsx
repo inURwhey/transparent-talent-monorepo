@@ -148,7 +148,7 @@ export default function UserProfilePage() {
     }, [profile, updateProfileData]);
 
     const handleGetLocation = useCallback(() => {
-        if (!navigator.geolocation) return setError("Geolocation is not supported.");
+        if (!navigator.geolocation) return setError("Geolocation is not supported by your browser.");
         setIsLocationLoading(true);
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -284,7 +284,7 @@ export default function UserProfilePage() {
                         <CollapsibleContent className="p-4 pt-0 space-y-4">
                             <div><Label htmlFor="personality_adjectives">Describe Yourself in a Few Adjectives</Label><Input id="personality_adjectives" type="text" value={profile.personality_adjectives || ''} onChange={(e) => handleChange('personality_adjectives', e.target.value)} /></div>
                             <div><Label htmlFor="personality_16_personalities">16 Personalities (e.g., INTJ)</Label><Input id="personality_16_personalities" type="text" value={profile.personality_16_personalities || ''} onChange={(e) => handleChange('personality_16_personalities', e.target.value)} /></div>
-                            <div><Label htmlFor="personality_disc">DISC Profile</Label><Input id="personality_disc" type="text" value={profile.personality_disc || ''} onChange={(e) => handleChange('personality_disc', e.g.target.value)} /></div>
+                            <div><Label htmlFor="personality_disc">DISC Profile</Label><Input id="personality_disc" type="text" value={profile.personality_disc || ''} onChange={(e) => handleChange('personality_disc', e.target.value)} /></div>
                             <div><Label htmlFor="personality_gallup_strengths">Gallup Strengths (Top 5)</Label><Textarea id="personality_gallup_strengths" value={profile.personality_gallup_strengths || ''} onChange={(e) => handleChange('personality_gallup_strengths', e.target.value)} rows={3} /></div>
                         </CollapsibleContent>
                     </Collapsible>
