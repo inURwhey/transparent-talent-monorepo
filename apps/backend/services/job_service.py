@@ -28,6 +28,11 @@ class JobService:
         self.VALID_JOB_LEVELS = {'Entry', 'Mid', 'Senior', 'Staff', 'Principal', 'Manager', 'Director', 'VP', 'C-Suite'}
 
     def research_and_get_company_profile(self, company_id: int):
+        """
+        Checks if a company profile exists. If not, triggers AI research to create one.
+        Returns the company profile data dictionary. This is a best-effort service.
+        NOTE: This service does NOT commit to the database; the calling function must handle the transaction.
+        """
         db = get_db()
         with db.cursor() as cursor:
             cursor.execute("SELECT * FROM company_profiles WHERE company_id = %s", (company_id,))
@@ -70,12 +75,11 @@ class JobService:
                     (company_id, json_data.get('industry'), json_data.get('employee_count_range'), json_data.get('publicly_stated_mission'), json_data.get('primary_business_model'), COMPANY_RESEARCH_PROTOCOL_VERSION)
                 )
                 new_profile = cursor.fetchone()
-                db.commit()
-                self.logger.info(f"Successfully created and saved new profile for company_id: {company_id}")
+                # The calling function is responsible for the commit.
+                self.logger.info(f"Successfully staged new profile for company_id: {company_id}")
                 return dict(new_profile) if new_profile else None
             except Exception as e:
-                db.rollback()
-                self.logger.error(f"Database error saving new company profile for {company_name}: {e}")
+                self.logger.error(f"Database error staging new company profile for {company_name}: {e}")
                 return None
 
     def get_basic_job_details(self, job_url: str):
@@ -141,7 +145,6 @@ class JobService:
             if not job_row: raise ValueError(f"Job with id {job_id} not found.")
             
             company_profile = self.research_and_get_company_profile(job_row['company_id'])
-            # --- FIX: Added default=str to handle datetime serialization ---
             company_profile_text = json.dumps(company_profile, indent=2, default=str) if company_profile else "No company profile available."
             
             return self.get_job_details_and_analysis(job_row['job_url'], user_profile_text, company_profile_text)
