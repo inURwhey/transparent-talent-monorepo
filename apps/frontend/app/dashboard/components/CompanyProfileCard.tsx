@@ -8,7 +8,7 @@ import { type CompanyProfile } from '../types';
 interface CompanyProfileCardProps {
     companyId: number;
     fetchCompanyProfile: (companyId: number) => Promise<CompanyProfile | null>;
-    isExpanded: boolean; // Add a prop to know if the row is expanded
+    isExpanded: boolean;
 }
 
 export default function CompanyProfileCard({ companyId, fetchCompanyProfile, isExpanded }: CompanyProfileCardProps) {
@@ -17,18 +17,12 @@ export default function CompanyProfileCard({ companyId, fetchCompanyProfile, isE
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Only fetch if the row is expanded and we haven't already fetched the data.
-        // This prevents re-fetching on every render.
-        if (isExpanded && !profile && !isLoading && !error) {
+        // This effect should ONLY run when the component is expanded for the first time.
+        // We check `isExpanded` to trigger it, and `!profile` to ensure it only runs once.
+        if (isExpanded && !profile && !isLoading) {
             const loadProfile = async () => {
-                if (!companyId) {
-                    setIsLoading(false);
-                    return;
-                }
-                
                 setIsLoading(true);
                 setError(null);
-
                 try {
                     const fetchedProfile = await fetchCompanyProfile(companyId);
                     setProfile(fetchedProfile);
@@ -42,8 +36,9 @@ export default function CompanyProfileCard({ companyId, fetchCompanyProfile, isE
 
             loadProfile();
         }
-    // Dependency array now includes `isExpanded` to trigger the fetch.
-    }, [companyId, fetchCompanyProfile, isExpanded, profile, isLoading, error]);
+    // This simplified dependency array is key. It re-evaluates the effect
+    // when `isExpanded` changes, which is exactly what we need.
+    }, [isExpanded, companyId, fetchCompanyProfile, profile, isLoading]);
 
     return (
         <div className="p-4 bg-gray-50/50 border-l-4 border-blue-500">
