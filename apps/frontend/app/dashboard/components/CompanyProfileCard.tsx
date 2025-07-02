@@ -1,7 +1,7 @@
 // Path: apps/frontend/app/dashboard/components/CompanyProfileCard.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Loader2 } from "lucide-react";
 import { type CompanyProfile } from '../types';
 
@@ -15,24 +15,43 @@ export default function CompanyProfileCard({ companyId, fetchCompanyProfile }: C
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const loadProfile = useCallback(async () => {
-        if (!companyId) return;
-        setIsLoading(true);
-        setError(null);
-        try {
-            const fetchedProfile = await fetchCompanyProfile(companyId);
-            setProfile(fetchedProfile);
-        } catch (err) {
-            setError("Failed to load company data.");
-            console.error(err);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [companyId, fetchCompanyProfile]);
-
     useEffect(() => {
+        let isMounted = true; // Flag to track if the component is mounted
+
+        const loadProfile = async () => {
+            if (!companyId) {
+                setIsLoading(false);
+                return;
+            };
+            
+            setIsLoading(true);
+            setError(null);
+
+            try {
+                const fetchedProfile = await fetchCompanyProfile(companyId);
+                if (isMounted) { // Only update state if the component is still mounted
+                    setProfile(fetchedProfile);
+                }
+            } catch (err) {
+                if (isMounted) {
+                    setError("Failed to load company data.");
+                }
+                console.error(err);
+            } finally {
+                if (isMounted) {
+                    setIsLoading(false);
+                }
+            }
+        };
+
         loadProfile();
-    }, [loadProfile]);
+
+        // Cleanup function to run when the component unmounts
+        return () => {
+            isMounted = false;
+        };
+    // The dependency array ensures this effect runs only when companyId changes.
+    }, [companyId, fetchCompanyProfile]);
 
     return (
         <div className="p-4 bg-gray-50/50 border-l-4 border-blue-500">
