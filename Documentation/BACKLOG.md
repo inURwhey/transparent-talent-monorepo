@@ -1,4 +1,4 @@
-# Transparent Talent: Product Backlog & Roadmap v1.29
+# Transparent Talent: Product Backlog & Roadmap v1.30
 
 ## Column Definitions
 *   **AI Model:** The complexity required from the AI. (Flash, Pro [Breakdown/Execute], Creative, N/A)
@@ -28,7 +28,6 @@
 ## Tier 2: Core User Experience & Differentiation
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **UI/UX: Change "Desired Job Title" to "Desired Job Title(s)"** | E02 | 1000 | 1 | 100% | 0.05 | **20000** | N/A | S | **To Do** |
 | **UI/UX: Add "Upload New Resume" component to dashboard** | E02 | 1000 | 3 | 100% | 0.2 | **15000** | Flash | S | **To Do** |
 | **UI/UX: Add filler text to "preferred work location" dropdown & conditional logic for remote preference.**| E02 | 1000 | 1 | 100% | 0.1 | **10000** | Flash | S | **To Do** |
 | **Feature: Intelligent Duplicate Resume Handling (Reactivation/Discard)** | E02 | 1000 | 2 | 90% | 0.5 | **9000** | Flash | M | **To Do** |
@@ -82,6 +81,11 @@
 ---
 
 ## Completed Features & Bugfixes
+### v0.45.0
+| Feature/Bugfix | Original Tier | RICE Score | Epic |
+| :--- | :--- | :--- | :--- |
+| **UI/UX: Change "Desired Job Title" to "Desired Job Title(s)"** | Tier 2 | 20000 | E02 |
+
 ### v0.44.0
 | Feature/Bugfix | Original Tier | RICE Score | Epic |
 | :--- | :--- | :--- | :--- |

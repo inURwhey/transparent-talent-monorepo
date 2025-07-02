@@ -3,6 +3,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.45.0 - 2025-07-02 - Profile UX Refinement
+
+This release implements a high-value UX improvement on the user profile page based on its RICE score.
+
+### Changed
+- **UI/UX:** Updated the "Desired Job Title" field to "Desired Job Title(s)" on the user profile page, including the label and placeholder text, to better reflect that users may be targeting multiple roles.
+
 ## v0.44.0 - 2025-07-02 - UX Refinements & Final Onboarding Fixes
 
 This release completes the stabilization of the new user experience by refining UI interactions and resolving the final bug in the onboarding data lifecycle. The application is now fully stable with a robust and intuitive user flow.
