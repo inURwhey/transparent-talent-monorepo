@@ -163,16 +163,6 @@ export default function UserProfilePage() {
         updateProfileData({ latitude: null, longitude: null, current_location: '' });
     }, [updateProfileData]);
 
-    const getSelectDisplayValue = useCallback((field: keyof Profile): string => {
-        if (!profile) return '';
-        const backendValue = profile[field];
-        if (backendValue === null) return 'null';
-        if (field === 'change_tolerance') {
-            return changeToleranceBackendToFrontendMap[backendValue as string] || '';
-        }
-        return String(backendValue) || '';
-    }, [profile]);
-
     const isRequired = (field: keyof Profile) => !profile?.has_completed_onboarding && ONBOARDING_REQUIRED_FIELDS.includes(field);
 
     if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading profile...</div>;
@@ -199,7 +189,7 @@ export default function UserProfilePage() {
                             <CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Work Style & Preferences{openSections.workStyle ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                             <CollapsibleContent className="p-4 pt-2 space-y-4">
                                 <div><Label htmlFor="work_style_preference">I do my best work in...{isRequired('work_style_preference') && <span className="text-red-500 ml-1">*</span>}</Label>
-                                    <Select name="work_style_preference" value={getSelectDisplayValue('work_style_preference')} onValueChange={(v) => handleChange('work_style_preference',v)}>
+                                    <Select name="work_style_preference" value={profile.work_style_preference ?? undefined} onValueChange={(v) => handleChange('work_style_preference',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select a work style..." /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="An ambiguous environment where I can create my own structure.">An ambiguous environment where I can create my own structure.</SelectItem>
@@ -208,7 +198,7 @@ export default function UserProfilePage() {
                                     </Select>
                                 </div>
                                 <div><Label htmlFor="conflict_resolution_style">When I disagree with a colleague, I prefer to...{isRequired('conflict_resolution_style') && <span className="text-red-500 ml-1">*</span>}</Label>
-                                    <Select name="conflict_resolution_style" value={getSelectDisplayValue('conflict_resolution_style')} onValueChange={(v) => handleChange('conflict_resolution_style',v)}>
+                                    <Select name="conflict_resolution_style" value={profile.conflict_resolution_style ?? undefined} onValueChange={(v) => handleChange('conflict_resolution_style',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select a conflict style..." /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="Have a direct, open debate to resolve the issue quickly.">Have a direct, open debate to resolve the issue quickly.</SelectItem>
@@ -217,7 +207,7 @@ export default function UserProfilePage() {
                                     </Select>
                                 </div>
                                 <div><Label htmlFor="communication_preference">I communicate most effectively through...{isRequired('communication_preference') && <span className="text-red-500 ml-1">*</span>}</Label>
-                                    <Select name="communication_preference" value={getSelectDisplayValue('communication_preference')} onValueChange={(v) => handleChange('communication_preference',v)}>
+                                    <Select name="communication_preference" value={profile.communication_preference ?? undefined} onValueChange={(v) => handleChange('communication_preference',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select a communication style..." /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="Detailed written documentation (e.g., docs, wikis, Notion).">Detailed written documentation (e.g., docs, wikis, Notion).</SelectItem>
@@ -226,7 +216,7 @@ export default function UserProfilePage() {
                                     </Select>
                                 </div>
                                 <div><Label htmlFor="change_tolerance">I am most productive when...{isRequired('change_tolerance') && <span className="text-red-500 ml-1">*</span>}</Label>
-                                    <Select name="change_tolerance" value={getSelectDisplayValue('change_tolerance')} onValueChange={(v) => handleChange('change_tolerance',v)}>
+                                    <Select name="change_tolerance" value={changeToleranceBackendToFrontendMap[profile.change_tolerance ?? ''] ?? undefined} onValueChange={(v) => handleChange('change_tolerance',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select your preference for change..." /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="Priorities are stable and I can focus on a long-term roadmap.">Priorities are stable and I can focus on a long-term roadmap.</SelectItem>
@@ -266,7 +256,7 @@ export default function UserProfilePage() {
                             <CollapsibleContent className="p-4 pt-0 space-y-4">
                                 <div>
                                     <Label htmlFor="preferred_work_style_select">Preferred Work Location</Label>
-                                    <Select value={getSelectDisplayValue('preferred_work_style')} onValueChange={(v) => handleChange('preferred_work_style', v)}>
+                                    <Select value={profile.preferred_work_style ?? undefined} onValueChange={(v) => handleChange('preferred_work_style', v)}>
                                         <SelectTrigger id="preferred_work_style_select"><SelectValue placeholder="Select a preference..."/></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="null">No Preference</SelectItem>
@@ -276,7 +266,7 @@ export default function UserProfilePage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                {(profile.preferred_work_style === 'Hybrid' || profile.preferred_work_style === null) && (
+                                {profile.preferred_work_style === 'Hybrid' && (
                                     <div className="flex items-center space-x-2 pl-1 pt-2">
                                         <Checkbox id="is_remote_preferred" checked={!!profile.is_remote_preferred} onCheckedChange={(checked) => handleCheckboxChange('is_remote_preferred', !!checked)} />
                                         <Label htmlFor="is_remote_preferred" className="font-normal">I have a strong preference for the remote part of Hybrid.</Label>
@@ -284,7 +274,7 @@ export default function UserProfilePage() {
                                 )}
                                 <div>
                                     <Label htmlFor="preferred_company_size">Preferred Company Size</Label>
-                                    <Select value={getSelectDisplayValue('preferred_company_size')} onValueChange={(value) => handleChange('preferred_company_size', value)}>
+                                    <Select value={profile.preferred_company_size ?? undefined} onValueChange={(value) => handleChange('preferred_company_size', value)}>
                                         <SelectTrigger><SelectValue placeholder="No Preference" /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="null">No Preference</SelectItem>
