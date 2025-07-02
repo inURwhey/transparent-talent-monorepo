@@ -36,13 +36,10 @@ def token_required(f):
             public_key = RSAAlgorithm.from_jwk(rsa_key)
             claims = jwt.decode(token, public_key, algorithms=["RS256"], issuer=config.CLERK_ISSUER_URL, options={"verify_aud": False})
 
-            # --- REVERTED AZP CHECK ---
-            # Reverting to the simpler, ground-truth logic provided by the user.
             authorized_party = claims.get('azp')
             if not authorized_party or authorized_party not in config.CLERK_AUTHORIZED_PARTY:
                 current_app.logger.warning(f"JWT validation failed: Invalid authorized party (azp): {authorized_party}")
                 raise jwt.exceptions.InvalidAudienceError(f"Invalid authorized party: {authorized_party}")
-            # --- END OF REVERTED LOGIC ---
             
             clerk_user_id = claims.get('sub')
             if not clerk_user_id: raise Exception("Token is missing 'sub' (subject) claim.")
@@ -92,8 +89,14 @@ def admin_required(f):
         
         user_clerk_id = g.current_user.get('clerk_user_id') if hasattr(g, 'current_user') and g.current_user else None
         
+        # --- DEBUGGING LOGS ---
+        current_app.logger.info(f"Admin Check: User Clerk ID is '{user_clerk_id}' (Type: {type(user_clerk_id)})")
+        current_app.logger.info(f"Admin Check: Admin ID list is {admin_ids} (Types: {[type(i) for i in admin_ids]})")
+        
         if not user_clerk_id or user_clerk_id not in admin_ids:
+            current_app.logger.warning(f"Admin access DENIED for user '{user_clerk_id}'. Not in admin list.")
             return jsonify({"message": "Admin access required."}), 403
-            
+        
+        current_app.logger.info(f"Admin access GRANTED for user '{user_clerk_id}'.")
         return f(*args, **kwargs)
     return decorated
