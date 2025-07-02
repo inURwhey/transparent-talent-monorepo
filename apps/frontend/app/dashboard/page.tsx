@@ -12,6 +12,7 @@ import { useJobRecommendationsApi } from '../../hooks/useJobRecommendationsApi';
 import { DataTable } from './data-table';
 import { getColumns } from './components/columns';
 import { JobSubmissionForm } from './components/JobSubmissionForm';
+import { ResumeUploadForm } from './components/ResumeUploadForm'; // Import the new component
 import JobsForYou from './components/JobsForYou';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -126,12 +127,15 @@ export default function UserDashboard() {
           isProfileComplete={profile.has_completed_onboarding}
         />
 
-        <JobSubmissionForm 
-          onSubmit={handleJobSubmit} 
-          isSubmitting={isSubmitting} 
-          submissionError={submissionError} 
-          isProfileComplete={profile.has_completed_onboarding}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <JobSubmissionForm 
+            onSubmit={handleJobSubmit} 
+            isSubmitting={isSubmitting} 
+            submissionError={submissionError} 
+            isProfileComplete={profile.has_completed_onboarding}
+          />
+          <ResumeUploadForm />
+        </div>
         
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">My Job Tracker</h2>
