@@ -1,6 +1,7 @@
 # Path: apps/backend/app.py
 import os
-from flask import Flask, jsonify, request
+import re
+from flask import Flask, jsonify
 
 def create_app():
     app = Flask(__name__)
@@ -8,9 +9,23 @@ def create_app():
     from . import config
     app.config.from_object(config.Config)
     
-    # We are now handling CORS manually via middleware below.
-    # from flask_cors import CORS
-    # CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # Re-instantiate Flask-CORS with a robust configuration
+    from flask_cors import CORS
+    
+    # Define allowed origins, including a regex for Vercel preview deployments
+    allowed_origins = [
+        "https://www.transparenttalent.ai",
+        "https://transparenttalent.ai",
+        re.compile(r"^https://transparent-talent-git-.*-greg-p-projects\.vercel\.app$")
+    ]
+
+    CORS(
+        app,
+        resources={r"/api/*": {"origins": allowed_origins}},
+        supports_credentials=True,
+        allow_headers=["Authorization", "Content-Type"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    )
 
     from . import database
     database.init_app(app)
@@ -29,30 +44,7 @@ def create_app():
     app.register_blueprint(onboarding_bp, url_prefix='/api')
     app.register_blueprint(reco_bp, url_prefix='/api')
 
-    @app.after_request
-    def after_request(response):
-        """
-        Manually attach CORS headers to every response.
-        This is a robust way to handle CORS for production APIs.
-        """
-        # The frontend URL from Vercel
-        origin = request.headers.get('Origin')
-        allowed_origins = [
-            'https://www.transparenttalent.ai', 
-            'https://transparenttalent.ai'
-        ]
-        
-        # This is a simplified check. A more robust regex could be used for previews.
-        if origin and any(origin.startswith(url) for url in allowed_origins):
-             response.headers.add('Access-Control-Allow-Origin', origin)
-        
-        # For development, a wildcard is often used, but explicit is better for prod.
-        # response.headers.add('Access-Control-Allow-Origin', '*')
-
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response
+    # The manual CORS middleware has been removed in favor of Flask-CORS.
 
     @app.route('/')
     def index(): return "Backend server is running."

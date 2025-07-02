@@ -1,223 +1,195 @@
-# Path: apps/backend/services/job_service.py
-import requests
-from bs4 import BeautifulSoup
-import google.generativeai as genai
-import json
-import re
-from ..config import config
+# Path: apps/backend/routes/jobs.py
+
+from flask import Blueprint, request, jsonify, g, current_app
+from psycopg2.extras import Json
+from ..auth import token_required
+from ..services.job_service import JobService
+from ..services.profile_service import ProfileService
+from ..services.tracked_job_service import TrackedJobService
 from ..database import get_db
+from ..config import config
+import psycopg2
+import requests
 
-class JobService:
-    def __init__(self, logger):
-        self.logger = logger
-        if config.GEMINI_API_KEY:
-            try:
-                genai.configure(api_key=config.GEMINI_API_KEY)
-                self.model = genai.GenerativeModel('gemini-1.5-flash')
-                self.logger.info("Gemini AI model configured successfully.")
-            except Exception as e:
-                self.logger.error(f"Error configuring Gemini AI: {e}")
-                self.model = None
-        else:
-            self.model = None
-            self.logger.warning("JobService initialized without a GEMINI_API_KEY. AI analysis is disabled.")
+jobs_bp = Blueprint('jobs_bp', __name__)
 
-        self.VALID_JOB_MODALITIES = {'On-site', 'Remote', 'Hybrid'}
-        self.VALID_JOB_LEVELS = {'Entry', 'Mid', 'Senior', 'Staff', 'Principal', 'Manager', 'Director', 'VP', 'C-Suite'}
+@jobs_bp.route('/jobs/submit', methods=['POST'])
+@token_required
+def submit_job():
+    user_id = g.current_user['id']
+    data = request.get_json()
+    job_url = data.get('job_url')
+    if not job_url:
+        return jsonify({"error": "job_url is required"}), 400
 
-    def get_job_details_and_analysis(self, job_url: str, user_profile_text: str):
-        self.logger.info(f"Fetching job text for URL: {job_url}")
-        try:
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
-            response = requests.get(job_url, headers=headers, timeout=10)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.content, 'html.parser')
-            job_text = soup.get_text(separator=' ', strip=True)
-            
-            if not job_text or len(job_text) < 100:
-                 raise ValueError("Extracted job text is too short or empty for meaningful analysis.")
-            if len(job_text) > config.MAX_JOB_TEXT_LENGTH:
-                raise ValueError(f"Extracted job text too long ({len(job_text)} characters). Please keep it under {config.MAX_JOB_TEXT_LENGTH} characters.")
-
-            is_job_posting = self.is_job_posting_content(job_text)
-            if not is_job_posting:
-                raise ValueError("The provided text does not appear to be a job posting. Please submit a valid job description URL.")
-
-            self.logger.info(f"Successfully fetched job text. Length: {len(job_text)} characters.")
-            
-            analysis = self._run_ai_analysis(job_text, user_profile_text)
-            
-            return {
-                "job_text": job_text,
-                "analysis": analysis
-            }
-        except requests.exceptions.RequestException as e:
-            self.logger.error(f"Failed to fetch job URL '{job_url}': {e}")
-            raise
-        except Exception as e:
-            self.logger.error(f"An unexpected error occurred in get_job_details_and_analysis for url '{job_url}': {e}")
-            raise
-
-    def analyze_existing_job(self, job_id: int, user_profile_text: str):
-        """
-        Analyzes an existing job from the database against a user profile.
-        This re-scrapes the URL to get the job text for analysis.
-        """
-        self.logger.info(f"Re-analyzing existing job_id: {job_id}")
-        db = get_db()
+    job_service = JobService(current_app.logger)
+    profile_service = ProfileService(current_app.logger)
+    db = get_db()
+    
+    try:
         with db.cursor() as cursor:
-            cursor.execute("SELECT job_url FROM jobs WHERE id = %s", (job_id,))
+            # Check if this job URL already exists in our jobs table
+            cursor.execute("SELECT id FROM jobs WHERE job_url = %s", (job_url,))
             job_row = cursor.fetchone()
-            if not job_row:
-                raise ValueError(f"Job with id {job_id} not found for re-analysis.")
+
+            if job_row:
+                job_id = job_row['id']
+                # Job exists. Now check if the current user is already tracking it.
+                cursor.execute("SELECT id FROM tracked_jobs WHERE user_id = %s AND job_id = %s", (user_id, job_id))
+                if cursor.fetchone():
+                    return jsonify({"error": "You are already tracking this job."}), 409
+                else:
+                    # This is a "re-track" scenario. The user deleted it and is now adding it back.
+                    current_app.logger.info(f"User {user_id} is re-tracking existing job_id {job_id}.")
+                    cursor.execute("INSERT INTO tracked_jobs (user_id, job_id) VALUES (%s, %s) RETURNING id;", (user_id, job_id))
+                    tracked_job_id = cursor.fetchone()['id']
+                    db.commit()
+                    service = TrackedJobService(current_app.logger)
+                    new_job_data = service._get_formatted_job_by_id(cursor, tracked_job_id, user_id)
+                    return jsonify(new_job_data), 201
             
-            return self.get_job_details_and_analysis(job_row['job_url'], user_profile_text)
-
-    def _run_ai_analysis(self, job_text: str, user_profile_text: str) -> dict:
-        if not self.model:
-            self.logger.error("Cannot run AI analysis: Model is not configured.")
-            raise ConnectionError("AI Service is not configured due to missing API key.")
-
-        prompt = f"""
-            You are a meticulous career-focused analyst for a platform called "Transparent Talent".
-            Your task is to analyze a job description in the context of a user's professional profile.
-            Produce a JSON object with the exact keys specified below. Do not include any introductory text or markdown formatting.
-
-            For the 'matrix_rating', calculate the average of 'position_relevance_score' and 'environment_fit_score'.
-            Then, assign a letter grade based on this average:
-            - 90-100: A+
-            - 80-89: A
-            - 70-79: B+
-            - 60-69: B
-            - 50-59: C+
-            - 40-49: C
-            - 30-39: D
-            - 0-29: F
-
-            Extract the following structured data points from the job description:
-            - `salary_min` and `salary_max`: The minimum and maximum annual salary in USD. If only one value is given, use it for both min and max. If a range like "$150k - $180k" is given, extract both numbers. If "DOE" (Depends On Experience), "Competitive", or no salary is stated, set to null.
-            - `required_experience_years`: The minimum number of years of experience explicitly stated or clearly implied by the role's seniority (e.g., "Senior" often implies 5+ years, "Director" implies 10+). If not stated or ambiguously implied (e.g. "several years"), set to null.
-            - `job_modality`: The work arrangement. Choose exactly one from "On-site", "Remote", or "Hybrid". Infer based on location keywords (e.g., "New York, NY" implies On-site unless stated otherwise), explicit remote policy, or hybrid mentions. If unsure or if role can be either (e.g., "remote/in-office"), set to null.
-            - `deduced_job_level`: The seniority level of the role. Choose exactly one from "Entry", "Mid", "Senior", "Staff", "Principal", "Manager", "Director", "VP", "C-Suite". Infer based on title, responsibilities, and implied years of experience. If unsure, set to null.
-
-            USER PROFILE:
-            ---
-            {user_profile_text}
-            ---
-
-            JOB DESCRIPTION:
-            ---
-            {job_text}
-            ---
-
-            JSON_OUTPUT_SCHEMA:
-            {{
-                "company_name": "string",
-                "job_title": "string",
-                "salary_min": "integer (annual salary in USD, e.g., 120000) or null",
-                "salary_max": "integer (annual salary in USD, e.g., 150000) or null",
-                "required_experience_years": "integer (e.g., 5) or null",
-                "job_modality": "string ('On-site', 'Remote', 'Hybrid') or null",
-                "deduced_job_level": "string ('Entry', 'Mid', 'Senior', 'Staff', 'Principal', 'Manager', 'Director', 'VP', 'C-Suite') or null",
-                "position_relevance_score": "integer (1-100)",
-                "environment_fit_score": "integer (1-100)",
-                "hiring_manager_view": "string (A concise paragraph from the hiring manager's perspective on the candidate's fit)",
-                "matrix_rating": "string (A letter grade based on the average of position_relevance_score and environment_fit_score, e.g., 'A+', 'B', 'F')",
-                "summary": "string (A concise, professional summary of the role and its alignment with the user's goals)",
-                "qualification_gaps": "array of strings (List specific, actionable qualification gaps)",
-                "recommended_testimonials": "array of strings (List 3-5 specific skills or experiences from the user's profile to highlight)"
-            }}
-        """
+            # If we reach here, the job does not exist in the 'jobs' table at all. Proceed with full analysis.
+            user_profile = profile_service.get_profile(user_id)
+            perform_ai_analysis = user_profile.get('has_completed_onboarding', False)
         
-        self.logger.info("Sending request to Gemini AI for job analysis.")
-        try:
-            response = self.model.generate_content(prompt)
-            cleaned_response = re.sub(r'```json\s*|\s*```', '', response.text.strip())
+            analysis_result = None
+            if perform_ai_analysis:
+                current_app.logger.info(f"User {user_id} has completed onboarding. Performing full AI analysis.")
+                user_profile_text = profile_service.get_profile_for_analysis(user_id)
+                job_data = job_service.get_job_details_and_analysis(job_url, user_profile_text)
+                analysis_result = job_data['analysis']
+            else:
+                current_app.logger.info(f"User {user_id} has not completed onboarding. Performing lightweight scrape.")
+                # Call the new lightweight scraper instead of creating a generic placeholder
+                analysis_result = job_service.get_basic_job_details(job_url)
+
+            company_name = analysis_result.get('company_name', 'Unknown Company')
+            job_title = analysis_result.get('job_title', 'Unknown Title')
             
-            self.logger.info("Received AI response. Attempting to parse JSON.")
-            parsed_data = json.loads(cleaned_response)
+            # Ensure we don't try to get AI-only fields if analysis was not performed
+            salary_min = analysis_result.get('salary_min') if perform_ai_analysis else None
+            salary_max = analysis_result.get('salary_max') if perform_ai_analysis else None
+            required_experience_years = analysis_result.get('required_experience_years') if perform_ai_analysis else None
+            job_modality = analysis_result.get('job_modality') if perform_ai_analysis else None
+            deduced_job_level = analysis_result.get('deduced_job_level') if perform_ai_analysis else None
 
-            # --- Start: Robust Post-Parsing Validation ---
-            if not parsed_data.get('company_name') or not isinstance(parsed_data.get('company_name'), str):
-                raise ValueError("AI analysis failed to return a valid 'company_name'.")
-            if not parsed_data.get('job_title') or not isinstance(parsed_data.get('job_title'), str):
-                 raise ValueError("AI analysis failed to return a valid 'job_title'.")
-            # --- End: Robust Post-Parsing Validation ---
+            # Check for existing company and insert if new
+            cursor.execute("SELECT id FROM companies WHERE LOWER(name) = LOWER(%s)", (company_name,))
+            company_row = cursor.fetchone()
+            if company_row:
+                company_id = company_row['id']
+            else:
+                cursor.execute("INSERT INTO companies (name) VALUES (%s) RETURNING id", (company_name,))
+                company_id = cursor.fetchone()['id']
 
-            analysis = {}
-            for key in ["company_name", "job_title", "position_relevance_score", "environment_fit_score",
-                        "hiring_manager_view", "matrix_rating", "summary", "qualification_gaps", "recommended_testimonials"]:
-                analysis[key] = parsed_data.get(key)
-            
-            analysis['salary_min'] = self._parse_and_validate_int(parsed_data.get('salary_min'), 'salary_min')
-            analysis['salary_max'] = self._parse_and_validate_int(parsed_data.get('salary_max'), 'salary_max')
-            analysis['required_experience_years'] = self._parse_and_validate_int(parsed_data.get('required_experience_years'), 'required_experience_years')
-            analysis['job_modality'] = self._validate_enum(parsed_data.get('job_modality'), self.VALID_JOB_MODALITIES, 'job_modality')
-            analysis['deduced_job_level'] = self._validate_enum(parsed_data.get('deduced_job_level'), self.VALID_JOB_LEVELS, 'deduced_job_level')
+            # Use ON CONFLICT to handle the edge case where another process inserts the same job_url
+            cursor.execute("""
+                INSERT INTO jobs (company_id, company_name, job_title, job_url, source, status, last_checked_at,
+                                  salary_min, salary_max, required_experience_years, job_modality, deduced_job_level)
+                VALUES (%s, %s, %s, %s, %s, 'Active', NOW(), %s, %s, %s, %s, %s)
+                ON CONFLICT (job_url) DO UPDATE SET 
+                    job_title = EXCLUDED.job_title, status = 'Active', last_checked_at = NOW(),
+                    salary_min = EXCLUDED.salary_min, salary_max = EXCLUDED.salary_max,
+                    required_experience_years = EXCLUDED.required_experience_years,
+                    job_modality = EXCLUDED.job_modality, deduced_job_level = EXCLUDED.deduced_job_level
+                RETURNING id;
+            """, (
+                company_id, company_name, job_title, job_url, 'User Submission',
+                salary_min, salary_max, required_experience_years, job_modality, deduced_job_level
+            ))
+            job_id = cursor.fetchone()['id']
 
-            self.logger.info(f"Successfully parsed and validated AI analysis for job: {analysis.get('job_title')}")
-            return analysis
-        except Exception as e:
-            self.logger.error(f"AI analysis failed. Raw response was: {response.text if 'response' in locals() else 'N/A'}")
-            self.logger.error(f"Error during AI analysis or JSON parsing: {e}")
-            raise
+            if perform_ai_analysis:
+                cursor.execute("""
+                    INSERT INTO job_analyses (job_id, user_id, analysis_protocol_version, position_relevance_score, environment_fit_score, hiring_manager_view, matrix_rating, summary, qualification_gaps, recommended_testimonials)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (job_id, user_id) DO UPDATE SET
+                        analysis_protocol_version = EXCLUDED.analysis_protocol_version, position_relevance_score = EXCLUDED.position_relevance_score,
+                        environment_fit_score = EXCLUDED.environment_fit_score, hiring_manager_view = EXCLUDED.hiring_manager_view,
+                        matrix_rating = EXCLUDED.matrix_rating, summary = EXCLUDED.summary, qualification_gaps = EXCLUDED.qualification_gaps,
+                        recommended_testimonials = EXCLUDED.recommended_testimonials, updated_at = NOW();
+                """, (
+                    job_id, user_id, config.ANALYSIS_PROTOCOL_VERSION,
+                    analysis_result.get('position_relevance_score'), analysis_result.get('environment_fit_score'),
+                    analysis_result.get('hiring_manager_view'), analysis_result.get('matrix_rating'),
+                    analysis_result.get('summary'), Json(analysis_result.get('qualification_gaps', [])),
+                    Json(analysis_result.get('recommended_testimonials', []))
+                ))
 
-    def _parse_and_validate_int(self, value, field_name):
-        if value is None: return None
-        try: return int(str(value))
-        except (ValueError, TypeError):
-            self.logger.warning(f"AI returned invalid integer for {field_name}: '{value}'. Setting to None.")
-            return None
+            cursor.execute("INSERT INTO tracked_jobs (user_id, job_id) VALUES (%s, %s) RETURNING id;", (user_id, job_id))
+            tracked_job_id = cursor.fetchone()['id']
+            db.commit()
 
-    def _validate_enum(self, value, valid_set, field_name):
-        if value is None: return None
-        if isinstance(value, str) and value.strip() in valid_set: return value.strip()
-        self.logger.warning(f"AI returned invalid enum value for {field_name}: '{value}'. Setting to None.")
-        return None
+            service = TrackedJobService(current_app.logger)
+            new_job_data = service._get_formatted_job_by_id(cursor, tracked_job_id, user_id)
+            return jsonify(new_job_data), 201
 
-    def is_resume_content(self, text: str) -> bool:
-        return self._run_ai_classification(text, 'resume')
+    except ValueError as e: return jsonify({"error": str(e)}), 400
+    except (requests.exceptions.RequestException, ConnectionError) as e: return jsonify({"error": f"Service Error: {str(e)}"}), 503
+    except psycopg2.IntegrityError as e:
+        db.rollback()
+        current_app.logger.error(f"DATABASE INTEGRITY ERROR in submit_job route: {e}")
+        # This will now catch the "jobs_company_id_job_title_key" error if the lightweight scrape fails
+        # and two users submit the same URL that results in the same scraped title.
+        return jsonify({"error": "This job may already exist or could not be saved due to a data conflict."}), 409
+    except psycopg2.Error as e:
+        db.rollback()
+        current_app.logger.error(f"DATABASE ERROR in submit_job route: {e}")
+        return jsonify({"error": "A database error occurred."}), 500
+    except Exception as e:
+        db.rollback()
+        current_app.logger.error(f"An unexpected error occurred in submit_job route: {e}")
+        return jsonify({"error": "An internal server error occurred."}), 500
 
-    def is_job_posting_content(self, text: str) -> bool:
-        return self._run_ai_classification(text, 'job_posting')
+@jobs_bp.route('/tracked-jobs', methods=['GET'])
+@token_required
+def get_tracked_jobs():
+    user_id = g.current_user['id']
+    try:
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 10))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid pagination parameters"}), 400
+    offset = (page - 1) * limit
+    db = get_db()
+    service = TrackedJobService(current_app.logger)
+    with db.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) FROM tracked_jobs WHERE user_id = %s;", (user_id,))
+        total_count = cursor.fetchone()[0]
+        cursor.execute("SELECT id FROM tracked_jobs WHERE user_id = %s ORDER BY created_at DESC, id DESC LIMIT %s OFFSET %s;", (user_id, limit, offset))
+        job_ids = [row['id'] for row in cursor.fetchall()]
+        tracked_jobs = [service._get_formatted_job_by_id(cursor, job_id, user_id) for job_id in job_ids]
+        return jsonify({"tracked_jobs": [job for job in tracked_jobs if job is not None], "total_count": total_count, "page": page, "limit": limit})
 
-    def _run_ai_classification(self, text: str, content_type: str) -> bool:
-        if not self.model:
-            self.logger.error("Cannot run AI classification: Model is not configured.")
-            return True 
+@jobs_bp.route('/tracked-jobs/<int:tracked_job_id>', methods=['PUT'])
+@token_required
+def update_tracked_job(tracked_job_id):
+    user_id = g.current_user['id']
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No update data provided"}), 400
+    service = TrackedJobService(current_app.logger)
+    try:
+        updated_job = service.update_job(user_id, tracked_job_id, data)
+        if updated_job:
+            return jsonify(updated_job), 200
+        else:
+            return jsonify({"error": "Tracked job not found or permission denied"}), 404
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error in update_tracked_job route: {e}")
+        return jsonify({"error": "An internal server error occurred."}), 500
 
-        prompt = f"""
-            Analyze the following text content. Determine if it is a valid and recognizable {content_type}.
-            Respond with only "YES" if it is, and "NO" if it is not.
-            TEXT CONTENT:
-            ---
-            {text[:config.MAX_CLASSIFICATION_TEXT_LENGTH]}
-            ---
-            Is this a {content_type}? (YES/NO):
-        """
-        self.logger.info(f"Sending request to Gemini AI for {content_type} classification.")
-        try:
-            response = self.model.generate_content(prompt)
-            cleaned_response = response.text.strip().upper()
-            self.logger.info(f"AI classified {content_type} as: {cleaned_response}")
-            return cleaned_response == "YES"
-        except Exception as e:
-            self.logger.error(f"AI classification for {content_type} failed: {e}")
-            return True
-
-    def check_url_validity(self, full_url_string: str) -> bool:
-        url_match = re.search(r"https?://[^\s)\]]+", full_url_string)
-        if not url_match:
-            self.logger.warning(f"No valid URL pattern found in string: {full_url_string}")
-            return False
-        clean_url = url_match.group(0)
-        try:
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
-            response = requests.head(clean_url, timeout=5, headers=headers, allow_redirects=True)
-            return 200 <= response.status_code < 400
-        except requests.exceptions.RequestException as e:
-            self.logger.warning(f"Unreachable URL '{clean_url}' extracted from '{full_url_string}': {e}")
-            return False
-        except Exception as e:
-            self.logger.error(f"Unexpected error in check_url_validity for '{clean_url}': {e}")
-            return False
+@jobs_bp.route('/tracked-jobs/<int:tracked_job_id>', methods=['DELETE'])
+@token_required
+def remove_tracked_job(tracked_job_id):
+    user_id = g.current_user['id']
+    db = get_db()
+    with db.cursor() as cursor:
+        cursor.execute("DELETE FROM tracked_jobs WHERE id = %s AND user_id = %s RETURNING id", (tracked_job_id, user_id))
+        if cursor.fetchone():
+            db.commit()
+            return jsonify({"message": "Tracked job removed successfully"}), 200
+        else:
+            return jsonify({"error": "Tracked job not found or permission denied"}), 404
