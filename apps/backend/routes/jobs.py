@@ -32,7 +32,6 @@ def submit_job():
             cursor.execute("SELECT id FROM jobs WHERE job_url = %s", (job_url,))
             job_row = cursor.fetchone()
 
-            # --- Scenario 1: Job already exists in the system ---
             if job_row:
                 job_id = job_row['id']
                 cursor.execute("SELECT id FROM tracked_jobs WHERE user_id = %s AND job_id = %s", (user_id, job_id))
@@ -42,9 +41,9 @@ def submit_job():
                 current_app.logger.info(f"User {user_id} is re-tracking existing job_id {job_id}.")
                 user_profile = profile_service.get_profile(user_id)
                 
-                # If user is onboarded, run an analysis for them if they don't have one
                 if user_profile.get('has_completed_onboarding', False):
-                    cursor.execute("SELECT id FROM job_analyses WHERE user_id = %s AND job_id = %s", (user_id, job_id))
+                    # --- FIX: Changed SELECT id to SELECT 1 ---
+                    cursor.execute("SELECT 1 FROM job_analyses WHERE user_id = %s AND job_id = %s", (user_id, job_id))
                     if not cursor.fetchone():
                         current_app.logger.info(f"No analysis found for user {user_id} and job {job_id}. Generating one.")
                         user_profile_text = profile_service.get_profile_for_analysis(user_id)
@@ -74,8 +73,6 @@ def submit_job():
                 service = TrackedJobService(current_app.logger)
                 new_job_data = service._get_formatted_job_by_id(cursor, tracked_job_id, user_id)
                 return jsonify(new_job_data), 201
-            
-            # --- Scenario 2: Job is entirely new to the system ---
             
             basic_details = job_service.get_basic_job_details(job_url)
             company_name_guess = basic_details.get('company_name', 'Unknown Company')
