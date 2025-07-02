@@ -103,7 +103,9 @@ export default function UserProfilePage() {
                 actualValue = null;
             }
             let updatedProfile = { ...prev, [id]: actualValue };
-            if (id === 'preferred_work_style' && (actualValue === 'On-site' || actualValue === 'Remote')) {
+
+            // If the work style is changed to anything other than Hybrid, reset the remote preference.
+            if (id === 'preferred_work_style' && actualValue !== 'Hybrid') {
                 updatedProfile.is_remote_preferred = false;
             }
             return updatedProfile;
