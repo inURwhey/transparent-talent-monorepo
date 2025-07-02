@@ -34,11 +34,9 @@ export default function UserDashboard() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [filterStatus, setFilterStatus] = useState<'all' | 'active_pipeline' | 'closed_pipeline' | 'active_posting' | 'expired_posting'>('all');
 
-  // This hook now ONLY fetches the profile to get the onboarding status.
-  // It no longer performs any redirects.
   useEffect(() => {
     const fetchInitialProfile = async () => {
-        if (!isUserLoaded || profile) return; // Only run once on initial load
+        if (!isUserLoaded || profile) return;
         try {
             const token = await getToken();
             if (!token) return;
@@ -128,7 +126,12 @@ export default function UserDashboard() {
           isProfileComplete={profile.has_completed_onboarding}
         />
 
-        <JobSubmissionForm onSubmit={handleJobSubmit} isSubmitting={isSubmitting} submissionError={submissionError} />
+        <JobSubmissionForm 
+          onSubmit={handleJobSubmit} 
+          isSubmitting={isSubmitting} 
+          submissionError={submissionError} 
+          isProfileComplete={profile.has_completed_onboarding}
+        />
         
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">My Job Tracker</h2>
