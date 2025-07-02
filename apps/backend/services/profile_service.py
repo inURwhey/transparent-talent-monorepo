@@ -8,6 +8,7 @@ from ..config import config
 class ProfileService:
     def __init__(self, logger):
         self.logger = logger
+        # This list of fields is now defined in routes/profile.py and passed in
         self.allowed_fields = [
             "full_name", "current_location", "linkedin_profile_url", "resume_url",
             "short_term_career_goal", "long_term_career_goals", 
@@ -47,7 +48,6 @@ class ProfileService:
     def get_profile_for_analysis(self, user_id: int):
         db = get_db()
         with db.cursor() as cursor:
-            # Fetch both profile and active resume
             profile = self.get_profile(user_id)
             resume_text = self._get_active_resume_text(cursor, user_id)
 
@@ -82,7 +82,6 @@ class ProfileService:
             if len(profile_parts) == 0:
                 raise ValueError("User profile is too sparse. Please fill out your profile to enable analysis.")
             
-            # Combine profile and resume into a single context string
             profile_context = "\n".join(profile_parts)
             full_context = f"USER PROFILE & PREFERENCES:\n---\n{profile_context}\n---\n\nUSER RESUME:\n---\n{resume_text}\n---"
             return full_context
@@ -130,6 +129,26 @@ class ProfileService:
             db.rollback()
             self.logger.error(f"Failed to save resume submission for user_id {user_id}: {e}")
             raise
+
+    def check_and_trigger_onboarding_completion(self, user_id: int, required_fields: list):
+        self.logger.info(f"Checking onboarding status for user_id: {user_id}")
+        db = get_db()
+        with db.cursor() as cursor:
+            profile = self.get_profile(user_id)
+            
+            if profile.get('has_completed_onboarding'):
+                self.logger.info(f"User {user_id} has already completed onboarding. No action needed.")
+                return
+
+            profile_fields_complete = all(profile.get(field) for field in required_fields)
+            has_active_resume = self._get_active_resume_text(cursor, user_id) != ""
+
+            self.logger.info(f"Onboarding check for user {user_id}: Profile Fields Complete? {profile_fields_complete}, Has Active Resume? {has_active_resume}")
+
+            if profile_fields_complete and has_active_resume:
+                self.logger.info(f"User {user_id} has now met all onboarding criteria. Updating status and triggering re-analysis.")
+                self.update_profile(user_id, {'has_completed_onboarding': True})
+                self.trigger_reanalysis_for_user(user_id)
 
     def trigger_reanalysis_for_user(self, user_id: int):
         from ..services.job_service import JobService
@@ -192,7 +211,6 @@ class ProfileService:
 
     def _format_profile(self, profile_row: DictCursor, description) -> dict:
         if not profile_row: return {}
-        # ... (rest of function is unchanged)
         profile_dict = {}
         string_fields = [
             'full_name', 'current_location', 'linkedin_profile_url', 'resume_url',
