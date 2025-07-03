@@ -83,5 +83,5 @@
 ### Backlog Content Protocol v1.0
 *   **Directive:** When updating `BACKLOG.md` during a full `END_PROMPT`, remove the "Completed" section entirely. Completed items live permanently in the `CHANGELOG.md`.
 
-### Self-Correction on Truncation Protocol v1.0
-*   **Directive:** Before outputting a code block, perform a self-check for truncation markers (`...`). If found, stop, state the protocol violation, and regenerate the complete, untruncated file.
+### Self-Correction on Abridgement Protocol v1.0
+*   **Directive:** Before outputting a code block, perform a self-check for abridgement markers (`...`). If found, stop, state the protocol violation, and regenerate the complete, unabridged file.
