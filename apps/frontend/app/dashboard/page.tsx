@@ -16,8 +16,6 @@ import { type Profile, type UpdatePayload } from './types';
 
 export default function UserDashboard() {
   const { data: recommendedJobs, isLoading: isLoadingRecs, error: recsError, refetch: refetchRecommendations } = useJobRecommendationsApi();
-  // Corrected destructuring for useTrackedJobsApi - it returns 'trackedJobs' directly, not nested in 'data'.
-  // Also destructure 'actions' to pass down to JobTracker.
   const { trackedJobs: trackedJobsData, isLoading: isLoadingTrackedJobs, error: trackedJobsError, refetch: refetchTrackedJobs, actions: trackedJobsActions } = useTrackedJobsApi();
   
   const { isLoaded: isUserLoaded, user } = useUser();
@@ -37,25 +35,16 @@ export default function UserDashboard() {
         [field]: value
       };
 
-      const response = await fetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, {
-          method: 'PUT',
-          headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
-      });
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || `Failed to update job field ${String(field)}.`);
-      
-      // Trigger refetch of tracked jobs to update UI
-      refetchTrackedJobs();
+      // The useTrackedJobsApi.updateTrackedJob already handles optimistic updates and re-syncs.
+      // Calling refetchTrackedJobs() here is redundant and causes an unnecessary full table re-render.
+      // We will now call the action directly and let it manage the state update.
+      await trackedJobsActions.updateTrackedJob(trackedJobId, payload); 
 
     } catch (error) {
         console.error(`Error updating job field ${String(field)}:`, error);
+        // If update fails, the useTrackedJobsApi hook itself will refetch, reverting optimistic update
     }
-  }, [getToken, apiBaseUrl, refetchTrackedJobs]);
+  }, [getToken, apiBaseUrl, trackedJobsActions]); // Depend on trackedJobsActions instead of refetchTrackedJobs
 
   const handleJobSubmit = useCallback(async (jobUrl: string) => {
     setIsSubmitting(true);
@@ -76,6 +65,8 @@ export default function UserDashboard() {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Failed to submit job.');
         
+        // Keep these refetches. New job submission implies a change that affects
+        // both tracked jobs list and recommendations (if relevant).
         refetchTrackedJobs();
         refetchRecommendations();
 
@@ -88,7 +79,7 @@ export default function UserDashboard() {
 
   useEffect(() => {
     const fetchInitialProfile = async () => {
-        if (!isUserLoaded || profile) return; // Only fetch if user is loaded and profile is not yet set
+        if (!isUserLoaded || profile) return;
         try {
             const token = await getToken();
             if (!token) return;
@@ -103,12 +94,9 @@ export default function UserDashboard() {
     fetchInitialProfile();
   }, [isUserLoaded, getToken, apiBaseUrl, profile]);
 
-  // Combine loading states for a single dashboard loading indicator
   const isLoading = !isUserLoaded || !profile || isLoadingRecs || isLoadingTrackedJobs;
   if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>;
   
-  // Display errors if any exist for recommendations or tracked jobs
-  // Removed .message as error is already a string
   if (recsError) return <div className="min-h-screen flex items-center justify-center text-red-600">Error loading recommendations: {recsError}</div>;
   if (trackedJobsError) return <div className="min-h-screen flex items-center justify-center text-red-600">Error loading tracked jobs: {trackedJobsError}</div>;
 
@@ -140,12 +128,12 @@ export default function UserDashboard() {
         />
         
         <JobTracker 
-          trackedJobs={trackedJobsData || []} // Pass the fetched data as a prop
-          totalCount={trackedJobsData?.length || 0} // trackedJobsData is an array, so its length is the total count for client-side pagination
-          isLoading={isLoadingTrackedJobs} // Pass loading state
-          error={trackedJobsError} // Pass error state
+          trackedJobs={trackedJobsData || []}
+          totalCount={trackedJobsData?.length || 0}
+          isLoading={isLoadingTrackedJobs}
+          error={trackedJobsError}
           handleUpdateJobField={handleUpdateJobField}
-          actions={trackedJobsActions} // Pass the actions object
+          actions={trackedJobsActions}
         />
         
       </div>
