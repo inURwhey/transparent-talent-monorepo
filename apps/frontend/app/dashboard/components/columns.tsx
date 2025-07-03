@@ -35,7 +35,6 @@ interface GetColumnsProps {
   handleRemoveJob: (trackedJobId: number) => void;
   handleToggleExcited: (trackedJobId: number, isExcited: boolean) => void;
   handleUpdateJobField: (trackedJobId: number, field: keyof UpdatePayload, value: any) => Promise<void>;
-  // This prop is crucial for manually looking up the latest data
   allTableData: TrackedJob[];
 }
 
@@ -49,7 +48,7 @@ export const getColumns = ({
   handleRemoveJob,
   handleToggleExcited,
   handleUpdateJobField,
-  allTableData // Destructure the allTableData prop
+  allTableData
 }: GetColumnsProps): ColumnDef<TrackedJob>[] => [
   {
     id: "expander",
@@ -92,7 +91,7 @@ export const getColumns = ({
           value={status}
           onValueChange={(newValue) => handleStatusChange(row.original.tracked_job_id, newValue)}
         >
-          <SelectTrigger className="w-[180px] bg-gray-50">
+          <SelectTrigger className="w-auto bg-gray-50"> {/* Adjusted width here */}
             <SelectValue className={textColor} placeholder="Select Status" />
           </SelectTrigger>
           <SelectContent>
@@ -123,6 +122,30 @@ export const getColumns = ({
       return gradeA.localeCompare(gradeB);
     }
   },
+  // Re-adding the is_excited column
+  {
+    accessorKey: "is_excited",
+    header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Excited?<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
+    cell: ({ row }) => {
+      const trackedJobId = row.original.tracked_job_id;
+      // Use useMemo to get the latest data from allTableData for optimistic updates
+      const currentJobData = useMemo(() =>
+        allTableData.find(job => job.tracked_job_id === trackedJobId),
+        [allTableData, trackedJobId]
+      );
+      const isExcited = currentJobData?.is_excited || false;
+
+      return (
+        <Checkbox
+          checked={isExcited}
+          onCheckedChange={(checked: boolean) => handleToggleExcited(trackedJobId, checked)}
+          aria-label="Toggle excited status"
+        />
+      );
+    },
+    enableSorting: true,
+    enableHiding: true,
+  },
   {
     accessorKey: "created_at",
     header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Date Saved<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
@@ -145,7 +168,7 @@ export const getColumns = ({
       // CRITICAL: Use useMemo to get the latest data from allTableData
       const currentJobData = useMemo(() =>
         allTableData.find(job => job.tracked_job_id === trackedJobId),
-        [allTableData, trackedJobId] // Depend on allTableData and the job ID
+        [allTableData, trackedJobId]
       );
       const nextActionAt = currentJobData?.next_action_at;
 
@@ -160,7 +183,7 @@ export const getColumns = ({
             <Button
               variant={"outline"}
               className={cn(
-                "w-[180px] justify-start text-left font-normal bg-gray-50",
+                "w-auto justify-start text-left font-normal bg-gray-50", // Adjusted width here
                 !dateValue && "text-muted-foreground"
               )}
             >
@@ -192,7 +215,7 @@ export const getColumns = ({
       // CRITICAL: Use useMemo to get the latest data from allTableData
       const currentJobData = useMemo(() =>
         allTableData.find(job => job.tracked_job_id === trackedJobId),
-        [allTableData, trackedJobId] // Depend on allTableData and the job ID
+        [allTableData, trackedJobId]
       );
       const notes = currentJobData?.next_action_notes;
 
@@ -200,12 +223,11 @@ export const getColumns = ({
 
       return (
         <Textarea
-          // The key ensures Textarea component itself re-mounts if its ID or the notes content changes
           key={trackedJobId + (notes || "")}
           defaultValue={notes || ""}
           placeholder="Add notes..."
           onBlur={(e) => {
-            if (e.target.value !== (notes || "")) { // Compare against the latest 'notes'
+            if (e.target.value !== (notes || "")) {
               console.log(`[Next Action Notes] onBlur triggered. Saving notes: ${e.target.value}`);
               handleUpdateJobField(trackedJobId, 'next_action_notes', e.target.value || null);
             }

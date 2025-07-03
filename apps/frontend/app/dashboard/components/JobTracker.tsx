@@ -4,7 +4,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { PaginationState } from '@tanstack/react-table';
 
-// Removed: import { useTrackedJobsApi } from '../hooks/useTrackedJobsApi'; // No longer fetching internally
 import { DataTable } from '../data-table';
 import { getColumns } from './columns';
 import { Label } from '@/components/ui/label';
@@ -12,12 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { type UpdatePayload, type TrackedJob, type CompanyProfile } from '../types';
 
 interface JobTrackerProps {
-    trackedJobs: TrackedJob[]; // Added prop for data
-    isLoading: boolean; // Added prop for loading state
-    error: string | null; // Added prop for error state
-    totalCount: number; // Added prop for total count (for pagination)
+    trackedJobs: TrackedJob[];
+    isLoading: boolean;
+    error: string | null;
+    totalCount: number;
     handleUpdateJobField: (trackedJobId: number, field: keyof UpdatePayload, value: any) => Promise<void>;
-    // Pass necessary actions from useTrackedJobsApi down
     actions: {
         updateTrackedJob: (trackedJobId: number, payload: UpdatePayload) => Promise<void>;
         removeTrackedJob: (trackedJobId: number) => Promise<void>;
@@ -28,12 +26,12 @@ interface JobTrackerProps {
 const ACTIVE_PIPELINE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS'];
 
 export default function JobTracker({
-    trackedJobs, // Destructure from props
-    isLoading,   // Destructure from props
-    error,       // Destructure from props
-    totalCount,  // Destructure from props
+    trackedJobs,
+    isLoading,
+    error,
+    totalCount, // This totalCount is for the *unfiltered* list, used for global pagination display
     handleUpdateJobField,
-    actions // Destructure actions from props
+    actions
 }: JobTrackerProps) {
     
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -44,36 +42,57 @@ export default function JobTracker({
         if (!currentJob) return;
         const payload: UpdatePayload = { status: newStatus };
         const now = new Date().toISOString();
-        if (newStatus === 'APPLIED' && !currentJob.applied_at) payload.applied_at = now;
+
+        if (newStatus === 'APPLIED' && !currentJob.applied_at) {
+            payload.applied_at = now;
+        } else if (newStatus === 'SAVED' && currentJob.applied_at) { // Fix: Clear applied_at if status reverts to SAVED
+            payload.applied_at = null;
+        }
+        
         if (newStatus === 'INTERVIEWING' && !currentJob.first_interview_at) payload.first_interview_at = now;
         if (newStatus === 'OFFER_NEGOTIATIONS' && !currentJob.offer_received_at) payload.offer_received_at = now;
-        if (!ACTIVE_PIPELINE_STATUSES.includes(newStatus) && !currentJob.resolved_at) payload.resolved_at = now;
-        if (ACTIVE_PIPELINE_STATUSES.includes(newStatus) && currentJob.resolved_at) payload.resolved_at = null;
-        await actions.updateTrackedJob(trackedJobId, payload); // Use actions from props
+        
+        // Handle resolved_at for terminal vs. active states
+        if (!ACTIVE_PIPELINE_STATUSES.includes(newStatus) && !currentJob.resolved_at) {
+            payload.resolved_at = now;
+        } else if (ACTIVE_PIPELINE_STATUSES.includes(newStatus) && currentJob.resolved_at) {
+            payload.resolved_at = null;
+        }
+        await actions.updateTrackedJob(trackedJobId, payload);
     }, [actions, trackedJobs]);
 
     const handleToggleExcited = useCallback(async (trackedJobId: number, isExcited: boolean) => {
-        await actions.updateTrackedJob(trackedJobId, { is_excited: isExcited }); // Use actions from props
+        await actions.updateTrackedJob(trackedJobId, { is_excited: isExcited });
     }, [actions]);
 
     const handleRemoveJob = useCallback(async (trackedJobId: number) => {
-        if (window.confirm("Are you sure?")) await actions.removeTrackedJob(trackedJobId); // Use actions from props
+        if (window.confirm("Are you sure?")) await actions.removeTrackedJob(trackedJobId);
     }, [actions]);
 
     const filteredTrackedJobs = useMemo(() => {
-        if (filterStatus === 'all') return trackedJobs;
-        return trackedJobs.filter(job => {
-            switch (filterStatus) {
-                case 'active_pipeline': return ACTIVE_PIPELINE_STATUSES.includes(job.status);
-                case 'closed_pipeline': return !ACTIVE_PIPELINE_STATUSES.includes(job.status);
-                case 'active_posting': return job.job_posting_status === 'Active';
-                case 'expired_posting': return job.job_posting_status !== 'Active';
-                default: return true;
-            }
-        });
-    }, [trackedJobs, filterStatus]); // Use trackedJobs prop here
+        let filtered = trackedJobs;
+        switch (filterStatus) {
+            case 'active_pipeline': filtered = trackedJobs.filter(job => ACTIVE_PIPELINE_STATUSES.includes(job.status)); break;
+            case 'closed_pipeline': filtered = trackedJobs.filter(job => !ACTIVE_PIPELINE_STATUSES.includes(job.status)); break;
+            case 'active_posting': filtered = trackedJobs.filter(job => job.job_posting_status === 'Active'); break;
+            case 'expired_posting': filtered = trackedJobs.filter(job => job.job_posting_status !== 'Active'); break;
+            case 'all': // fall through
+            default: filtered = trackedJobs; break;
+        }
+        // Always reset pagination to page 0 when filters change or data updates significantly
+        // This is handled by a useEffect below, but keeps memoization clean.
+        return filtered;
+    }, [trackedJobs, filterStatus]);
 
+    // This useEffect ensures pagination resets when filter changes
     useEffect(() => { setPagination(prev => ({ ...prev, pageIndex: 0 })); }, [filterStatus]);
+
+    // New: Slice the filtered data for current page display
+    const paginatedFilteredJobs = useMemo(() => {
+        const start = pagination.pageIndex * pagination.pageSize;
+        const end = start + pagination.pageSize;
+        return filteredTrackedJobs.slice(start, end);
+    }, [filteredTrackedJobs, pagination]);
 
     const columns = useMemo(
         () => getColumns({
@@ -81,16 +100,16 @@ export default function JobTracker({
             handleRemoveJob,
             handleToggleExcited,
             handleUpdateJobField,
-            allTableData: filteredTrackedJobs,
+            allTableData: filteredTrackedJobs, // Pass the entire filtered set for cell-level memoization
         }),
         [handleStatusChange, handleRemoveJob, handleToggleExcited, handleUpdateJobField, filteredTrackedJobs]
     );
     
-    if (isLoading) { // Use isLoading prop
+    if (isLoading) {
         return <div className="text-center p-8">Loading your tracked jobs...</div>;
     }
 
-    if (error) { // Use error prop
+    if (error) {
         return <div className="text-center p-8 text-red-600">Error loading jobs: {error}</div>;
     }
 
@@ -100,7 +119,7 @@ export default function JobTracker({
             <div className="mb-4">
                 <Label htmlFor="filterStatus">Filter by Status:</Label>
                 <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
-                    <SelectTrigger className="w-[220px]"><SelectValue placeholder="All Jobs"/></SelectTrigger>
+                    <SelectTrigger id="filterStatus" className="w-[220px]"><SelectValue placeholder="All Jobs"/></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All Jobs</SelectItem>
                         <SelectItem value="active_pipeline">Active Pipeline</SelectItem>
@@ -112,11 +131,11 @@ export default function JobTracker({
             </div>
             <DataTable
                 columns={columns}
-                data={filteredTrackedJobs}
+                data={paginatedFilteredJobs} // Pass the paginated data
                 pagination={pagination}
                 setPagination={setPagination}
-                totalCount={totalCount} // Use totalCount prop
-                fetchCompanyProfile={actions.fetchCompanyProfile} // Use actions from props
+                totalCount={filteredTrackedJobs.length} // totalCount for pagination UI should be of the filtered set
+                fetchCompanyProfile={actions.fetchCompanyProfile}
             />
         </div>
     );
