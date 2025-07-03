@@ -2,8 +2,8 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, ChevronRight, CalendarIcon } from "lucide-react" // Added CalendarIcon
-import { format } from "date-fns" // Added for date formatting
+import { ArrowUpDown, MoreHorizontal, ChevronRight, CalendarIcon } from "lucide-react"
+import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -21,19 +21,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover" // Added for date picker
-import { Calendar } from "@/components/ui/calendar" // Added for date picker
-import { Textarea } from "@/components/ui/textarea" // Added for notes
-import { cn } from "@/lib/utils" // Added for conditional classnames
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { Textarea } from "@/components/ui/textarea"
+import { cn } from "@/lib/utils"
 
 import UnlockAIGradeCTA from "./UnlockAIGradeCTA"
-import { type TrackedJob, type UpdatePayload } from '../types'; // Import UpdatePayload here
+import { type TrackedJob, type UpdatePayload } from '../types';
+import React, { useState, useEffect } from "react"; // Added React, useState, useEffect
 
 interface GetColumnsProps {
   handleStatusChange: (trackedJobId: number, newStatus: string) => void;
   handleRemoveJob: (trackedJobId: number) => void;
   handleToggleExcited: (trackedJobId: number, isExcited: boolean) => void;
-  // Updated type for handleUpdateJobField
   handleUpdateJobField: (trackedJobId: number, field: keyof UpdatePayload, value: any) => Promise<void>;
 }
 
@@ -46,7 +46,7 @@ export const getColumns = ({
   handleStatusChange,
   handleRemoveJob,
   handleToggleExcited,
-  handleUpdateJobField // Destructure new prop
+  handleUpdateJobField
 }: GetColumnsProps): ColumnDef<TrackedJob>[] => [
   {
     id: "expander",
@@ -140,11 +140,11 @@ export const getColumns = ({
     cell: ({ row }) => {
       const nextActionAt = row.original.next_action_at;
       const trackedJobId = row.original.tracked_job_id;
-      // Ensure dateValue is a Date object or undefined for the calendar component
       const dateValue = nextActionAt ? new Date(nextActionAt) : undefined;
+      const [open, setOpen] = useState(false); // State to control Popover open/close
 
       return (
-        <Popover>
+        <Popover open={open} onOpenChange={setOpen}> {/* Controlled Popover */}
           <PopoverTrigger asChild>
             <Button
               variant={"outline"}
@@ -162,8 +162,9 @@ export const getColumns = ({
               mode="single"
               selected={dateValue}
               onSelect={(date) => {
-                // Pass date as ISO string, or null if date is undefined (cleared)
+                console.log(`[Next Action Date] onSelect triggered. Date selected: ${date}`); // DEBUG LOG
                 handleUpdateJobField(trackedJobId, 'next_action_at', date ? date.toISOString() : null);
+                setOpen(false); // Close popover after selection
               }}
               initialFocus
             />
@@ -176,17 +177,25 @@ export const getColumns = ({
     accessorKey: "next_action_notes",
     header: "Next Action Notes",
     cell: ({ row }) => {
-      const notes = row.original.next_action_notes;
+      const originalNotes = row.original.next_action_notes;
       const trackedJobId = row.original.tracked_job_id;
+      const [localNotes, setLocalNotes] = useState(originalNotes || ""); // Local state for text input
+
+      // Sync local state with prop when originalNotes changes (e.g., on fetch/refresh)
+      useEffect(() => {
+        setLocalNotes(originalNotes || "");
+      }, [originalNotes]);
 
       return (
         <Textarea
-          defaultValue={notes || ""}
+          value={localNotes} // Use value for controlled component
+          onChange={(e) => setLocalNotes(e.target.value)} // Update local state on change
           placeholder="Add notes..."
-          onBlur={(e) => {
-            // Only update if value has changed to avoid unnecessary API calls
-            if (e.target.value !== (notes || "")) {
-              handleUpdateJobField(trackedJobId, 'next_action_notes', e.target.value || null);
+          onBlur={() => {
+            // Only update if value has changed from the *original* value to avoid unnecessary API calls
+            if (localNotes !== (originalNotes || "")) {
+              console.log(`[Next Action Notes] onBlur triggered. Saving notes: ${localNotes}`); // DEBUG LOG
+              handleUpdateJobField(trackedJobId, 'next_action_notes', localNotes || null);
             }
           }}
           className="min-h-[50px] bg-gray-50 text-sm"
