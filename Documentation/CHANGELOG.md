@@ -3,6 +3,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.50.0 - 2025-07-03 - CRM Reminders & Notes (Backend & Core Frontend)
+
+This release implements the foundational CRM-like functionality for tracked jobs, allowing users to add "Next Action Date" and "Next Action Notes." It also includes critical bug fixes and architectural refinements across the frontend.
+
+### Added
+- **Feature: User-set Reminders & Next Action Notifications:** Implemented backend support for `next_action_at` (date) and `next_action_notes` (text) fields on `tracked_jobs`, enabling users to record future actions and reminders for job applications.
+- **Frontend UI:** Added new interactive columns for "Next Action Date" (with date picker) and "Next Action Notes" (with textarea) to the "My Job Tracker" table.
+
+### Changed
+- **Backend:** Enhanced `TrackedJobService` to accept and persist updates for `next_action_at` and `next_action_notes`.
+- **Frontend Data Model:** Updated `TrackedJob` interface in `types.ts` to reflect the `notes` column (instead of `user_notes`) and include new CRM fields.
+- **Frontend Architecture:** Refactored `columns.tsx` to include interactive date pickers and text areas for new CRM fields.
+- **Frontend Architecture:** Unified the update mechanism by passing a generic `handleUpdateJobField` function from `page.tsx` down to `JobTracker.tsx` and `columns.tsx`, enabling flexible updates to any modifiable tracked job field.
+- **Frontend UX:** Modified `handleJobSubmit` in `page.tsx` to trigger a refetch of relevant data (tracked jobs and recommendations) instead of a full page reload after a new job submission, providing a smoother user experience.
+- **Frontend Components:** Integrated Shadcn UI `Calendar` and `Popover` components for the date picker functionality.
+- **Frontend Components:** Implemented `useState` and `onBlur` with `defaultValue` for `Textarea` to manage the "Next Action Notes" input.
+
+### Fixed
+- **Bugfix (Frontend UI):** Corrected the mapping for the `notes` column in `tracked_job_service.py` and `types.ts` to ensure existing user notes are correctly displayed.
+- **Bugfix (Frontend Types):** Resolved TypeScript error `TS2322` by aligning async/sync return types and parameter types for `handleUpdateJobField` across frontend components (`page.tsx`, `JobTracker.tsx`, `columns.tsx`).
+- **Bugfix (Frontend Imports):** Resolved TypeScript error `TS2307` by correcting the import path for `useTrackedJobsApi` in `page.tsx`.
+- **Bugfix (Frontend Hook):** Resolved TypeScript error `TS2339` by explicitly exposing the `refetch` function from `useTrackedJobsApi`.
+
+### Known Issues
+- **UI Update Delay:** The "Next Action Date" and "Next Action Notes" fields do not visually update immediately after changes are saved, despite the backend successfully persisting the data and the frontend refetching it. The changes only become visible upon a manual page refresh. This is currently being investigated as a complex `react-table` rendering/memoization issue.
+
 ## v0.49.0 - 2025-07-03 - Company Profile V1 & Dashboard Refactor
 
 This release completes the V1 of the Company Profile feature by adding a user-facing UI to display AI-generated company data. To support this, the entire dashboard frontend has been refactored into a more stable and modular architecture, resolving numerous bugs and improving future development velocity.

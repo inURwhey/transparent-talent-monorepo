@@ -23,7 +23,6 @@
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Architecture: Distinguish 'Unset' vs 'No Preference' in DB** | E02 | 1000 | 2 | 100% | 0.5 | **4000** | Pro Breakdown | M | **To Do** |
 | **Backend: Re-process malformed job data** | - | 1000 | 2 | 100% | 0.5 | **4000** | Flash | S | **To Do** |
-| **Feature: User-set Reminders & Next Action Notifications** | - | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 | **Bugfix: Profile Save Fails Randomly (Likely Render Instance Spin-down)** | - | 1000 | 1 | 70% | 0.5 | **1400** | Flash | S | **To Do** |
 
 ## Tier 2: Core User Experience & Differentiation
@@ -57,6 +56,10 @@
 | **Feature (Coaching): AI-Powered Interview Prep** | E03 | 1000 | 3 | 90% | 1.0 | **2700** | Pro | L | **To Do** |
 | **Feature: User-Facing Application Artifact Generation (Resumes, Cover Letters)** | E03 | 1000 | 3 | 90% | 1.5 | **1800** | Creative | L | **To Do** |
 | **Feature: User Feedback Loop** | E01 | 1000 | 3 | 100% | 2.5 | **1200** | Pro | L | **To Do** |
+| **Feature: "Jobs For You" Pagination & Tabular View** | E01 | 1000 | 2 | 90% | 0.25 | **800** | Flash | S | **To Do** |
+| **UI/UX: Clear Date Field in Next Action Date** | - | 1000 | 1 | 90% | 0.1 | **900** | Flash | S | **To Do** |
+| **UI/UX: Restrict Next Action Date to Future Only** | - | 1000 | 1 | 90% | 0.1 | **900** | Flash | S | **To Do** |
+| **UI/UX: Refine Job Tracker Table Layout** | - | 1000 | 2 | 90% | 0.25 | **1800** | Flash | S | **To Do** |
 
 ---
 
@@ -77,6 +80,7 @@
 | **Tech Debt: Improve Lightweight Scraper** | Enhance the simple title scraper to use more advanced techniques (e.g., CSS selectors, low-cost AI call) to improve the accuracy of company/title extraction for incomplete profiles. | Medium |
 | **Research: Long-lived, user-specific AI context windows** | Investigate the feasibility and cost-effectiveness of using advanced AI APIs (like OpenAI's Assistants API) to maintain stateful, long-running conversations and context for individual users. | Low |
 | **Tech Debt: Modernize JWT Validation Library** | Evaluate and potentially replace the current `PyJWT` library for token validation with a more modern alternative, such as Clerk's official backend SDK (`clerk-python`). | Low |
+| **Bugfix: UI Update Delay for Job Tracker Fields** | The "Next Action Date" and "Next Action Notes" fields do not visually update immediately after changes are saved, despite successful backend persistence and frontend data refetch. This requires further investigation into React's reconciliation and `react-table`'s rendering pipeline. | High | - |
 
 ---
 
@@ -91,9 +95,8 @@
 ---
 
 ## Completed Features & Bugfixes
-*Items are moved here from the main backlog after being deployed and confirmed.*
-
-### v0.49.0
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
+| **Feature: User-set Reminders & Next Action Notifications** | Tier 1 | 4000 |
 | **Feature: Enhanced Company Profiles & Research** | Tier 2 | 1200 |
+| **Feature: Automated Company Data Enrichment** | Tier 2 | 5400 |
