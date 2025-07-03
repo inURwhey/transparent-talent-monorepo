@@ -10,7 +10,7 @@ class TrackedJobService:
 
     def update_job(self, user_id, tracked_job_id, data):
         allowed_fields = [
-            'status', 'is_excited', 'user_notes', 'status_reason',
+            'status', 'is_excited', 'notes', 'status_reason', # Changed 'user_notes' to 'notes'
             'applied_at', 'first_interview_at', 'offer_received_at',
             'resolved_at', 'next_action_at', 'next_action_notes'
         ]
@@ -50,6 +50,7 @@ class TrackedJobService:
                 t.id as tracked_job_id,
                 t.status,
                 t.is_excited,
+                t.notes, -- Ensure 'notes' is selected
                 t.created_at,
                 t.applied_at,
                 t.first_interview_at,
@@ -92,7 +93,7 @@ class TrackedJobService:
             "company_name": job['company_name'],
             "job_url": job['job_url'],
             "status": job['status'],
-            "user_notes": None, # FIX: Removed non-existent column, returning None as placeholder
+            "notes": job['notes'], # FIX: Correctly map 'notes' column
             "created_at": job['created_at'].isoformat() if job['created_at'] else None,
             "is_excited": job['is_excited'],
             "job_posting_status": job['job_posting_status'],

@@ -6,11 +6,13 @@ import { useAuth, useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 
 import { useJobRecommendationsApi } from '../../hooks/useJobRecommendationsApi';
+import { useTrackedJobsApi } from './hooks/useTrackedJobsApi'; // CORRECTED IMPORT PATH
+
 import { JobSubmissionForm } from './components/JobSubmissionForm';
 import JobsForYou from './components/JobsForYou';
-import JobTracker from './components/JobTracker'; // Import the new component
+import JobTracker from './components/JobTracker';
 import { Button } from '@/components/ui/button';
-import { type Profile } from './types';
+import { type Profile, type UpdatePayload } from './types'; // Import UpdatePayload
 
 export default function UserDashboard() {
   const { data: recommendedJobs, isLoading: isLoadingRecs, error: recsError, refetch: refetchRecommendations } = useJobRecommendationsApi();
@@ -18,13 +20,40 @@ export default function UserDashboard() {
   const { getToken } = useAuth();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  // State is now managed at a higher level
+  const { refetch: refetchTrackedJobs } = useTrackedJobsApi();
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
-  // This is now the single source of truth for submitting a job.
-  // It will be passed down to both the JobSubmissionForm and JobsForYou components.
+  const handleUpdateJobField = useCallback(async (trackedJobId: number, field: keyof UpdatePayload, value: any) => {
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("Authentication token is missing.");
+
+      const payload: UpdatePayload = {
+        [field]: value
+      };
+
+      const response = await fetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, {
+          method: 'PUT',
+          headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `Failed to update job field ${String(field)}.`);
+      
+      refetchTrackedJobs();
+
+    } catch (error) {
+        console.error(`Error updating job field ${String(field)}:`, error);
+    }
+  }, [getToken, apiBaseUrl, refetchTrackedJobs]);
+
   const handleJobSubmit = useCallback(async (jobUrl: string) => {
     setIsSubmitting(true);
     setSubmissionError(null);
@@ -44,16 +73,15 @@ export default function UserDashboard() {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Failed to submit job.');
         
-        // This is a bit of a hack. A better solution would involve a global state manager (like Zustand or Redux)
-        // to notify the JobTracker component to refetch its data. For now, a page reload is the simplest way.
-        window.location.reload();
+        refetchTrackedJobs();
+        refetchRecommendations();
 
     } catch (error) {
         setSubmissionError(error instanceof Error ? error.message : 'An unknown submission error occurred.');
     } finally {
         setIsSubmitting(false);
     }
-  }, [getToken, apiBaseUrl]);
+  }, [getToken, apiBaseUrl, refetchTrackedJobs, refetchRecommendations]);
 
   useEffect(() => {
     const fetchInitialProfile = async () => {
@@ -90,19 +118,19 @@ export default function UserDashboard() {
           jobs={recommendedJobs} 
           isLoading={isLoadingRecs} 
           error={recsError} 
-          onTrack={handleJobSubmit} // Pass the unified submit handler
+          onTrack={handleJobSubmit}
           isSubmitting={isSubmitting}
           isProfileComplete={profile!.has_completed_onboarding}
         />
         
         <JobSubmissionForm 
-          onSubmit={handleJobSubmit} // Pass the unified submit handler
+          onSubmit={handleJobSubmit}
           isSubmitting={isSubmitting} 
           submissionError={submissionError} 
           isProfileComplete={profile!.has_completed_onboarding}
         />
         
-        <JobTracker />
+        <JobTracker handleUpdateJobField={handleUpdateJobField} />
         
       </div>
     </main>

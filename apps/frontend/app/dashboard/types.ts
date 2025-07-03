@@ -51,12 +51,12 @@ export interface AIAnalysis {
 export interface TrackedJob {
   tracked_job_id: number;
   job_id: number;
-  company_id: number; // <-- ADDED
+  company_id: number;
   job_title: string;
   company_name: string;
   job_url: string;
   status: string;
-  user_notes: string | null;
+  notes: string | null; // Changed from user_notes to notes
   created_at: string;
   is_excited: boolean;
   job_posting_status: string;

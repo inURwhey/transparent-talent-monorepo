@@ -2,7 +2,8 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, ChevronRight } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, ChevronRight, CalendarIcon } from "lucide-react" // Added CalendarIcon
+import { format } from "date-fns" // Added for date formatting
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -20,13 +21,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover" // Added for date picker
+import { Calendar } from "@/components/ui/calendar" // Added for date picker
+import { Textarea } from "@/components/ui/textarea" // Added for notes
+import { cn } from "@/lib/utils" // Added for conditional classnames
+
 import UnlockAIGradeCTA from "./UnlockAIGradeCTA"
-import { type TrackedJob } from '../types';
+import { type TrackedJob, type UpdatePayload } from '../types'; // Import UpdatePayload here
 
 interface GetColumnsProps {
   handleStatusChange: (trackedJobId: number, newStatus: string) => void;
   handleRemoveJob: (trackedJobId: number) => void;
   handleToggleExcited: (trackedJobId: number, isExcited: boolean) => void;
+  // Updated type for handleUpdateJobField
+  handleUpdateJobField: (trackedJobId: number, field: keyof UpdatePayload, value: any) => Promise<void>;
 }
 
 const SUCCESS_STATUSES = ['OFFER_ACCEPTED'];
@@ -34,7 +42,12 @@ const NEGATIVE_TERMINAL_STATUSES = ['REJECTED', 'EXPIRED'];
 const NEUTRAL_TERMINAL_STATUSES = ['WITHDRAWN'];
 const ACTIVE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS'];
 
-export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleExcited }: GetColumnsProps): ColumnDef<TrackedJob>[] => [
+export const getColumns = ({
+  handleStatusChange,
+  handleRemoveJob,
+  handleToggleExcited,
+  handleUpdateJobField // Destructure new prop
+}: GetColumnsProps): ColumnDef<TrackedJob>[] => [
   {
     id: "expander",
     header: () => null,
@@ -119,6 +132,66 @@ export const getColumns = ({ handleStatusChange, handleRemoveJob, handleToggleEx
       const appliedAt = row.original.applied_at;
       if (!appliedAt) { return <div className="text-center">-</div>; }
       return new Date(appliedAt).toLocaleDateString();
+    }
+  },
+  {
+    accessorKey: "next_action_at",
+    header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Next Action Date<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
+    cell: ({ row }) => {
+      const nextActionAt = row.original.next_action_at;
+      const trackedJobId = row.original.tracked_job_id;
+      // Ensure dateValue is a Date object or undefined for the calendar component
+      const dateValue = nextActionAt ? new Date(nextActionAt) : undefined;
+
+      return (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-[180px] justify-start text-left font-normal bg-gray-50",
+                !dateValue && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateValue ? format(dateValue, "PPP") : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={dateValue}
+              onSelect={(date) => {
+                // Pass date as ISO string, or null if date is undefined (cleared)
+                handleUpdateJobField(trackedJobId, 'next_action_at', date ? date.toISOString() : null);
+              }}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      );
+    }
+  },
+  {
+    accessorKey: "next_action_notes",
+    header: "Next Action Notes",
+    cell: ({ row }) => {
+      const notes = row.original.next_action_notes;
+      const trackedJobId = row.original.tracked_job_id;
+
+      return (
+        <Textarea
+          defaultValue={notes || ""}
+          placeholder="Add notes..."
+          onBlur={(e) => {
+            // Only update if value has changed to avoid unnecessary API calls
+            if (e.target.value !== (notes || "")) {
+              handleUpdateJobField(trackedJobId, 'next_action_notes', e.target.value || null);
+            }
+          }}
+          className="min-h-[50px] bg-gray-50 text-sm"
+        />
+      );
     }
   },
   {

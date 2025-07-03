@@ -9,11 +9,16 @@ import { DataTable } from '../data-table';
 import { getColumns } from './columns';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { type UpdatePayload } from '../types';
+import { type UpdatePayload, type TrackedJob } from '../types'; // Import UpdatePayload and TrackedJob for the prop interface
+
+interface JobTrackerProps {
+    // Updated type for handleUpdateJobField
+    handleUpdateJobField: (trackedJobId: number, field: keyof UpdatePayload, value: any) => Promise<void>;
+}
 
 const ACTIVE_PIPELINE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS'];
 
-export default function JobTracker() {
+export default function JobTracker({ handleUpdateJobField }: JobTrackerProps) { // Accept the new prop
     const { trackedJobs, isLoading: isLoadingJobs, error: jobsError, actions } = useTrackedJobsApi();
     
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -60,8 +65,9 @@ export default function JobTracker() {
             handleStatusChange,
             handleRemoveJob,
             handleToggleExcited,
+            handleUpdateJobField, // Pass the new prop here
         }),
-        [handleStatusChange, handleRemoveJob, handleToggleExcited]
+        [handleStatusChange, handleRemoveJob, handleToggleExcited, handleUpdateJobField] // Add to dependency array
     );
     
     if (isLoadingJobs) {

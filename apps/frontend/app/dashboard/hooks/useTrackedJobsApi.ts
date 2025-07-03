@@ -22,6 +22,7 @@ export function useTrackedJobsApi() {
     return fetch(url, { ...options, headers });
   }, [getToken]);
 
+  // This is the function that needs to be exposed
   const fetchJobs = useCallback(() => {
     if (!isUserLoaded) return;
     setIsLoading(true);
@@ -63,7 +64,7 @@ export function useTrackedJobsApi() {
       setTrackedJobs(prev => prev.map(job => job.tracked_job_id === trackedJobId ? updatedFromServer : job));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Update failed.");
-      fetchJobs();
+      fetchJobs(); // Refetch if update fails to ensure consistency
     }
   }, [apiBaseUrl, authedFetch, fetchJobs]);
 
@@ -75,7 +76,7 @@ export function useTrackedJobsApi() {
       if (!response.ok) setTrackedJobs(originalJobs);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Delete failed.");
-      setTrackedJobs(originalJobs);
+      setTrackedJobs(originalJobs); // Revert if delete fails
     }
   }, [apiBaseUrl, authedFetch, trackedJobs]);
 
@@ -95,6 +96,16 @@ export function useTrackedJobsApi() {
     }
   }, [apiBaseUrl, authedFetch]);
 
-
-  return { trackedJobs, isLoading, error, actions: { submitNewJob, updateTrackedJob, removeTrackedJob, fetchCompanyProfile }};
+  return {
+    trackedJobs,
+    isLoading,
+    error,
+    refetch: fetchJobs, // EXPOSED fetchJobs as refetch
+    actions: {
+      submitNewJob,
+      updateTrackedJob,
+      removeTrackedJob,
+      fetchCompanyProfile
+    }
+  };
 }
