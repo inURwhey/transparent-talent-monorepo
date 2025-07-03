@@ -1,12 +1,12 @@
 // Path: apps/frontend/app/dashboard/components/CompanyProfileCard.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Loader2 } from "lucide-react";
 import { type CompanyProfile } from '../types';
 
 interface CompanyProfileCardProps {
-    companyId: number | null; // Allow null
+    companyId: number | null;
     fetchCompanyProfile: (companyId: number) => Promise<CompanyProfile | null>;
     isExpanded: boolean;
 }
@@ -16,40 +16,40 @@ export default function CompanyProfileCard({ companyId, fetchCompanyProfile, isE
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const loadProfile = useCallback(async () => {
-        // --- FIX: Add a guard clause to prevent fetching with null/undefined ID ---
-        if (!companyId) {
-            setIsLoading(false);
-            return;
-        }
-        
-        setIsLoading(true);
-        setError(null);
-        try {
-            const fetchedProfile = await fetchCompanyProfile(companyId);
-            setProfile(fetchedProfile);
-        } catch (err) {
-            setError("Failed to load company data.");
-            console.error(err);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [companyId, fetchCompanyProfile]);
-
     useEffect(() => {
-        if (isExpanded && !profile && !isLoading && !error) {
+        // We only want to fetch data if the row is expanded.
+        if (isExpanded) {
+            const loadProfile = async () => {
+                // Also, ensure we have a valid ID before fetching.
+                if (!companyId) {
+                    setIsLoading(false); // Stop loading if no ID
+                    return;
+                }
+                
+                setIsLoading(true);
+                setError(null);
+
+                try {
+                    const fetchedProfile = await fetchCompanyProfile(companyId);
+                    setProfile(fetchedProfile);
+                } catch (err) {
+                    setError("Failed to load company data.");
+                    console.error(err);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            
+            // Invoke the fetch
             loadProfile();
         }
-    }, [isExpanded, loadProfile, profile, isLoading, error]);
+    // This effect should re-run if the component is re-expanded or if the ID changes.
+    }, [isExpanded, companyId, fetchCompanyProfile]);
 
 
-    // If there's no company ID, don't render anything.
-    if (!companyId) {
-        return (
-            <div className="p-4 bg-gray-50/50 border-l-4 border-gray-300">
-                <p className="text-gray-500 text-sm">Company data not available for this entry.</p>
-            </div>
-        );
+    // If the row is not expanded, don't render anything.
+    if (!isExpanded) {
+        return null;
     }
 
     return (
