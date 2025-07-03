@@ -16,7 +16,7 @@ export interface Profile {
   desired_salary_max: number | null;
   desired_title: string | null;
   ideal_role_description: string | null;
-  preferred_company_size: string | null;
+  preferred_company_size: string | null; // This is now an ENUM field
   ideal_work_culture: string | null;
   disliked_work_culture: string | null;
   core_strengths: string | null;
@@ -29,13 +29,13 @@ export interface Profile {
   personality_16_personalities: string | null;
   personality_disc: string | null;
   personality_gallup_strengths: string | null;
-  preferred_work_style: 'On-site' | 'Remote' | 'Hybrid' | null;
+  preferred_work_style: string | null; // Changed from 'On-site' | 'Remote' | 'Hybrid' | null to string | null
   is_remote_preferred: boolean | null;
   has_completed_onboarding: boolean;
-  work_style_preference: string | null;
-  conflict_resolution_style: string | null;
-  communication_preference: string | null;
-  change_tolerance: string | null;
+  work_style_preference: string | null; // This is now an ENUM field
+  conflict_resolution_style: string | null; // This is now an ENUM field
+  communication_preference: string | null; // This is now an ENUM field
+  change_tolerance: string | null; // This is now an ENUM field
 }
 
 export interface AIAnalysis {

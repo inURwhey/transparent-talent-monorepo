@@ -61,6 +61,15 @@ const changeToleranceOptions = [
     { value: 'The team is nimble and priorities pivot often based on new data.', label: 'The team is nimble and priorities pivot often based on new data.' },
 ];
 
+// For preferred_work_style, if we convert it to ENUM, this will be used.
+// If not, it will still rely on current backend logic of null for 'No Preference'.
+const preferredWorkLocationOptions = [
+    { value: 'No Preference', label: 'No Preference' },
+    { value: 'On-site', label: 'On-site' },
+    { value: 'Hybrid', label: 'Hybrid' },
+    { value: 'Remote', label: 'Remote' },
+];
+
 
 const formatNumberForDisplay = (num: number | null | undefined): string => {
     if (num === null || num === undefined) return '';
@@ -127,7 +136,7 @@ export default function UserProfilePage() {
             } else if (value === 'No Preference') {
                 // For ENUMs, "No Preference" needs to be sent as the explicit string "No Preference"
                 actualValue = "No Preference";
-            } else if (value === 'null') { // Handles the specific string "null" from SelectItem
+            } else if (value === 'null') { // Handles the specific string "null" from SelectItem, converting to actual null
                 actualValue = null;
             } else if (value === '') { // Handles empty string from text inputs or Select when unset
                 actualValue = null;
@@ -292,12 +301,16 @@ export default function UserProfilePage() {
                                 <div>
                                     <Label htmlFor="preferred_work_style_select">Preferred Work Location</Label>
                                     <Select value={profile.preferred_work_style || ''} onValueChange={(v) => handleChange('preferred_work_style', v)}>
-                                        <SelectTrigger id="preferred_work_style_select"><SelectValue placeholder="Select a preference..."/></SelectTrigger>
+                                        <SelectTrigger id="preferred_work_style_select">
+                                            {/* Logic for Preferred Work Location - ensures 'No Preference' from options array is used */}
+                                            <SelectValue placeholder="Select a preference...">
+                                                {profile.preferred_work_style === 'No Preference' ? 'No Preference' : (profile.preferred_work_style || 'Select a preference...')}
+                                            </SelectValue>
+                                        </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="null">No Preference</SelectItem>
-                                            <SelectItem value="On-site">On-site</SelectItem>
-                                            <SelectItem value="Hybrid">Hybrid</SelectItem>
-                                            <SelectItem value="Remote">Remote</SelectItem>
+                                            {preferredWorkLocationOptions.map(option => ( // Use new options array here
+                                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -310,7 +323,12 @@ export default function UserProfilePage() {
                                 <div>
                                     <Label htmlFor="preferred_company_size">Preferred Company Size</Label>
                                     <Select value={profile.preferred_company_size ?? ''} onValueChange={(value) => handleChange('preferred_company_size', value)}>
-                                        <SelectTrigger><SelectValue placeholder="No Preference" /></SelectTrigger>
+                                        <SelectTrigger>
+                                            {/* Logic for Preferred Company Size - ensures 'No Preference' from options array is used */}
+                                            <SelectValue placeholder="No Preference">
+                                                {profile.preferred_company_size === 'No Preference' ? 'No Preference' : (profile.preferred_company_size || 'No Preference')}
+                                            </SelectValue>
+                                        </SelectTrigger>
                                         <SelectContent>
                                             {companySizeOptions.map(option => (
                                                 <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>

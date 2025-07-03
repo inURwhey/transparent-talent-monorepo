@@ -42,6 +42,14 @@ CHANGE_TOLERANCE_MAPPING = {
     "NO_PREFERENCE": "No Preference",
 }
 
+# New mapping for preferred_work_style (work_location_enum)
+WORK_LOCATION_MAPPING = {
+    "ON_SITE": "On-site",
+    "HYBRID": "Hybrid",
+    "REMOTE": "Remote",
+    "NO_PREFERENCE": "No Preference",
+}
+
 # Consolidate all mappings for easy lookup in _format_profile_for_frontend and update_profile
 ALL_ENUM_MAPPINGS = {
     "preferred_company_size": COMPANY_SIZE_MAPPING,
@@ -49,6 +57,7 @@ ALL_ENUM_MAPPINGS = {
     "conflict_resolution_style": CONFLICT_RESOLUTION_MAPPING,
     "communication_preference": COMMUNICATION_PREFERENCE_MAPPING,
     "change_tolerance": CHANGE_TOLERANCE_MAPPING,
+    "preferred_work_style": WORK_LOCATION_MAPPING, # Added new mapping
 }
 
 
@@ -64,7 +73,7 @@ class ProfileService:
             "skills_to_avoid", "non_negotiable_requirements", "deal_breakers",
             "preferred_industries", "industries_to_avoid", "personality_adjectives",
             "personality_16_personalities", "personality_disc", "personality_gallup_strengths",
-            "preferred_work_style", # This column was `character varying(50)` and is now handled by an ENUM mapping.
+            "preferred_work_style", # Now ENUM
             "is_remote_preferred", "latitude", "longitude",
             "has_completed_onboarding",
             "work_style_preference", # Now ENUM
@@ -141,7 +150,8 @@ class ProfileService:
                 "short_term_career_goal", "ideal_role_description", "core_strengths",
                 "skills_to_avoid", "preferred_industries", "industries_to_avoid",
                 "desired_title", "non_negotiable_requirements", "deal_breakers",
-                "preferred_work_style", "is_remote_preferred",
+                "preferred_work_style", # Added for analysis context
+                "is_remote_preferred",
                 "desired_salary_min", "desired_salary_max",
                 "preferred_company_size", # Added for analysis context
                 "work_style_preference", # Added for analysis context
@@ -154,7 +164,8 @@ class ProfileService:
                 "core_strengths": "Core Strengths", "skills_to_avoid": "Skills To Avoid",
                 "preferred_industries": "Preferred Industries", "industries_to_avoid": "Industries To Avoid",
                 "desired_title": "Desired Title", "non_negotiable_requirements": "Non-Negotiables",
-                "deal_breakers": "Deal Breakers", "preferred_work_style": "Preferred Work Style",
+                "deal_breakers": "Deal Breakers",
+                "preferred_work_style": "Preferred Work Style", # Label for new ENUM
                 "is_remote_preferred": "Remote Preference",
                 "desired_salary_min": "Desired Minimum Salary",
                 "desired_salary_max": "Desired Maximum Salary",
