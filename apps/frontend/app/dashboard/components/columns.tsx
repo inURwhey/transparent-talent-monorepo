@@ -34,8 +34,8 @@ interface GetColumnsProps {
   handleStatusChange: (trackedJobId: number, newStatus: string) => void;
   handleRemoveJob: (trackedJobId: number) => void;
   handleToggleExcited: (trackedJobId: number, isExcited: boolean) => void;
-  // This type definition is correct for `columns.tsx`
   handleUpdateJobField: (trackedJobId: number, field: keyof UpdatePayload, value: any) => Promise<void>;
+  // This prop is crucial for manually looking up the latest data
   allTableData: TrackedJob[];
 }
 
@@ -49,7 +49,7 @@ export const getColumns = ({
   handleRemoveJob,
   handleToggleExcited,
   handleUpdateJobField,
-  allTableData
+  allTableData // Destructure the allTableData prop
 }: GetColumnsProps): ColumnDef<TrackedJob>[] => [
   {
     id: "expander",
@@ -142,9 +142,10 @@ export const getColumns = ({
     header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Next Action Date<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
     cell: ({ row }) => {
       const trackedJobId = row.original.tracked_job_id;
+      // CRITICAL: Use useMemo to get the latest data from allTableData
       const currentJobData = useMemo(() =>
         allTableData.find(job => job.tracked_job_id === trackedJobId),
-        [allTableData, trackedJobId]
+        [allTableData, trackedJobId] // Depend on allTableData and the job ID
       );
       const nextActionAt = currentJobData?.next_action_at;
 
@@ -188,9 +189,10 @@ export const getColumns = ({
     header: "Next Action Notes",
     cell: ({ row }) => {
       const trackedJobId = row.original.tracked_job_id;
+      // CRITICAL: Use useMemo to get the latest data from allTableData
       const currentJobData = useMemo(() =>
         allTableData.find(job => job.tracked_job_id === trackedJobId),
-        [allTableData, trackedJobId]
+        [allTableData, trackedJobId] // Depend on allTableData and the job ID
       );
       const notes = currentJobData?.next_action_notes;
 
@@ -198,11 +200,12 @@ export const getColumns = ({
 
       return (
         <Textarea
+          // The key ensures Textarea component itself re-mounts if its ID or the notes content changes
           key={trackedJobId + (notes || "")}
           defaultValue={notes || ""}
           placeholder="Add notes..."
           onBlur={(e) => {
-            if (e.target.value !== (notes || "")) {
+            if (e.target.value !== (notes || "")) { // Compare against the latest 'notes'
               console.log(`[Next Action Notes] onBlur triggered. Saving notes: ${e.target.value}`);
               handleUpdateJobField(trackedJobId, 'next_action_notes', e.target.value || null);
             }
