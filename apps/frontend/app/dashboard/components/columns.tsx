@@ -28,13 +28,15 @@ import { cn } from "@/lib/utils"
 
 import UnlockAIGradeCTA from "./UnlockAIGradeCTA"
 import { type TrackedJob, type UpdatePayload } from '../types';
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 
 interface GetColumnsProps {
   handleStatusChange: (trackedJobId: number, newStatus: string) => void;
   handleRemoveJob: (trackedJobId: number) => void;
   handleToggleExcited: (trackedJobId: number, isExcited: boolean) => void;
+  // This type definition is correct for `columns.tsx`
   handleUpdateJobField: (trackedJobId: number, field: keyof UpdatePayload, value: any) => Promise<void>;
+  allTableData: TrackedJob[];
 }
 
 const SUCCESS_STATUSES = ['OFFER_ACCEPTED'];
@@ -46,7 +48,8 @@ export const getColumns = ({
   handleStatusChange,
   handleRemoveJob,
   handleToggleExcited,
-  handleUpdateJobField
+  handleUpdateJobField,
+  allTableData
 }: GetColumnsProps): ColumnDef<TrackedJob>[] => [
   {
     id: "expander",
@@ -138,13 +141,17 @@ export const getColumns = ({
     accessorKey: "next_action_at",
     header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Next Action Date<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
     cell: ({ row }) => {
-      const nextActionAt = row.original.next_action_at;
       const trackedJobId = row.original.tracked_job_id;
+      const currentJobData = useMemo(() =>
+        allTableData.find(job => job.tracked_job_id === trackedJobId),
+        [allTableData, trackedJobId]
+      );
+      const nextActionAt = currentJobData?.next_action_at;
+
       const dateValue = nextActionAt ? new Date(nextActionAt) : undefined;
       const [open, setOpen] = useState(false);
 
-      // Log the value *at the point of rendering*
-      console.log(`[Next Action Date Cell] Job ID: ${trackedJobId}, Value: ${nextActionAt}`);
+      console.log(`[Next Action Date Cell] Rendered Job ID: ${trackedJobId}, Value from live data: ${nextActionAt}`);
 
       return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -180,15 +187,17 @@ export const getColumns = ({
     accessorKey: "next_action_notes",
     header: "Next Action Notes",
     cell: ({ row }) => {
-      const notes = row.original.next_action_notes;
       const trackedJobId = row.original.tracked_job_id;
+      const currentJobData = useMemo(() =>
+        allTableData.find(job => job.tracked_job_id === trackedJobId),
+        [allTableData, trackedJobId]
+      );
+      const notes = currentJobData?.next_action_notes;
 
-      // Log the value *at the point of rendering*
-      console.log(`[Next Action Notes Cell] Job ID: ${trackedJobId}, Value: ${notes}`);
+      console.log(`[Next Action Notes Cell] Rendered Job ID: ${trackedJobId}, Value from live data: ${notes}`);
 
       return (
         <Textarea
-          // Corrected key to handle null 'notes'
           key={trackedJobId + (notes || "")}
           defaultValue={notes || ""}
           placeholder="Add notes..."

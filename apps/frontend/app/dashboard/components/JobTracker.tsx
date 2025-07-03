@@ -9,16 +9,16 @@ import { DataTable } from '../data-table';
 import { getColumns } from './columns';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { type UpdatePayload, type TrackedJob } from '../types'; // Import UpdatePayload and TrackedJob for the prop interface
+import { type UpdatePayload, type TrackedJob } from '../types';
 
 interface JobTrackerProps {
-    // Updated type for handleUpdateJobField
+    // Corrected type for handleUpdateJobField to use keyof UpdatePayload
     handleUpdateJobField: (trackedJobId: number, field: keyof UpdatePayload, value: any) => Promise<void>;
 }
 
 const ACTIVE_PIPELINE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS'];
 
-export default function JobTracker({ handleUpdateJobField }: JobTrackerProps) { // Accept the new prop
+export default function JobTracker({ handleUpdateJobField }: JobTrackerProps) {
     const { trackedJobs, isLoading: isLoadingJobs, error: jobsError, actions } = useTrackedJobsApi();
     
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -65,9 +65,10 @@ export default function JobTracker({ handleUpdateJobField }: JobTrackerProps) { 
             handleStatusChange,
             handleRemoveJob,
             handleToggleExcited,
-            handleUpdateJobField, // Pass the new prop here
+            handleUpdateJobField,
+            allTableData: filteredTrackedJobs,
         }),
-        [handleStatusChange, handleRemoveJob, handleToggleExcited, handleUpdateJobField] // Add to dependency array
+        [handleStatusChange, handleRemoveJob, handleToggleExcited, handleUpdateJobField, filteredTrackedJobs]
     );
     
     if (isLoadingJobs) {
@@ -94,11 +95,11 @@ export default function JobTracker({ handleUpdateJobField }: JobTrackerProps) { 
                     </SelectContent>
                 </Select>
             </div>
-            <DataTable 
-                columns={columns} 
-                data={filteredTrackedJobs} 
-                pagination={pagination} 
-                setPagination={setPagination} 
+            <DataTable
+                columns={columns}
+                data={filteredTrackedJobs}
+                pagination={pagination}
+                setPagination={setPagination}
                 totalCount={filteredTrackedJobs.length}
                 fetchCompanyProfile={actions.fetchCompanyProfile}
             />
