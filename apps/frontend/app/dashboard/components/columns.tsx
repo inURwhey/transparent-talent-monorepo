@@ -143,6 +143,9 @@ export const getColumns = ({
       const dateValue = nextActionAt ? new Date(nextActionAt) : undefined;
       const [open, setOpen] = useState(false);
 
+      // Log the value *at the point of rendering*
+      console.log(`[Next Action Date Cell] Job ID: ${trackedJobId}, Value: ${nextActionAt}`);
+
       return (
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
@@ -180,10 +183,13 @@ export const getColumns = ({
       const notes = row.original.next_action_notes;
       const trackedJobId = row.original.tracked_job_id;
 
+      // Log the value *at the point of rendering*
+      console.log(`[Next Action Notes Cell] Job ID: ${trackedJobId}, Value: ${notes}`);
+
       return (
         <Textarea
           // Corrected key to handle null 'notes'
-          key={trackedJobId + (notes || "")} 
+          key={trackedJobId + (notes || "")}
           defaultValue={notes || ""}
           placeholder="Add notes..."
           onBlur={(e) => {
