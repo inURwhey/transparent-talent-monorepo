@@ -21,14 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover" // CORRECTED LINE
 import { Calendar } from "@/components/ui/calendar"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
 import UnlockAIGradeCTA from "./UnlockAIGradeCTA"
 import { type TrackedJob, type UpdatePayload } from '../types';
-import React, { useState, useEffect } from "react"; // Added React, useState, useEffect
+import React, { useState } from "react";
 
 interface GetColumnsProps {
   handleStatusChange: (trackedJobId: number, newStatus: string) => void;
@@ -141,10 +141,10 @@ export const getColumns = ({
       const nextActionAt = row.original.next_action_at;
       const trackedJobId = row.original.tracked_job_id;
       const dateValue = nextActionAt ? new Date(nextActionAt) : undefined;
-      const [open, setOpen] = useState(false); // State to control Popover open/close
+      const [open, setOpen] = useState(false);
 
       return (
-        <Popover open={open} onOpenChange={setOpen}> {/* Controlled Popover */}
+        <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
               variant={"outline"}
@@ -162,9 +162,9 @@ export const getColumns = ({
               mode="single"
               selected={dateValue}
               onSelect={(date) => {
-                console.log(`[Next Action Date] onSelect triggered. Date selected: ${date}`); // DEBUG LOG
+                console.log(`[Next Action Date] onSelect triggered. Date selected: ${date}`);
                 handleUpdateJobField(trackedJobId, 'next_action_at', date ? date.toISOString() : null);
-                setOpen(false); // Close popover after selection
+                setOpen(false);
               }}
               initialFocus
             />
@@ -177,25 +177,17 @@ export const getColumns = ({
     accessorKey: "next_action_notes",
     header: "Next Action Notes",
     cell: ({ row }) => {
-      const originalNotes = row.original.next_action_notes;
+      const notes = row.original.next_action_notes;
       const trackedJobId = row.original.tracked_job_id;
-      const [localNotes, setLocalNotes] = useState(originalNotes || ""); // Local state for text input
-
-      // Sync local state with prop when originalNotes changes (e.g., on fetch/refresh)
-      useEffect(() => {
-        setLocalNotes(originalNotes || "");
-      }, [originalNotes]);
 
       return (
         <Textarea
-          value={localNotes} // Use value for controlled component
-          onChange={(e) => setLocalNotes(e.target.value)} // Update local state on change
+          defaultValue={notes || ""}
           placeholder="Add notes..."
-          onBlur={() => {
-            // Only update if value has changed from the *original* value to avoid unnecessary API calls
-            if (localNotes !== (originalNotes || "")) {
-              console.log(`[Next Action Notes] onBlur triggered. Saving notes: ${localNotes}`); // DEBUG LOG
-              handleUpdateJobField(trackedJobId, 'next_action_notes', localNotes || null);
+          onBlur={(e) => {
+            if (e.target.value !== (notes || "")) {
+              console.log(`[Next Action Notes] onBlur triggered. Saving notes: ${e.target.value}`);
+              handleUpdateJobField(trackedJobId, 'next_action_notes', e.target.value || null);
             }
           }}
           className="min-h-[50px] bg-gray-50 text-sm"
