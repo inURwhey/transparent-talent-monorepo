@@ -130,7 +130,8 @@ export function DataTable<TData extends TrackedJob, TValue>({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="rounded-md border">
+      {/* Added overflow-x-auto here to allow horizontal scrolling if content is too wide */}
+      <div className="rounded-md border overflow-x-auto"> 
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

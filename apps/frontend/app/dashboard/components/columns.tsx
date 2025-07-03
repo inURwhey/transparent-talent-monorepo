@@ -2,7 +2,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, ChevronRight, CalendarIcon } from "lucide-react"
+import { ArrowUpDown, MoreHorizontal, ChevronRight, CalendarIcon, XCircle } from "lucide-react" // Added XCircle icon
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -91,7 +91,8 @@ export const getColumns = ({
           value={status}
           onValueChange={(newValue) => handleStatusChange(row.original.tracked_job_id, newValue)}
         >
-          <SelectTrigger className="w-auto bg-gray-50"> {/* Adjusted width here */}
+          {/* Added id and name attributes */}
+          <SelectTrigger id={`status-select-${row.original.tracked_job_id}`} name={`status-select-${row.original.tracked_job_id}`} className="w-auto bg-gray-50">
             <SelectValue className={textColor} placeholder="Select Status" />
           </SelectTrigger>
           <SelectContent>
@@ -122,13 +123,11 @@ export const getColumns = ({
       return gradeA.localeCompare(gradeB);
     }
   },
-  // Re-adding the is_excited column
   {
     accessorKey: "is_excited",
     header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Excited?<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
     cell: ({ row }) => {
       const trackedJobId = row.original.tracked_job_id;
-      // Use useMemo to get the latest data from allTableData for optimistic updates
       const currentJobData = useMemo(() =>
         allTableData.find(job => job.tracked_job_id === trackedJobId),
         [allTableData, trackedJobId]
@@ -165,7 +164,6 @@ export const getColumns = ({
     header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Next Action Date<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
     cell: ({ row }) => {
       const trackedJobId = row.original.tracked_job_id;
-      // CRITICAL: Use useMemo to get the latest data from allTableData
       const currentJobData = useMemo(() =>
         allTableData.find(job => job.tracked_job_id === trackedJobId),
         [allTableData, trackedJobId]
@@ -175,15 +173,13 @@ export const getColumns = ({
       const dateValue = nextActionAt ? new Date(nextActionAt) : undefined;
       const [open, setOpen] = useState(false);
 
-      console.log(`[Next Action Date Cell] Rendered Job ID: ${trackedJobId}, Value from live data: ${nextActionAt}`);
-
       return (
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
               variant={"outline"}
               className={cn(
-                "w-auto justify-start text-left font-normal bg-gray-50", // Adjusted width here
+                "w-auto justify-start text-left font-normal bg-gray-50",
                 !dateValue && "text-muted-foreground"
               )}
             >
@@ -196,12 +192,26 @@ export const getColumns = ({
               mode="single"
               selected={dateValue}
               onSelect={(date) => {
-                console.log(`[Next Action Date] onSelect triggered. Date selected: ${date}`);
                 handleUpdateJobField(trackedJobId, 'next_action_at', date ? date.toISOString() : null);
                 setOpen(false);
               }}
               initialFocus
+              fromDate={new Date()} // Prevent setting dates in the past
             />
+            {dateValue && (
+              <div className="p-2 pt-0">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    handleUpdateJobField(trackedJobId, 'next_action_at', null); // Clear date
+                    setOpen(false);
+                  }}
+                  className="w-full text-sm text-red-500 hover:text-red-600"
+                >
+                  <XCircle className="mr-2 h-4 w-4" /> Clear Date
+                </Button>
+              </div>
+            )}
           </PopoverContent>
         </Popover>
       );
@@ -212,23 +222,21 @@ export const getColumns = ({
     header: "Next Action Notes",
     cell: ({ row }) => {
       const trackedJobId = row.original.tracked_job_id;
-      // CRITICAL: Use useMemo to get the latest data from allTableData
       const currentJobData = useMemo(() =>
         allTableData.find(job => job.tracked_job_id === trackedJobId),
         [allTableData, trackedJobId]
       );
       const notes = currentJobData?.next_action_notes;
 
-      console.log(`[Next Action Notes Cell] Rendered Job ID: ${trackedJobId}, Value from live data: ${notes}`);
-
       return (
         <Textarea
+          id={`next-action-notes-${trackedJobId}`} // Added id attribute
+          name={`next-action-notes-${trackedJobId}`} // Added name attribute
           key={trackedJobId + (notes || "")}
           defaultValue={notes || ""}
           placeholder="Add notes..."
           onBlur={(e) => {
             if (e.target.value !== (notes || "")) {
-              console.log(`[Next Action Notes] onBlur triggered. Saving notes: ${e.target.value}`);
               handleUpdateJobField(trackedJobId, 'next_action_notes', e.target.value || null);
             }
           }}
