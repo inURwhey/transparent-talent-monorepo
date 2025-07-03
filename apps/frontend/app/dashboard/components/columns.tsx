@@ -2,7 +2,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, MoreHorizontal, ChevronRight, CalendarIcon, XCircle } from "lucide-react" // Added XCircle icon
+import { ArrowUpDown, MoreHorizontal, ChevronRight, CalendarIcon, XCircle } from "lucide-react"
 import { format } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover" // Corrected this line
 import { Calendar } from "@/components/ui/calendar"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
@@ -70,11 +70,13 @@ export const getColumns = ({
     cell: ({ row }) => (<Checkbox checked={row.getIsSelected()} onCheckedChange={(value) => row.toggleSelected(!!value)} />),
     enableSorting: false,
     enableHiding: false,
+    size: 30, // Small fixed size for checkbox
   },
   {
     accessorKey: "job_title",
     header: "Job",
     cell: ({ row }) => (<div className="font-medium">{row.original.job_title}<div className="text-sm text-muted-foreground">{row.original.company_name}</div></div>),
+    size: 250, // Give job title more space
   },
   {
     accessorKey: "status",
@@ -91,7 +93,6 @@ export const getColumns = ({
           value={status}
           onValueChange={(newValue) => handleStatusChange(row.original.tracked_job_id, newValue)}
         >
-          {/* Added id and name attributes */}
           <SelectTrigger id={`status-select-${row.original.tracked_job_id}`} name={`status-select-${row.original.tracked_job_id}`} className="w-auto bg-gray-50">
             <SelectValue className={textColor} placeholder="Select Status" />
           </SelectTrigger>
@@ -108,6 +109,7 @@ export const getColumns = ({
         </Select>
       );
     },
+    size: 150, // Fixed size for status dropdown
   },
   {
     accessorKey: "ai_grade",
@@ -144,11 +146,13 @@ export const getColumns = ({
     },
     enableSorting: true,
     enableHiding: true,
+    size: 80, // Fixed size for checkbox column
   },
   {
     accessorKey: "created_at",
     header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Date Saved<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
-    cell: ({ row }) => (new Date(row.original.created_at).toLocaleDateString())
+    cell: ({ row }) => (new Date(row.original.created_at).toLocaleDateString()),
+    size: 120, // Fixed size for dates
   },
   {
     accessorKey: "applied_at",
@@ -157,7 +161,8 @@ export const getColumns = ({
       const appliedAt = row.original.applied_at;
       if (!appliedAt) { return <div className="text-center">-</div>; }
       return new Date(appliedAt).toLocaleDateString();
-    }
+    },
+    size: 120, // Fixed size for dates
   },
   {
     accessorKey: "next_action_at",
@@ -173,13 +178,16 @@ export const getColumns = ({
       const dateValue = nextActionAt ? new Date(nextActionAt) : undefined;
       const [open, setOpen] = useState(false);
 
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); 
+
       return (
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
               variant={"outline"}
               className={cn(
-                "w-auto justify-start text-left font-normal bg-gray-50",
+                "w-full justify-start text-left font-normal bg-gray-50",
                 !dateValue && "text-muted-foreground"
               )}
             >
@@ -196,14 +204,14 @@ export const getColumns = ({
                 setOpen(false);
               }}
               initialFocus
-              fromDate={new Date()} // Prevent setting dates in the past
+              fromDate={today}
             />
             {dateValue && (
               <div className="p-2 pt-0">
                 <Button 
                   variant="ghost" 
                   onClick={() => {
-                    handleUpdateJobField(trackedJobId, 'next_action_at', null); // Clear date
+                    handleUpdateJobField(trackedJobId, 'next_action_at', null);
                     setOpen(false);
                   }}
                   className="w-full text-sm text-red-500 hover:text-red-600"
@@ -215,7 +223,8 @@ export const getColumns = ({
           </PopoverContent>
         </Popover>
       );
-    }
+    },
+    size: 180,
   },
   {
     accessorKey: "next_action_notes",
@@ -230,8 +239,8 @@ export const getColumns = ({
 
       return (
         <Textarea
-          id={`next-action-notes-${trackedJobId}`} // Added id attribute
-          name={`next-action-notes-${trackedJobId}`} // Added name attribute
+          id={`next-action-notes-${trackedJobId}`}
+          name={`next-action-notes-${trackedJobId}`}
           key={trackedJobId + (notes || "")}
           defaultValue={notes || ""}
           placeholder="Add notes..."
@@ -240,10 +249,11 @@ export const getColumns = ({
               handleUpdateJobField(trackedJobId, 'next_action_notes', e.target.value || null);
             }
           }}
-          className="min-h-[50px] bg-gray-50 text-sm"
+          className="min-h-[50px] bg-gray-50 text-sm w-full"
         />
       );
-    }
+    },
+    size: 200,
   },
   {
     id: "actions",
@@ -262,5 +272,6 @@ export const getColumns = ({
         </DropdownMenu>
       )
     },
+    size: 50,
   },
 ];

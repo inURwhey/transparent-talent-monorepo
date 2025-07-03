@@ -96,6 +96,8 @@ export function DataTable<TData extends TrackedJob, TValue>({
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
+          id="job-title-filter" // Added id
+          name="job_title_filter" // Added name
           placeholder="Filter jobs by title..."
           value={(table.getColumn("job_title")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
@@ -130,7 +132,6 @@ export function DataTable<TData extends TrackedJob, TValue>({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {/* Added overflow-x-auto here to allow horizontal scrolling if content is too wide */}
       <div className="rounded-md border overflow-x-auto"> 
         <Table>
           <TableHeader>
