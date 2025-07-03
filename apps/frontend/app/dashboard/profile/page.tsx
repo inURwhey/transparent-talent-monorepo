@@ -25,14 +25,42 @@ const ONBOARDING_REQUIRED_FIELDS: (keyof Profile)[] = [
     'desired_title'
 ];
 
-const changeToleranceBackendToFrontendMap: Record<string, string> = {
-    'Stable': 'Priorities are stable and I can focus on a long-term roadmap.',
-    'High': 'The team is nimble and priorities pivot often based on new data.',
-};
-const changeToleranceFrontendToBackendMap: Record<string, string> = {
-    'Priorities are stable and I can focus on a long-term roadmap.': 'Stable',
-    'The team is nimble and priorities pivot often based on new data.': 'High',
-};
+// Mappings for UI display values to/from backend ENUM values (display strings)
+// These mappings are crucial because the backend returns full display strings for ENUMs.
+// The frontend needs to ensure its SelectItem values match these for proper binding.
+const companySizeOptions = [
+    { value: 'No Preference', label: 'No Preference' },
+    { value: 'Startup (1-50 employees)', label: 'Startup (1-50 employees)' },
+    { value: 'Small (51-200 employees)', label: 'Small (51-200 employees)' },
+    { value: 'Medium (201-1000 employees)', label: 'Medium (201-1000 employees)' },
+    { value: 'Large (1001-10000 employees)', label: 'Large (1001-10000 employees)' },
+    { value: 'Enterprise (10000+ employees)', label: 'Enterprise (10000+ employees)' },
+];
+
+const workStyleOptions = [
+    { value: 'No Preference', label: 'No Preference' },
+    { value: 'An ambiguous environment where I can create my own structure.', label: 'An ambiguous environment where I can create my own structure.' },
+    { value: 'A structured environment with clearly defined tasks.', label: 'A structured environment with clearly defined tasks.' },
+];
+
+const conflictResolutionOptions = [
+    { value: 'No Preference', label: 'No Preference' },
+    { value: 'Have a direct, open debate to resolve the issue quickly.', label: 'Have a direct, open debate to resolve the issue quickly.' },
+    { value: 'Build consensus with stakeholders before presenting a solution.', label: 'Build consensus with stakeholders before presenting a solution.' },
+];
+
+const communicationPreferenceOptions = [
+    { value: 'No Preference', label: 'No Preference' },
+    { value: 'Detailed written documentation (e.g., docs, wikis, Notion).', label: 'Detailed written documentation (e.g., docs, wikis, Notion).' },
+    { value: 'Real-time synchronous meetings (e.g., Zoom, Slack huddles).', label: 'Real-time synchronous meetings (e.g., Zoom, Slack huddles).' },
+];
+
+const changeToleranceOptions = [
+    { value: 'No Preference', label: 'No Preference' },
+    { value: 'Priorities are stable and I can focus on a long-term roadmap.', label: 'Priorities are stable and I can focus on a long-term roadmap.' },
+    { value: 'The team is nimble and priorities pivot often based on new data.', label: 'The team is nimble and priorities pivot often based on new data.' },
+];
+
 
 const formatNumberForDisplay = (num: number | null | undefined): string => {
     if (num === null || num === undefined) return '';
@@ -83,27 +111,31 @@ export default function UserProfilePage() {
             if (!response.ok) throw new Error('Failed to fetch profile.');
             const data: Profile = await response.json();
             setProfile(data);
-        } catch (err: any) { setError(err.message); } 
+        } catch (err: any) { setError(err.message); }
         finally { setIsLoading(false); }
     }, [isAuthLoaded, authedFetch, apiBaseUrl]);
 
     useEffect(() => { fetchProfile(); }, [fetchProfile]);
-    
+
     const handleChange = useCallback((id: keyof Profile, value: any) => {
         setProfile(prev => {
             if (!prev) return null;
             let actualValue: any = value;
+
             if (id === 'desired_salary_min' || id === 'desired_salary_max') {
                 actualValue = parseFormattedNumber(value);
-            } else if (value === '') {
+            } else if (value === 'No Preference') {
+                // For ENUMs, "No Preference" needs to be sent as the explicit string "No Preference"
+                actualValue = "No Preference";
+            } else if (value === 'null') { // Handles the specific string "null" from SelectItem
                 actualValue = null;
-            } else if (id === 'change_tolerance') {
-                actualValue = changeToleranceFrontendToBackendMap[value] || null; 
-            } else if (value === 'null') {
+            } else if (value === '') { // Handles empty string from text inputs or Select when unset
                 actualValue = null;
             }
+
             let updatedProfile = { ...prev, [id]: actualValue };
-            
+
+            // Conditional logic for is_remote_preferred
             if (id === 'preferred_work_style' && actualValue !== 'Hybrid') {
                 updatedProfile.is_remote_preferred = false;
             }
@@ -128,14 +160,14 @@ export default function UserProfilePage() {
             setTimeout(() => {
                 window.location.assign('/dashboard');
             }, 1500);
-        } catch (err: any) { 
+        } catch (err: any) {
             console.error("Error updating profile:", err);
-            setError(err.message); 
+            setError(err.message);
         } finally {
             setIsSaving(false);
         }
     }, [apiBaseUrl, authedFetch]);
-    
+
     const handleSubmit = useCallback((e: FormEvent) => {
         e.preventDefault();
         if (!profile) return;
@@ -187,42 +219,43 @@ export default function UserProfilePage() {
                             <CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Work Style & Preferences{openSections.workStyle ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                             <CollapsibleContent className="p-4 pt-2 space-y-4">
                                 <div><Label htmlFor="work_style_preference">I do my best work in...{isRequired('work_style_preference') && <span className="text-red-500 ml-1">*</span>}</Label>
-                                    <Select name="work_style_preference" value={profile.work_style_preference || ''} onValueChange={(v) => handleChange('work_style_preference',v)}>
+                                    <Select name="work_style_preference" value={profile.work_style_preference ?? ''} onValueChange={(v) => handleChange('work_style_preference',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select a work style..." /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="null">No Preference</SelectItem>
-                                            <SelectItem value="An ambiguous environment where I can create my own structure.">An ambiguous environment where I can create my own structure.</SelectItem>
-                                            <SelectItem value="A structured environment with clearly defined tasks.">A structured environment with clearly defined tasks.</SelectItem>
+                                            {workStyleOptions.map(option => (
+                                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div><Label htmlFor="conflict_resolution_style">When I disagree with a colleague, I prefer to...{isRequired('conflict_resolution_style') && <span className="text-red-500 ml-1">*</span>}</Label>
-                                    <Select name="conflict_resolution_style" value={profile.conflict_resolution_style || ''} onValueChange={(v) => handleChange('conflict_resolution_style',v)}>
+                                    <Select name="conflict_resolution_style" value={profile.conflict_resolution_style ?? ''} onValueChange={(v) => handleChange('conflict_resolution_style',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select a conflict style..." /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="null">No Preference</SelectItem>
-                                            <SelectItem value="Have a direct, open debate to resolve the issue quickly.">Have a direct, open debate to resolve the issue quickly.</SelectItem>
-                                            <SelectItem value="Build consensus with stakeholders before presenting a solution.">Build consensus with stakeholders before presenting a solution.</SelectItem>
+                                            {conflictResolutionOptions.map(option => (
+                                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div><Label htmlFor="communication_preference">I communicate most effectively through...{isRequired('communication_preference') && <span className="text-red-500 ml-1">*</span>}</Label>
-                                    <Select name="communication_preference" value={profile.communication_preference || ''} onValueChange={(v) => handleChange('communication_preference',v)}>
+                                    <Select name="communication_preference" value={profile.communication_preference ?? ''} onValueChange={(v) => handleChange('communication_preference',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select a communication style..." /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="null">No Preference</SelectItem>
-                                            <SelectItem value="Detailed written documentation (e.g., docs, wikis, Notion).">Detailed written documentation (e.g., docs, wikis, Notion).</SelectItem>
-                                            <SelectItem value="Real-time synchronous meetings (e.g., Zoom, Slack huddles).">Real-time synchronous meetings (e.g., Zoom, Slack huddles).</SelectItem>
+                                            {communicationPreferenceOptions.map(option => (
+                                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div><Label htmlFor="change_tolerance">I am most productive when...{isRequired('change_tolerance') && <span className="text-red-500 ml-1">*</span>}</Label>
-                                    <Select name="change_tolerance" value={changeToleranceBackendToFrontendMap[profile.change_tolerance ?? ''] || ''} onValueChange={(v) => handleChange('change_tolerance',v)}>
+                                    {/* `profile.change_tolerance ?? ''` ensures that if it's null, it becomes empty string for Select value binding */}
+                                    <Select name="change_tolerance" value={profile.change_tolerance ?? ''} onValueChange={(v) => handleChange('change_tolerance',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select your preference for change..." /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="null">No Preference</SelectItem>
-                                            <SelectItem value="Priorities are stable and I can focus on a long-term roadmap.">Priorities are stable and I can focus on a long-term roadmap.</SelectItem>
-                                            <SelectItem value="The team is nimble and priorities pivot often based on new data.">The team is nimble and priorities pivot often based on new data.</SelectItem>
+                                            {changeToleranceOptions.map(option => (
+                                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -276,15 +309,12 @@ export default function UserProfilePage() {
                                 )}
                                 <div>
                                     <Label htmlFor="preferred_company_size">Preferred Company Size</Label>
-                                    <Select value={profile.preferred_company_size || ''} onValueChange={(value) => handleChange('preferred_company_size', value)}>
+                                    <Select value={profile.preferred_company_size ?? ''} onValueChange={(value) => handleChange('preferred_company_size', value)}>
                                         <SelectTrigger><SelectValue placeholder="No Preference" /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="null">No Preference</SelectItem>
-                                            <SelectItem value="Startup (1-50 employees)">Startup (1-50 employees)</SelectItem>
-                                            <SelectItem value="Small (51-200 employees)">Small (51-200 employees)</SelectItem>
-                                            <SelectItem value="Medium (201-1000 employees)">Medium (201-1000 employees)</SelectItem>
-                                            <SelectItem value="Large (1001-10000 employees)">Large (1001-10000 employees)</SelectItem>
-                                            <SelectItem value="Enterprise (10000+ employees)">Enterprise (10000+ employees)</SelectItem>
+                                            {companySizeOptions.map(option => (
+                                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -310,7 +340,7 @@ export default function UserProfilePage() {
                                 <div><Label htmlFor="personality_gallup_strengths">Gallup Strengths (Top 5)</Label><Textarea id="personality_gallup_strengths" value={profile.personality_gallup_strengths || ''} onChange={(e) => handleChange('personality_gallup_strengths', e.target.value)} rows={3} /></div>
                             </CollapsibleContent>
                         </Collapsible>
-                        
+
                         <div className="pt-4 space-y-4">
                              {error && <div className="bg-red-100 border-l-4 border-red-400 text-red-700 p-4" role="alert"><strong className="font-bold">Error! </strong>{error}</div>}
                              {successMessage && <div className="bg-green-100 border-l-4 border-green-400 text-green-700 p-4" role="alert"><strong className="font-bold">Success! </strong>{successMessage}</div>}
