@@ -1,12 +1,12 @@
 // Path: apps/frontend/app/dashboard/components/CompanyProfileCard.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Loader2 } from "lucide-react";
 import { type CompanyProfile } from '../types';
 
 interface CompanyProfileCardProps {
-    companyId: number;
+    companyId: number | null; // Allow null
     fetchCompanyProfile: (companyId: number) => Promise<CompanyProfile | null>;
     isExpanded: boolean;
 }
@@ -16,29 +16,41 @@ export default function CompanyProfileCard({ companyId, fetchCompanyProfile, isE
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        // This effect should ONLY run when the component is expanded for the first time.
-        // We check `isExpanded` to trigger it, and `!profile` to ensure it only runs once.
-        if (isExpanded && !profile && !isLoading) {
-            const loadProfile = async () => {
-                setIsLoading(true);
-                setError(null);
-                try {
-                    const fetchedProfile = await fetchCompanyProfile(companyId);
-                    setProfile(fetchedProfile);
-                } catch (err) {
-                    setError("Failed to load company data.");
-                    console.error(err);
-                } finally {
-                    setIsLoading(false);
-                }
-            };
+    const loadProfile = useCallback(async () => {
+        // --- FIX: Add a guard clause to prevent fetching with null/undefined ID ---
+        if (!companyId) {
+            setIsLoading(false);
+            return;
+        }
+        
+        setIsLoading(true);
+        setError(null);
+        try {
+            const fetchedProfile = await fetchCompanyProfile(companyId);
+            setProfile(fetchedProfile);
+        } catch (err) {
+            setError("Failed to load company data.");
+            console.error(err);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [companyId, fetchCompanyProfile]);
 
+    useEffect(() => {
+        if (isExpanded && !profile && !isLoading && !error) {
             loadProfile();
         }
-    // This simplified dependency array is key. It re-evaluates the effect
-    // when `isExpanded` changes, which is exactly what we need.
-    }, [isExpanded, companyId, fetchCompanyProfile, profile, isLoading]);
+    }, [isExpanded, loadProfile, profile, isLoading, error]);
+
+
+    // If there's no company ID, don't render anything.
+    if (!companyId) {
+        return (
+            <div className="p-4 bg-gray-50/50 border-l-4 border-gray-300">
+                <p className="text-gray-500 text-sm">Company data not available for this entry.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="p-4 bg-gray-50/50 border-l-4 border-blue-500">
