@@ -6,21 +6,23 @@ import { useAuth, useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 
 import { useJobRecommendationsApi } from '../../hooks/useJobRecommendationsApi';
-import { useTrackedJobsApi } from './hooks/useTrackedJobsApi'; // CORRECTED IMPORT PATH
+import { useTrackedJobsApi } from './hooks/useTrackedJobsApi';
 
 import { JobSubmissionForm } from './components/JobSubmissionForm';
 import JobsForYou from './components/JobsForYou';
 import JobTracker from './components/JobTracker';
 import { Button } from '@/components/ui/button';
-import { type Profile, type UpdatePayload } from './types'; // Import UpdatePayload
+import { type Profile, type UpdatePayload } from './types';
 
 export default function UserDashboard() {
   const { data: recommendedJobs, isLoading: isLoadingRecs, error: recsError, refetch: refetchRecommendations } = useJobRecommendationsApi();
+  // Corrected destructuring for useTrackedJobsApi - it returns 'trackedJobs' directly, not nested in 'data'.
+  // Also destructure 'actions' to pass down to JobTracker.
+  const { trackedJobs: trackedJobsData, isLoading: isLoadingTrackedJobs, error: trackedJobsError, refetch: refetchTrackedJobs, actions: trackedJobsActions } = useTrackedJobsApi();
+  
   const { isLoaded: isUserLoaded, user } = useUser();
   const { getToken } = useAuth();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  const { refetch: refetchTrackedJobs } = useTrackedJobsApi();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,6 +49,7 @@ export default function UserDashboard() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || `Failed to update job field ${String(field)}.`);
       
+      // Trigger refetch of tracked jobs to update UI
       refetchTrackedJobs();
 
     } catch (error) {
@@ -85,7 +88,7 @@ export default function UserDashboard() {
 
   useEffect(() => {
     const fetchInitialProfile = async () => {
-        if (!isUserLoaded || profile) return;
+        if (!isUserLoaded || profile) return; // Only fetch if user is loaded and profile is not yet set
         try {
             const token = await getToken();
             if (!token) return;
@@ -100,9 +103,15 @@ export default function UserDashboard() {
     fetchInitialProfile();
   }, [isUserLoaded, getToken, apiBaseUrl, profile]);
 
-  const isLoading = !isUserLoaded || !profile;
+  // Combine loading states for a single dashboard loading indicator
+  const isLoading = !isUserLoaded || !profile || isLoadingRecs || isLoadingTrackedJobs;
   if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading Dashboard...</div>;
   
+  // Display errors if any exist for recommendations or tracked jobs
+  // Removed .message as error is already a string
+  if (recsError) return <div className="min-h-screen flex items-center justify-center text-red-600">Error loading recommendations: {recsError}</div>;
+  if (trackedJobsError) return <div className="min-h-screen flex items-center justify-center text-red-600">Error loading tracked jobs: {trackedJobsError}</div>;
+
   return (
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -130,7 +139,14 @@ export default function UserDashboard() {
           isProfileComplete={profile!.has_completed_onboarding}
         />
         
-        <JobTracker handleUpdateJobField={handleUpdateJobField} />
+        <JobTracker 
+          trackedJobs={trackedJobsData || []} // Pass the fetched data as a prop
+          totalCount={trackedJobsData?.length || 0} // trackedJobsData is an array, so its length is the total count for client-side pagination
+          isLoading={isLoadingTrackedJobs} // Pass loading state
+          error={trackedJobsError} // Pass error state
+          handleUpdateJobField={handleUpdateJobField}
+          actions={trackedJobsActions} // Pass the actions object
+        />
         
       </div>
     </main>

@@ -9,11 +9,12 @@
 
 ## Developer Workflow & Quality Assurance
 
-### Git Branching & Preview Protocol v1.0
+// Commented out while preview environment is broken.
+/* ### Git Branching & Preview Protocol v1.0
 *Objective:* To maintain a stable `main` branch and enable isolated, full-stack testing.
 1.  **Start Work:** Create a descriptive feature branch (e.g., `feature/user-onboarding`, `bugfix/profile-save`). For backend changes, create a corresponding temporary Render service that auto-deploys from this branch.
 2.  **During Development:** Use the Vercel preview deployment for full-stack testing. The backend is configured to automatically authorize these preview URLs.
-3.  **Complete Work:** Create a Pull Request to `main`. After approval and merge, decommission the temporary Render service.
+3.  **Complete Work:** Create a Pull Request to `main`. After approval and merge, decommission the temporary Render service. */
 
 ### Development Cycle Protocol v1.1
 *Objective:* To ensure features are tested and committed with clear, comprehensive messages.

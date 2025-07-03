@@ -4,22 +4,37 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { PaginationState } from '@tanstack/react-table';
 
-import { useTrackedJobsApi } from '../hooks/useTrackedJobsApi';
+// Removed: import { useTrackedJobsApi } from '../hooks/useTrackedJobsApi'; // No longer fetching internally
 import { DataTable } from '../data-table';
 import { getColumns } from './columns';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { type UpdatePayload, type TrackedJob } from '../types';
+import { type UpdatePayload, type TrackedJob, type CompanyProfile } from '../types';
 
 interface JobTrackerProps {
-    // Corrected type for handleUpdateJobField to use keyof UpdatePayload
+    trackedJobs: TrackedJob[]; // Added prop for data
+    isLoading: boolean; // Added prop for loading state
+    error: string | null; // Added prop for error state
+    totalCount: number; // Added prop for total count (for pagination)
     handleUpdateJobField: (trackedJobId: number, field: keyof UpdatePayload, value: any) => Promise<void>;
+    // Pass necessary actions from useTrackedJobsApi down
+    actions: {
+        updateTrackedJob: (trackedJobId: number, payload: UpdatePayload) => Promise<void>;
+        removeTrackedJob: (trackedJobId: number) => Promise<void>;
+        fetchCompanyProfile: (companyId: number) => Promise<CompanyProfile | null>;
+    };
 }
 
 const ACTIVE_PIPELINE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS'];
 
-export default function JobTracker({ handleUpdateJobField }: JobTrackerProps) {
-    const { trackedJobs, isLoading: isLoadingJobs, error: jobsError, actions } = useTrackedJobsApi();
+export default function JobTracker({
+    trackedJobs, // Destructure from props
+    isLoading,   // Destructure from props
+    error,       // Destructure from props
+    totalCount,  // Destructure from props
+    handleUpdateJobField,
+    actions // Destructure actions from props
+}: JobTrackerProps) {
     
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
     const [filterStatus, setFilterStatus] = useState<'all' | 'active_pipeline' | 'closed_pipeline' | 'active_posting' | 'expired_posting'>('all');
@@ -34,15 +49,15 @@ export default function JobTracker({ handleUpdateJobField }: JobTrackerProps) {
         if (newStatus === 'OFFER_NEGOTIATIONS' && !currentJob.offer_received_at) payload.offer_received_at = now;
         if (!ACTIVE_PIPELINE_STATUSES.includes(newStatus) && !currentJob.resolved_at) payload.resolved_at = now;
         if (ACTIVE_PIPELINE_STATUSES.includes(newStatus) && currentJob.resolved_at) payload.resolved_at = null;
-        await actions.updateTrackedJob(trackedJobId, payload);
+        await actions.updateTrackedJob(trackedJobId, payload); // Use actions from props
     }, [actions, trackedJobs]);
 
     const handleToggleExcited = useCallback(async (trackedJobId: number, isExcited: boolean) => {
-        await actions.updateTrackedJob(trackedJobId, { is_excited: isExcited });
+        await actions.updateTrackedJob(trackedJobId, { is_excited: isExcited }); // Use actions from props
     }, [actions]);
 
     const handleRemoveJob = useCallback(async (trackedJobId: number) => {
-        if (window.confirm("Are you sure?")) await actions.removeTrackedJob(trackedJobId);
+        if (window.confirm("Are you sure?")) await actions.removeTrackedJob(trackedJobId); // Use actions from props
     }, [actions]);
 
     const filteredTrackedJobs = useMemo(() => {
@@ -56,7 +71,7 @@ export default function JobTracker({ handleUpdateJobField }: JobTrackerProps) {
                 default: return true;
             }
         });
-    }, [trackedJobs, filterStatus]);
+    }, [trackedJobs, filterStatus]); // Use trackedJobs prop here
 
     useEffect(() => { setPagination(prev => ({ ...prev, pageIndex: 0 })); }, [filterStatus]);
 
@@ -71,12 +86,12 @@ export default function JobTracker({ handleUpdateJobField }: JobTrackerProps) {
         [handleStatusChange, handleRemoveJob, handleToggleExcited, handleUpdateJobField, filteredTrackedJobs]
     );
     
-    if (isLoadingJobs) {
+    if (isLoading) { // Use isLoading prop
         return <div className="text-center p-8">Loading your tracked jobs...</div>;
     }
 
-    if (jobsError) {
-        return <div className="text-center p-8 text-red-600">Error loading jobs: {jobsError}</div>;
+    if (error) { // Use error prop
+        return <div className="text-center p-8 text-red-600">Error loading jobs: {error}</div>;
     }
 
     return (
@@ -100,8 +115,8 @@ export default function JobTracker({ handleUpdateJobField }: JobTrackerProps) {
                 data={filteredTrackedJobs}
                 pagination={pagination}
                 setPagination={setPagination}
-                totalCount={filteredTrackedJobs.length}
-                fetchCompanyProfile={actions.fetchCompanyProfile}
+                totalCount={totalCount} // Use totalCount prop
+                fetchCompanyProfile={actions.fetchCompanyProfile} // Use actions from props
             />
         </div>
     );
