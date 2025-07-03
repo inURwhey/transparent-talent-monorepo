@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover" // CORRECTED LINE
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
@@ -182,6 +182,8 @@ export const getColumns = ({
 
       return (
         <Textarea
+          // Corrected key to handle null 'notes'
+          key={trackedJobId + (notes || "")} 
           defaultValue={notes || ""}
           placeholder="Add notes..."
           onBlur={(e) => {
