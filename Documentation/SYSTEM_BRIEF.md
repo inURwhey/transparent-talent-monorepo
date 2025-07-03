@@ -15,9 +15,8 @@
 *   **Architecture Style:** Decoupled three-tier application, managed in a **monorepo**. The backend now follows a service-oriented architecture with an application factory pattern.
 
 ## 3. Current Project Status
-*   **Automated Data Enrichment:** The system is now significantly more intelligent. It automatically researches new companies upon job submission, creating a rich profile of company data (industry, mission, etc.). This data is then fed directly into the core AI analysis prompt, substantially improving the accuracy of the "Environment Fit" calculation and strengthening the platform's primary value proposition.
-*   **Onboarding Lifecycle Hardened:** The entire new user experience, from sign-up and job submission to profile completion, is stable and robust. Critical bugs related to data integrity, state synchronization, and edge cases (like re-tracking jobs or resume parsing overwriting data) have been resolved.
-*   **"Jobs For You" Module (v1) Live:** A module on the user dashboard displays a ranked list of personalized job recommendations.
+*   **V1 Company Profiles (Live):** An end-to-end feature for company data is now live. The backend automatically researches new companies upon job submission. The frontend has been refactored into a modular architecture and now displays this AI-generated company data in an expandable "Company Snapshot" card within the job tracker, making the "Environment Fit" score transparent to the user.
+*   **Onboarding Lifecycle Hardened:** The entire new user experience, from sign-up and job submission to profile completion, is stable and robust.
 *   **Application is stable and functional on its production domain.**
 
 ## 4. Immediate Backlog & Next Steps

@@ -3,6 +3,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.49.0 - 2025-07-03 - Company Profile V1 & Dashboard Refactor
+
+This release completes the V1 of the Company Profile feature by adding a user-facing UI to display AI-generated company data. To support this, the entire dashboard frontend has been refactored into a more stable and modular architecture, resolving numerous bugs and improving future development velocity.
+
+### Added
+- **Feature: Company Profile Snapshot UI:** Users can now expand a tracked job row in the "My Job Tracker" table to view a snapshot of the company's profile, including its industry, size, mission, and business model. This makes the "Environment Fit" analysis transparent to the user.
+- **Backend API:** A new endpoint `GET /api/companies/<int:company_id>/profile` was added to serve the company profile data to the frontend.
+
+### Changed
+- **Architecture (Frontend):** The main dashboard page (`page.tsx`) and its related components (`columns.tsx`, `data-table.tsx`) have been significantly refactored. Logic is now encapsulated in new, single-responsibility components like `JobTracker.tsx` and `CompanyProfileCard.tsx`, improving maintainability and fixing a cascade of state management bugs.
+- **Backend:** The `tracked_job_service.py` now correctly includes the `company_id` in the data payload for the job tracker, enabling the frontend to fetch the correct profile.
+
+### Fixed
+- **Critical Frontend Bug:** Fixed a persistent bug where the Company Snapshot card would either not load data or get stuck in an infinite loading loop due to complex `useEffect` dependency issues.
+- **Backend Data Bug:** Fixed a bug in `tracked_job_service.py` where a query for a non-existent `user_notes` column caused the main job tracker API to fail.
+
 ## v0.48.0 - 2025-07-02 - Automated Company Data Enrichment
 
 This release implements a significant backend feature that automatically researches and enriches company data, directly improving the core job relevancy engine. It also includes several critical bugfixes related to data integrity and edge case handling in the job submission process.
