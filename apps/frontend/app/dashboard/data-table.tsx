@@ -60,6 +60,11 @@ export function DataTable<TData extends TrackedJob, TValue>({
   const [rowSelection, setRowSelection] = React.useState({})
   const [expanded, setExpanded] = React.useState({})
 
+  // Log to see if data prop is changing
+  React.useEffect(() => {
+    console.log("[DataTable] Data prop received/updated:", data);
+  }, [data]);
+
   const table = useReactTable({
     data,
     columns,
