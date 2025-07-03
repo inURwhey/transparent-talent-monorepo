@@ -15,12 +15,13 @@
 *   **Architecture Style:** Decoupled three-tier application, managed in a **monorepo**. The backend now follows a service-oriented architecture with an application factory pattern.
 
 ## 3. Current Project Status
+*   **Structured User Preferences:** Critical user profile preference fields have been migrated to `ENUM` types in the database, enabling a precise distinction between unset fields and explicitly stated "No Preference." This is a foundational improvement for the core relevancy engine.
 *   **CRM Reminders & Notes (Live):** The foundational CRM-like functionality has been implemented, allowing users to add "Next Action Date" and "Next Action Notes" to their tracked jobs. This enhances personal pipeline management.
 *   **V1 Company Profiles (Live):** An end-to-end feature for company data is now live. The backend automatically researches new companies upon job submission. The frontend has been refactored into a modular architecture and now displays this AI-generated company data in an expandable "Company Snapshot" card within the job tracker, making the "Environment Fit" score transparent to the user.
 *   **Onboarding Lifecycle Hardened:** The entire new user experience, from sign-up and job submission to profile completion, is stable and robust.
 *   **Application is stable and functional on its production domain.**
 
 ## 4. Immediate Backlog & Next Steps
-1.  **Architecture: Distinguish 'Unset' vs 'No Preference' in DB:** Migrate user profile preference fields from `TEXT` to `ENUM` types to differentiate between a field a user hasn't set versus one they explicitly have no preference for. This is critical for data integrity and improving the accuracy of the relevancy engine. (RICE: 4000)
-2.  **Backend: Re-process malformed job data:** Create an admin endpoint to clean up historical job data that was saved with placeholder titles. (RICE: 4000)
+1.  **Backend: Re-process malformed job data:** Create an admin endpoint to clean up historical job data that was saved with placeholder titles. (RICE: 4000)
+2.  **Bugfix: Profile Save Fails Randomly (Likely Render Instance Spin-down):** Likely related to Render's free tier instance spin-down during inactivity. Investigate Flask's app context and database connection handling to ensure robustness. (Priority: High)
 3.  **Bugfix: UI Update Delay for Job Tracker Fields:** The "Next Action Date" and "Next Action Notes" fields do not visually update immediately after changes are saved, despite successful backend persistence and frontend data refetch. This requires further investigation into React's reconciliation and `react-table`'s rendering pipeline. (Priority: High)

@@ -21,7 +21,6 @@
 ## Tier 1: Foundational Infrastructure (Highest Priority)
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Architecture: Distinguish 'Unset' vs 'No Preference' in DB** | E02 | 1000 | 2 | 100% | 0.5 | **4000** | Pro Breakdown | M | **To Do** |
 | **Backend: Re-process malformed job data** | - | 1000 | 2 | 100% | 0.5 | **4000** | Flash | S | **To Do** |
 | **Bugfix: Profile Save Fails Randomly (Likely Render Instance Spin-down)** | - | 1000 | 1 | 70% | 0.5 | **1400** | Flash | S | **To Do** |
 
@@ -97,6 +96,7 @@
 ## Completed Features & Bugfixes
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
+| **Architecture: Distinguish 'Unset' vs 'No Preference' in DB** | Tier 1 | 4000 |
 | **Feature: User-set Reminders & Next Action Notifications** | Tier 1 | 4000 |
 | **Feature: Enhanced Company Profiles & Research** | Tier 2 | 1200 |
 | **Feature: Automated Company Data Enrichment** | Tier 2 | 5400 |

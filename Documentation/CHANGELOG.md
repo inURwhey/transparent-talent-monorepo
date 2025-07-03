@@ -3,6 +3,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.51.0 - 2025-07-04 - Data Integrity: ENUMs for User Preferences
+
+This release significantly enhances data integrity and prepares the system for more accurate relevancy calculations by migrating key user profile preference fields to PostgreSQL ENUM types. It includes full-stack implementation to ensure seamless display and persistence of these structured preferences.
+
+### Added
+-   **Database:** New PostgreSQL `ENUM` types: `company_size_enum`, `work_style_type_enum`, `conflict_resolution_enum`, `communication_pref_enum`, `change_tolerance_enum`, and `work_location_enum`.
+-   **Database:** Explicit `NO_PREFERENCE` option added to all new ENUM types, enabling clear distinction from `NULL` (unset) values.
+-   **Backend:** New `COMPANY_SIZE_MAPPING`, `WORK_STYLE_MAPPING`, `CONFLICT_RESOLUTION_MAPPING`, `COMMUNICATION_PREFERENCE_MAPPING`, `CHANGE_TOLERANCE_MAPPING`, and `WORK_LOCATION_MAPPING` in `ProfileService` for consistent ENUM value management.
+-   **Frontend:** New explicit option arrays (`companySizeOptions`, `workStyleOptions`, etc.) for `Select` components on the User Profile page, improving maintainability and ensuring consistent option lists.
+
+### Changed
+-   **Database Schema:** Migrated `user_profiles` columns (`preferred_company_size`, `work_style_preference`, `conflict_resolution_style`, `communication_preference`, `change_tolerance`, `preferred_work_style`) from `TEXT`/`VARCHAR` to their respective new `ENUM` types.
+-   **Backend (`ProfileService`):**
+    *   Updated `allowed_fields` to reflect ENUM types.
+    *   Enhanced `_map_db_to_display` and `_map_display_to_db` helpers to handle all newly converted ENUMs, ensuring bidirectional mapping between database short codes (e.g., `STARTUP`) and frontend display strings (e.g., `Startup (1-50 employees)`).
+    *   Modified `get_profile_for_analysis` to use raw ENUM values for AI prompts while still formatting other fields.
+-   **Frontend (`UserProfilePage`):**
+    *   Updated `Select` components to bind `value` prop to `profile.fieldName ?? ''` ensuring correct behavior with `null` values and placeholders.
+    *   Refined `handleChange` logic to consistently interpret `Select` input values, correctly mapping "No Preference" strings to their explicit values, and empty strings/`"null"` to `null` for backend submission.
+    *   Adjusted `SelectValue` rendering for `preferred_company_size` and `preferred_work_style` to explicitly display "No Preference" in black text when it's selected.
+-   **Frontend (`types.ts`):** Broadened type definitions for ENUM-backed fields (e.g., `preferred_work_style`) from strict literal unions to `string | null` to accommodate all valid display strings.
+
+### Fixed
+-   **Database Migration Error:** Resolved `invalid input value for enum` errors during database migration by implementing explicit `CASE WHEN` statements to map existing long-form `TEXT` values to new short-code `ENUM` values.
+-   **TypeScript Compilation Error:** Fixed `TS2367` by updating `Profile` interface types, allowing frontend to correctly handle new ENUM string values.
+-   **UI Display & Persistence Bugs:** Addressed issues where ENUM values (especially "No Preference") were not correctly displaying after save, appearing as grey placeholders instead of selected black text, or failing to persist.
+
+
 ## v0.50.0 - 2025-07-03 - CRM Reminders & Notes (Backend & Core Frontend)
 
 This release implements the foundational CRM-like functionality for tracked jobs, allowing users to add "Next Action Date" and "Next Action Notes." It also includes critical bug fixes and architectural refinements across the frontend.
