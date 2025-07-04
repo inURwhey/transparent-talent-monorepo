@@ -85,4 +85,11 @@
 *   **Directive:** When updating `BACKLOG.md` during a full `END_PROMPT`, remove the "Completed" section entirely. Completed items live permanently in the `CHANGELOG.md`.
 
 ### Self-Correction on Abridgement Protocol v1.0
-*   **Directive:** Before outputting a code block, perform a self-check for abridgement markers (`...`). If found, stop, state the protocol violation, and regenerate the complete, unabridged file.
+*   **Directive:** Before outputting a code block, perform a self-check for abridgement markers (`...`, `// ...`, `# ...`). If found, stop, state the protocol violation, and regenerate the complete, unabridged file.
+
+### Architectural Change Impact Protocol v1.0
+*Objective:* To prevent cascading failures after a major architectural change (e.g., ORM migration, auth system swap).
+1.  **Identify Impact Radius:** Before beginning work, identify all code files and services that directly or indirectly depend on the system being changed.
+2.  **Create Systemic Test Plan:** Create a test plan that explicitly includes verification steps for *every single file* within the impact radius identified in step 1.
+3.  **Proactive Refactoring:** During implementation, if a file in the impact radius is only partially updated, proactively update the *entire file* to be consistent with the new architecture, even if it is outside the immediate scope of the task. Do not leave latent bugs.
+4.  **Verify End-to-End:** After code changes are complete, testing must include a full, end-to-end user flow that touches all affected components (e.g., user signup -> profile completion -> job submission -> admin view).

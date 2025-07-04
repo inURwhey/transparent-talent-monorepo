@@ -3,6 +3,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.55.0 - 2025-07-04 - ORM Fallout Remediation & AI API Diagnostics
+### Added
+- **Protocols:** Added `Architectural Change Impact Protocol v1.0` to prevent cascading failures after major refactors.
+- **Backend (Admin):** Added a temporary `/api/admin/list-models` debugging endpoint to get a ground-truth list of available Gemini models for the configured API key.
+
+### Changed
+- **Protocols:** Updated the `Self-Correction on Abridgement Protocol` to detect more patterns of truncated code.
+
+### Fixed
+- **Critical Bug (Full Stack):** Resolved a deep-seated, cascading series of bugs resulting from the Flask-SQLAlchemy migration. This involved:
+    - Fixing all backend `AttributeError` and `500` errors by making services robust to null relationships.
+    - Synchronizing the entire frontend data layer (`types.ts`, hooks, and components) with the new nested API data contract, which resolved all Vercel build failures.
+- **Authentication:** Fixed the `@admin_required` decorator logic, which was failing due to incorrect assumptions about decorator execution order. Admin-only endpoints are now functional.
+
+### Known Issues
+- **AI Features Non-Functional:** All calls to the Gemini API are still failing with a `400 Bad Request` or `404 Not Found` error, blocking resume parsing and job analysis. The root cause has been narrowed down to an incompatibility between the API version endpoint and the model names being used.
+
 ## v0.54.0 - 2025-07-04 - Full-Stack ORM Synchronization
 ### Fixed
 - **Critical Build Failure:** Resolved a cascade of TypeScript errors across the entire frontend that prevented Vercel deployments. This was a comprehensive fix to synchronize all components (`profile/page.tsx`, `JobTracker.tsx`, `columns.tsx`, `data-table.tsx`, `JobsForYou.tsx`, `types.ts`) with the new, nested API data contract provided by the SQLAlchemy backend.
