@@ -29,7 +29,7 @@ export default function JobTracker({
     trackedJobs,
     isLoading,
     error,
-    totalCount, // This totalCount is for the *unfiltered* list, used for global pagination display
+    totalCount,
     handleUpdateJobField,
     actions
 }: JobTrackerProps) {
@@ -45,14 +45,13 @@ export default function JobTracker({
 
         if (newStatus === 'APPLIED' && !currentJob.applied_at) {
             payload.applied_at = now;
-        } else if (newStatus === 'SAVED' && currentJob.applied_at) { // Fix: Clear applied_at if status reverts to SAVED
+        } else if (newStatus === 'SAVED' && currentJob.applied_at) {
             payload.applied_at = null;
         }
         
         if (newStatus === 'INTERVIEWING' && !currentJob.first_interview_at) payload.first_interview_at = now;
         if (newStatus === 'OFFER_NEGOTIATIONS' && !currentJob.offer_received_at) payload.offer_received_at = now;
         
-        // Handle resolved_at for terminal vs. active states
         if (!ACTIVE_PIPELINE_STATUSES.includes(newStatus) && !currentJob.resolved_at) {
             payload.resolved_at = now;
         } else if (ACTIVE_PIPELINE_STATUSES.includes(newStatus) && currentJob.resolved_at) {
@@ -79,15 +78,11 @@ export default function JobTracker({
             case 'all': // fall through
             default: filtered = trackedJobs; break;
         }
-        // Always reset pagination to page 0 when filters change or data updates significantly
-        // This is handled by a useEffect below, but keeps memoization clean.
         return filtered;
     }, [trackedJobs, filterStatus]);
 
-    // This useEffect ensures pagination resets when filter changes
     useEffect(() => { setPagination(prev => ({ ...prev, pageIndex: 0 })); }, [filterStatus]);
 
-    // New: Slice the filtered data for current page display
     const paginatedFilteredJobs = useMemo(() => {
         const start = pagination.pageIndex * pagination.pageSize;
         const end = start + pagination.pageSize;
@@ -100,7 +95,7 @@ export default function JobTracker({
             handleRemoveJob,
             handleToggleExcited,
             handleUpdateJobField,
-            allTableData: filteredTrackedJobs, // Pass the entire filtered set for cell-level memoization
+            allTableData: filteredTrackedJobs,
         }),
         [handleStatusChange, handleRemoveJob, handleToggleExcited, handleUpdateJobField, filteredTrackedJobs]
     );
@@ -131,10 +126,10 @@ export default function JobTracker({
             </div>
             <DataTable
                 columns={columns}
-                data={paginatedFilteredJobs} // Pass the paginated data
+                data={paginatedFilteredJobs}
                 pagination={pagination}
                 setPagination={setPagination}
-                totalCount={filteredTrackedJobs.length} // totalCount for pagination UI should be of the filtered set
+                totalCount={filteredTrackedJobs.length}
                 fetchCompanyProfile={actions.fetchCompanyProfile}
             />
         </div>
