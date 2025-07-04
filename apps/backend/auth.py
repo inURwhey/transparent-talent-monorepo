@@ -7,8 +7,7 @@ import jwt
 from jwt.algorithms import RSAAlgorithm
 import requests
 
-# CORRECTED IMPORT: Import the SQLAlchemy instance from the app.py within the same package
-from .app import db
+from .app import db # CORRECTED IMPORT: Import the SQLAlchemy instance from the main app factory
 from .models import User # Import the User model
 
 from .config import config

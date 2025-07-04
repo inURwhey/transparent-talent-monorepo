@@ -1,378 +1,235 @@
 # Path: apps/backend/services/profile_service.py
+from flask import current_app
+from sqlalchemy.exc import IntegrityError
+from datetime import datetime
+import pytz
 
-from psycopg2.extras import DictCursor, Json
-from ..database import get_db
-from decimal import Decimal
-from typing import Dict, Any, Optional
-from ..config import config # Assuming config is imported for ANALYSIS_PROTOCOL_VERSION
+from ..app import db # NEW IMPORT for Flask-SQLAlchemy
+from ..models import UserProfile, User, ResumeSubmission # Also import ResumeSubmission for potential use
 
-# Define mappings between ENUM values (short codes) and display strings (long forms)
-# These will be used for both serialization to frontend and deserialization from frontend.
-
+# Mapping for ENUM fields from database value to display string
 COMPANY_SIZE_MAPPING = {
-    "STARTUP": "Startup (1-50 employees)",
-    "SMALL": "Small (51-200 employees)",
-    "MEDIUM": "Medium (201-1000 employees)",
-    "LARGE": "Large (1001-10000 employees)",
-    "ENTERPRISE": "Enterprise (10000+ employees)",
-    "NO_PREFERENCE": "No Preference",
+    'SMALL_BUSINESS': 'Small Business (1-50 employees)',
+    'MEDIUM_BUSINESS': 'Medium Business (51-250 employees)',
+    'LARGE_ENTERPRISE': 'Large Enterprise (250+ employees)',
+    'STARTUP': 'Startup (1-50 employees)',
+    'NO_PREFERENCE': 'No Preference'
 }
 
 WORK_STYLE_MAPPING = {
-    "STRUCTURED": "A structured environment with clearly defined tasks.",
-    "FLEXIBLE": "An ambiguous environment where I can create my own structure.",
-    "NO_PREFERENCE": "No Preference",
+    'STRUCTURED': 'Structured (Clear processes, predictable)',
+    'AUTONOMOUS': 'Autonomous (Independent, self-directed)',
+    'COLLABORATIVE': 'Collaborative (Team-oriented, frequent interaction)',
+    'HYBRID': 'Hybrid (Mix of structure and autonomy)',
+    'NO_PREFERENCE': 'No Preference'
 }
 
 CONFLICT_RESOLUTION_MAPPING = {
-    "DIRECT": "Have a direct, open debate to resolve the issue quickly.",
-    "COLLABORATIVE": "Build consensus with stakeholders before presenting a solution.",
-    "NO_PREFERENCE": "No Preference",
+    'DIRECT': 'Direct (Face-to-face, immediate)',
+    'MEDIATED': 'Mediated (Involving a third party)',
+    'AVOIDANT': 'Avoidant (Prefer to de-escalate or avoid)',
+    'NO_PREFERENCE': 'No Preference'
 }
 
 COMMUNICATION_PREFERENCE_MAPPING = {
-    "WRITTEN": "Detailed written documentation (e.g., docs, wikis, Notion).",
-    "SYNCHRONOUS": "Real-time synchronous meetings (e.g., Zoom, Slack huddles).",
-    "NO_PREFERENCE": "No Preference",
+    'WRITTEN': 'Written (Email, documentation)',
+    'VERBAL': 'Verbal (Meetings, calls)',
+    'VISUAL': 'Visual (Diagrams, presentations)',
+    'NO_PREFERENCE': 'No Preference'
 }
 
 CHANGE_TOLERANCE_MAPPING = {
-    "HIGH": "The team is nimble and priorities pivot often based on new data.",
-    "LOW": "Priorities are stable and I can focus on a long-term roadmap.",
-    "NO_PREFERENCE": "No Preference",
+    'HIGH': 'High (Thrive in fast-paced, evolving environments)',
+    'MEDIUM': 'Medium (Adaptable but prefer some stability)',
+    'LOW': 'Low (Prefer stability and established routines)',
+    'NO_PREFERENCE': 'No Preference'
 }
 
-# New mapping for preferred_work_style (work_location_enum)
 WORK_LOCATION_MAPPING = {
-    "ON_SITE": "On-site",
-    "HYBRID": "Hybrid",
-    "REMOTE": "Remote",
-    "NO_PREFERENCE": "No Preference",
-}
-
-# Consolidate all mappings for easy lookup in _format_profile_for_frontend and update_profile
-ALL_ENUM_MAPPINGS = {
-    "preferred_company_size": COMPANY_SIZE_MAPPING,
-    "work_style_preference": WORK_STYLE_MAPPING,
-    "conflict_resolution_style": CONFLICT_RESOLUTION_MAPPING,
-    "communication_preference": COMMUNICATION_PREFERENCE_MAPPING,
-    "change_tolerance": CHANGE_TOLERANCE_MAPPING,
-    "preferred_work_style": WORK_LOCATION_MAPPING, # Added new mapping
+    'ON_SITE': 'On-site',
+    'REMOTE': 'Remote',
+    'HYBRID': 'Hybrid',
+    'NO_PREFERENCE': 'No Preference'
 }
 
 
 class ProfileService:
-    def __init__(self, logger):
-        self.logger = logger
+    def __init__(self, logger=None):
+        self.logger = logger or current_app.logger
         self.allowed_fields = [
-            "full_name", "current_location", "linkedin_profile_url", "resume_url",
-            "short_term_career_goal", "long_term_career_goals",
-            "desired_salary_min", "desired_salary_max",
-            "desired_title", "ideal_role_description", "preferred_company_size", # Now ENUM
-            "ideal_work_culture", "disliked_work_culture", "core_strengths",
-            "skills_to_avoid", "non_negotiable_requirements", "deal_breakers",
-            "preferred_industries", "industries_to_avoid", "personality_adjectives",
-            "personality_16_personalities", "personality_disc", "personality_gallup_strengths",
-            "preferred_work_style", # Now ENUM
-            "is_remote_preferred", "latitude", "longitude",
-            "has_completed_onboarding",
-            "work_style_preference", # Now ENUM
-            "conflict_resolution_style", # Now ENUM
-            "communication_preference", # Now ENUM
-            "change_tolerance" # Now ENUM
+            'phone_number', 'linkedin_url', 'github_url', 'portfolio_url', 'location',
+            'latitude', 'longitude', 'current_role', 'desired_job_titles',
+            'desired_salary_min', 'desired_salary_max', 'target_industries',
+            'career_goals', 'preferred_company_size', 'work_style_preference',
+            'conflict_resolution_style', 'communication_preference', 'change_tolerance',
+            'preferred_work_style', 'is_remote_preferred',
+            'skills', 'education', 'work_experience', 'personality_16_personalities',
+            'other_personal_attributes', 'has_completed_onboarding'
         ]
+        self.enum_fields = {
+            'preferred_company_size': COMPANY_SIZE_MAPPING,
+            'work_style_preference': WORK_STYLE_MAPPING,
+            'conflict_resolution_style': CONFLICT_RESOLUTION_MAPPING,
+            'communication_preference': COMMUNICATION_PREFERENCE_MAPPING,
+            'change_tolerance': CHANGE_TOLERANCE_MAPPING,
+            'preferred_work_style': WORK_LOCATION_MAPPING
+        }
 
-    def _map_db_to_display(self, db_value: Optional[str], mapping: Dict[str, str]) -> Optional[str]:
-        """Maps an internal DB ENUM value to its user-friendly display string."""
-        if db_value is None:
-            return None
-        return mapping.get(db_value, None) # Return None if not found, indicating an unmapped value or error
+    def _map_db_to_display(self, field_name, db_value):
+        """Maps database ENUM value to a user-friendly display string."""
+        if field_name in self.enum_fields and db_value is not None:
+            # db_value will be an Enum object, need to get its value first
+            return self.enum_fields[field_name].get(db_value.value, db_value.value)
+        return db_value
 
-    def _map_display_to_db(self, display_value: Optional[str], mapping: Dict[str, str]) -> Optional[str]:
-        """Maps a user-friendly display string to its internal DB ENUM value."""
-        # Treat None, empty string, or "null" string from frontend as DB NULL
-        if display_value is None or str(display_value).strip() == "" or str(display_value).lower() == "null":
-            return None
-
-        # Find the DB key for the given display value
-        for db_key, display_str in mapping.items():
-            if display_str == display_value:
-                return db_key
-
-        # If the display value is "No Preference" (literal) and it's a valid enum member for this mapping,
-        # return "NO_PREFERENCE". This handles cases where UI sends "No Preference" directly for the enum field.
-        if display_value == "No Preference" and "NO_PREFERENCE" in mapping:
-             return "NO_PREFERENCE"
-
-        # If not found in mapping, return None. This will be saved as NULL in DB
-        # or trigger a psycopg2.errors.InvalidTextRepresentation error if the column is NOT NULL
-        # and an unmapped value was attempted.
-        return None
-
-    def _get_active_resume_text(self, cursor, user_id: int) -> str:
-        cursor.execute(
-            "SELECT raw_text FROM resume_submissions WHERE user_id = %s AND is_active = TRUE ORDER BY submitted_at DESC LIMIT 1",
-            (user_id,)
-        )
-        resume_row = cursor.fetchone()
-        return resume_row['raw_text'] if resume_row else ""
+    def _map_display_to_db(self, field_name, display_value):
+        """Maps user-friendly display string to a database ENUM value."""
+        if field_name in self.enum_fields and display_value is not None:
+            # Find the key (DB value) for the given display_value
+            for db_key, display_str in self.enum_fields[field_name].items():
+                if display_str == display_value:
+                    return db_key
+            # If "No Preference" is selected, ensure it maps to the correct ENUM value
+            if display_value == "No Preference":
+                return "NO_PREFERENCE"
+            # If value is an empty string or null from frontend, convert to None for DB
+            if display_value == '' or display_value == 'null':
+                return None
+            return display_value # Return as is if no mapping found (e.g., direct enum value passed)
+        return None if display_value == '' or display_value == 'null' else display_value
 
     def get_profile(self, user_id: int):
-        db = get_db()
-        with db.cursor(cursor_factory=DictCursor) as cursor: # Use DictCursor for easier dict access
-            cursor.execute("SELECT * FROM user_profiles WHERE user_id = %s", (user_id,))
-            profile_row = cursor.fetchone()
+        """Fetches a user's profile, creating a default if none exists."""
+        profile = UserProfile.query.filter_by(user_id=user_id).first()
+        if not profile:
+            self.logger.info(f"No profile found for user {user_id}. Creating default.")
+            profile = UserProfile(user_id=user_id)
+            db.session.add(profile)
+            try:
+                db.session.commit()
+                db.session.refresh(profile) # Refresh to get ID and default values
+            except IntegrityError as e:
+                db.session.rollback()
+                self.logger.error(f"Integrity error when creating default profile for user {user_id}: {e}")
+                # Attempt to retrieve if it was created by a concurrent request
+                profile = UserProfile.query.filter_by(user_id=user_id).first()
+                if not profile: raise e # If still no profile, re-raise error
+            except Exception as e:
+                db.session.rollback()
+                self.logger.error(f"Error creating default profile for user {user_id}: {e}")
+                raise e
 
-            if not profile_row:
-                self.logger.info(f"No profile for user_id {user_id}. Creating default.")
-                cursor.execute("INSERT INTO user_profiles (user_id) VALUES (%s) RETURNING *;", (user_id,))
-                profile_row = cursor.fetchone()
-                db.commit()
+        profile_dict = profile.to_dict()
+        # Map ENUM values for display
+        for field, mapping in self.enum_fields.items():
+            db_value = getattr(profile, field)
+            profile_dict[field] = self._map_db_to_display(field, db_value)
 
-            return self._format_profile_for_frontend(profile_row) # Call new formatting helper
-
-    def get_profile_for_analysis(self, user_id: int):
-        db = get_db()
-        with db.cursor(cursor_factory=DictCursor) as cursor: # Use DictCursor for consistency
-            # For analysis, we need the *internal* raw DB values for ENUMs (short codes), not display strings.
-            cursor.execute("SELECT * FROM user_profiles WHERE user_id = %s", (user_id,))
-            raw_profile_for_analysis = cursor.fetchone()
-
-            if not raw_profile_for_analysis:
-                raise ValueError(f"User profile not found for analysis for user_id {user_id}.")
-
-            resume_text = self._get_active_resume_text(cursor, user_id)
-
-            if not resume_text:
-                raise ValueError("User has no active resume. Analysis cannot be performed.")
-
-            analysis_columns = [
-                "short_term_career_goal", "ideal_role_description", "core_strengths",
-                "skills_to_avoid", "preferred_industries", "industries_to_avoid",
-                "desired_title", "non_negotiable_requirements", "deal_breakers",
-                "preferred_work_style", # Added for analysis context
-                "is_remote_preferred",
-                "desired_salary_min", "desired_salary_max",
-                "preferred_company_size", # Added for analysis context
-                "work_style_preference", # Added for analysis context
-                "conflict_resolution_style", # Added for analysis context
-                "communication_preference", # Added for analysis context
-                "change_tolerance" # Added for analysis context
-            ]
-            profile_labels = {
-                "short_term_career_goal": "Short-Term Career Goal", "ideal_role_description": "Ideal Role",
-                "core_strengths": "Core Strengths", "skills_to_avoid": "Skills To Avoid",
-                "preferred_industries": "Preferred Industries", "industries_to_avoid": "Industries To Avoid",
-                "desired_title": "Desired Title", "non_negotiable_requirements": "Non-Negotiables",
-                "deal_breakers": "Deal Breakers",
-                "preferred_work_style": "Preferred Work Style", # Label for new ENUM
-                "is_remote_preferred": "Remote Preference",
-                "desired_salary_min": "Desired Minimum Salary",
-                "desired_salary_max": "Desired Maximum Salary",
-                "preferred_company_size": "Preferred Company Size",
-                "work_style_preference": "Work Style Preference",
-                "conflict_resolution_style": "Conflict Resolution Style",
-                "communication_preference": "Communication Preference",
-                "change_tolerance": "Change Tolerance"
-            }
-            profile_parts = []
-            for col in analysis_columns:
-                value = raw_profile_for_analysis.get(col) # Use raw profile for analysis
-                if col == 'is_remote_preferred':
-                    if value: profile_parts.append(f"- {profile_labels[col]}: Yes, remote is preferred.")
-                elif value and str(value).strip():
-                    # For ENUMs, use the raw DB value which is the short code
-                    profile_parts.append(f"- {profile_labels[col]}: {value}")
-
-            if len(profile_parts) == 0:
-                raise ValueError("User profile is too sparse. Please fill out your profile to enable analysis.")
-
-            profile_context = "\n".join(profile_parts)
-            full_context = f"USER PROFILE & PREFERENCES:\n---\n{profile_context}\n---\n\nUSER RESUME:\n---\n{resume_text}\n---"
-            return full_context
+        return profile_dict
 
     def update_profile(self, user_id: int, data: dict):
-        fields_to_update = []
-        params = []
-        db = get_db() # Get DB connection for this function scope
+        """Updates a user's profile with provided data."""
+        profile = UserProfile.query.filter_by(user_id=user_id).first()
+        if not profile:
+            # This case should ideally be handled by get_profile creating a default.
+            # But as a fallback, create if not found.
+            profile = UserProfile(user_id=user_id)
+            db.session.add(profile)
 
-        with db.cursor() as cursor: # Use a cursor for updates
-
-            for field, value in data.items():
-                if field in self.allowed_fields:
-                    # Apply display-to-db mapping for ENUM fields
-                    if field in ALL_ENUM_MAPPINGS:
-                        db_value = self._map_display_to_db(value, ALL_ENUM_MAPPINGS[field])
-                        fields_to_update.append(f"{field} = %s")
-                        params.append(db_value)
-                    elif field in ['is_remote_preferred', 'has_completed_onboarding']:
-                        fields_to_update.append(f"{field} = %s")
-                        params.append(bool(value) if value is not None and value != '' else False)
-                    elif field in ['desired_salary_min', 'desired_salary_max']:
-                        fields_to_update.append(f"{field} = %s")
-                        params.append(int(value) if value is not None else None)
-                    elif field in ['latitude', 'longitude']:
-                        fields_to_update.append(f"{field} = %s")
-                        params.append(float(value) if value is not None else None)
-                    else:
-                        fields_to_update.append(f"{field} = %s")
-                        params.append(value if value else None) # Handles other text fields, empty strings become None
-
-            if not fields_to_update:
-                self.logger.warning("Update profile called with no valid fields.")
-                return None
-
-            try:
-                sql = f"UPDATE user_profiles SET {', '.join(fields_to_update)} WHERE user_id = %s RETURNING *;"
-                params.append(user_id)
-                cursor.execute(sql, tuple(params))
-                updated_profile_row = cursor.fetchone()
-                db.commit()
-                return self._format_profile_for_frontend(updated_profile_row) # Format for frontend
-            except Exception as e:
-                db.rollback()
-                self.logger.error(f"Error updating user profile for user_id {user_id}: {e}")
-                raise # Re-raise for route handler
-
-    def create_or_update_active_resume_submission(self, user_id: int, raw_text: str, source: str):
-        db = get_db()
-        try:
-            with db.cursor() as cursor:
-                self.logger.info(f"Deactivating old resumes for user_id: {user_id}")
-                cursor.execute("UPDATE resume_submissions SET is_active = FALSE WHERE user_id = %s;",(user_id,))
-                self.logger.info(f"Inserting new active resume for user_id: {user_id}, source: {source}")
-                cursor.execute(
-                    "INSERT INTO resume_submissions (user_id, raw_text, source, is_active) VALUES (%s, %s, %s, TRUE) RETURNING id;",
-                    (user_id, raw_text, source)
-                )
-                new_resume_id = cursor.fetchone()[0]
-                db.commit()
-                self.logger.info(f"Successfully saved new resume submission with id: {new_resume_id} for user_id: {user_id}")
-                return new_resume_id
-        except Exception as e:
-            db.rollback()
-            self.logger.error(f"Failed to save resume submission for user_id {user_id}: {e}")
-            raise
-
-    def check_and_trigger_onboarding_completion(self, user_id: int, required_fields: list):
-        self.logger.info(f"Checking onboarding status for user_id: {user_id}")
-        db = get_db()
-        with db.cursor(cursor_factory=DictCursor) as cursor: # Use DictCursor
-            # Fetch profile, but for logic here, we need the raw DB values
-            cursor.execute("SELECT * FROM user_profiles WHERE user_id = %s", (user_id,))
-            profile = cursor.fetchone()
-
-            if not profile: # Should not happen if get_profile creates one, but defensive check
-                self.logger.error(f"Profile not found for user {user_id} during onboarding check.")
-                return
-
-            if profile.get('has_completed_onboarding'):
-                self.logger.info(f"User {user_id} has already completed onboarding. No action needed.")
-                return
-
-            profile_fields_complete = True
-            for field in required_fields:
-                value = profile.get(field)
-                # Check if value is None or empty string after stripping whitespace
-                if value is None or (isinstance(value, str) and not value.strip()):
-                    profile_fields_complete = False
-                    break
-                # For ENUM fields, 'NO_PREFERENCE' counts as a set value for completion
-                # No additional check needed here for that.
-
-            has_active_resume = self._get_active_resume_text(cursor, user_id) != ""
-
-            self.logger.info(f"Onboarding check for user {user_id}: Profile Fields Complete? {profile_fields_complete}, Has Active Resume? {has_active_resume}")
-
-            if profile_fields_complete and has_active_resume:
-                self.logger.info(f"User {user_id} has now met all onboarding criteria. Updating status and triggering re-analysis.")
-                # Directly update in DB to avoid recursion with update_profile
-                cursor.execute(
-                    "UPDATE user_profiles SET has_completed_onboarding = TRUE WHERE user_id = %s;",
-                    (user_id,)
-                )
-                db.commit()
-                self.trigger_reanalysis_for_user(user_id)
-
-    def trigger_reanalysis_for_user(self, user_id: int):
-        from ..services.job_service import JobService
-
-        self.logger.info(f"Checking for jobs to re-analyze for user_id: {user_id}")
-        db = get_db()
-        job_service = JobService(self.logger)
-
-        try:
-            try:
-                # get_profile_for_analysis needs the raw DB values for the AI prompt
-                user_profile_text = self.get_profile_for_analysis(user_id)
-            except ValueError as e:
-                self.logger.warning(f"Skipping re-analysis for user {user_id}: {e}")
-                return {"message": "Profile saved, but is still too sparse for re-analysis."}
-
-            with db.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute("""
-                    SELECT t.job_id
-                    FROM tracked_jobs t
-                    LEFT JOIN job_analyses a ON t.job_id = a.job_id AND a.user_id = t.user_id
-                    WHERE t.user_id = %s AND a.job_id IS NULL;
-                """, (user_id,))
-
-                jobs_to_analyze = cursor.fetchall()
-                self.logger.info(f"Found {len(jobs_to_analyze)} jobs to re-analyze for user {user_id}.")
-
-                if not jobs_to_analyze:
-                    return {"message": "No jobs needed re-analysis."}
-
-                for job_row in jobs_to_analyze:
-                    job_id = job_row['job_id']
+        for key, value in data.items():
+            if key in self.allowed_fields:
+                if key in self.enum_fields:
+                    # Convert display string to DB ENUM value
+                    db_value = self._map_display_to_db(key, value)
+                    setattr(profile, key, db_value)
+                elif key in ['latitude', 'longitude'] and value is not None:
                     try:
-                        self.logger.info(f"Re-analyzing job_id {job_id} for user_id {user_id}")
-                        job_data = job_service.analyze_existing_job(job_id, user_profile_text)
-                        analysis_result = job_data['analysis']
+                        setattr(profile, key, float(value))
+                    except (ValueError, TypeError):
+                        self.logger.warning(f"Invalid numeric value for {key}: {value}. Setting to None.")
+                        setattr(profile, key, None)
+                elif key == 'is_remote_preferred' and value is None:
+                    # Handle frontend sending null/undefined for checkbox if not checked
+                    setattr(profile, key, False)
+                elif key in ['desired_salary_min', 'desired_salary_max'] and value is not None:
+                    try:
+                        # Strip commas and convert to int
+                        clean_value = int(str(value).replace(',', ''))
+                        setattr(profile, key, clean_value)
+                    except (ValueError, TypeError):
+                        self.logger.warning(f"Invalid integer value for {key}: {value}. Setting to None.")
+                        setattr(profile, key, None)
+                else:
+                    # For other fields, if value is empty string, set to None for DB
+                    setattr(profile, key, value if value != '' else None)
+        
+        profile.updated_at = datetime.now(pytz.utc) # Manually update timestamp
 
-                        cursor.execute("""
-                            INSERT INTO job_analyses (job_id, user_id, analysis_protocol_version, position_relevance_score, environment_fit_score, hiring_manager_view, matrix_rating, summary, qualification_gaps, recommended_testimonials)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (job_id, user_id) DO NOTHING;
-                        """, (
-                            job_id, user_id, config.ANALYSIS_PROTOCOL_VERSION,
-                            analysis_result.get('position_relevance_score'), analysis_result.get('environment_fit_score'),
-                            analysis_result.get('hiring_manager_view'), analysis_result.get('matrix_rating'),
-                            analysis_result.get('summary'), Json(analysis_result.get('qualification_gaps', [])),
-                            Json(analysis_result.get('recommended_testimonials', []))
-                        ))
-                    except Exception as e:
-                        self.logger.error(f"Failed to re-analyze job_id {job_id} for user {user_id}: {e}")
-                        continue
-
-                db.commit()
-                self.logger.info(f"Completed re-analysis for user {user_id}.")
-                return {"message": f"Successfully re-analyzed {len(jobs_to_analyze)} jobs."}
-
+        try:
+            db.session.commit()
+            db.session.refresh(profile)
         except Exception as e:
-            db.rollback()
-            self.logger.error(f"A critical error occurred during trigger_reanalysis_for_user for user_id {user_id}: {e}")
-            raise
+            db.session.rollback()
+            self.logger.error(f"Error updating profile for user {user_id}: {e}")
+            raise e
 
-    def _format_profile_for_frontend(self, profile_row: DictCursor) -> dict:
-        """
-        Formats a user profile row fetched from the database for consumption by the frontend.
-        Converts Decimal to float, ensures boolean fields are bool, and maps ENUMs to display strings.
-        """
-        if not profile_row:
-            return {}
+        profile_dict = profile.to_dict()
+        # Remap for display after successful update
+        for field, mapping in self.enum_fields.items():
+            db_value = getattr(profile, field)
+            profile_dict[field] = self._map_db_to_display(field, db_value)
 
-        profile_dict = dict(profile_row) # Convert psycopg2.extras.DictRow to a standard dict
-
-        for col_name, value in profile_dict.items():
-            if isinstance(value, Decimal):
-                profile_dict[col_name] = float(value)
-            elif col_name in ['desired_salary_min', 'desired_salary_max']:
-                 profile_dict[col_name] = int(value) if value is not None else None
-            elif col_name in ALL_ENUM_MAPPINGS: # Check if it's one of our ENUM columns
-                profile_dict[col_name] = self._map_db_to_display(value, ALL_ENUM_MAPPINGS[col_name])
-            elif col_name in ['is_remote_preferred', 'has_completed_onboarding']:
-                profile_dict[col_name] = bool(value) if value is not None else False
-            # For other text fields, they will remain as is (None remains None for the frontend now),
-            # unless the frontend explicitly handles empty strings.
         return profile_dict
+
+
+    def get_profile_for_analysis(self, user_id: int):
+        """
+        Retrieves a user's profile optimized for AI analysis.
+        Returns a flat dictionary with raw DB values, not display strings.
+        """
+        profile = UserProfile.query.filter_by(user_id=user_id).first()
+        if not profile:
+            self.logger.warning(f"No profile found for user {user_id} during AI analysis request.")
+            return None # Or a default empty profile dict
+
+        # Directly return the raw DB values as a dictionary
+        profile_data = profile.to_dict()
+        
+        # Ensure enums are their raw string values, not Enum objects
+        for field in self.enum_fields.keys():
+            if profile_data.get(field) and hasattr(profile_data[field], 'value'):
+                profile_data[field] = profile_data[field].value
+
+        return profile_data
+
+    def get_active_resume_text(self, user_id: int):
+        """Retrieves the raw text of the user's active resume."""
+        resume = ResumeSubmission.query.filter_by(user_id=user_id, is_active=True).first()
+        return resume.raw_text if resume else None
+
+    def has_completed_required_profile_fields(self, user_id: int):
+        """
+        Checks if a user has completed the minimal required profile fields
+        to enable full AI analysis.
+        """
+        profile = UserProfile.query.filter_by(user_id=user_id).first()
+        if not profile:
+            return False
+
+        # Define required fields based on your business logic
+        # For example, desired_job_titles and current_role
+        required_fields = [
+            profile.desired_job_titles,
+            profile.current_role
+        ]
+
+        # Check for presence of required text fields
+        if not all(field and field.strip() for field in required_fields):
+            return False
+        
+        # Check if an active resume has been submitted
+        active_resume = ResumeSubmission.query.filter_by(user_id=user_id, is_active=True).first()
+        if not active_resume:
+            return False
+
+        return True

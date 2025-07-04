@@ -1,7 +1,9 @@
 # apps/backend/models.py
-from apps.backend.app import db # Import db from app.py now
+from .app import db # Corrected import for db from the main app factory
 from datetime import datetime
 import pytz
+from sqlalchemy.dialects.postgresql import JSONB # NEW IMPORT for JSONB type
+from sqlalchemy import text # For db.text in unique constraint
 
 # Helper for timezone-aware default timestamps
 def get_utc_now():
@@ -130,7 +132,6 @@ class Company(db.Model):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 
-# NEW MODEL: JobOpportunity
 class JobOpportunity(db.Model):
     __tablename__ = 'job_opportunities'
     id = db.Column(db.Integer, primary_key=True)
@@ -144,8 +145,7 @@ class JobOpportunity(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, nullable=False)
     updated_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, onupdate=get_utc_now, nullable=False)
 
-    # Relationship to the canonical Job
-    job = db.relationship('Job', backref='opportunities') # backref 'opportunities' added to Job model
+    job = db.relationship('Job', backref=db.backref('opportunities', lazy=True))
 
     def to_dict(self):
         return {
@@ -161,29 +161,25 @@ class JobOpportunity(db.Model):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 
-# MODIFIED MODEL: Job
 class Job(db.Model):
     __tablename__ = 'jobs'
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('companies.id', ondelete='CASCADE'))
     company_name = db.Column(db.String(255))
     job_title = db.Column(db.Text, nullable=False)
-    # job_url = db.Column(db.Text, unique=True) # REMOVED THIS COLUMN - handled by JobOpportunity
-    source = db.Column(db.String(255)) # This column might become redundant or repurposed later
+    source = db.Column(db.String(255))
     notes = db.Column(db.Text)
     found_at = db.Column(db.DateTime(timezone=True), default=get_utc_now)
-    status = db.Column(db.String(50), nullable=False, default='Active') # This 'status' refers to the job posting itself
+    status = db.Column(db.String(50), nullable=False, default='Active')
     last_checked_at = db.Column(db.DateTime(timezone=True), default=get_utc_now)
     salary_min = db.Column(db.Integer)
     salary_max = db.Column(db.Integer)
     required_experience_years = db.Column(db.Integer)
     job_modality = db.Column(db.Enum('ON_SITE', 'REMOTE', 'HYBRID', name='job_modality_enum'))
     deduced_job_level = db.Column(db.Enum('ENTRY', 'ASSOCIATE', 'MID', 'SENIOR', 'LEAD', 'PRINCIPAL', 'DIRECTOR', 'VP', 'EXECUTIVE', name='job_level_enum'))
-    job_description_hash = db.Column(db.Text) # NEW COLUMN: A hash of the canonical job description
+    job_description_hash = db.Column(db.Text)
 
-    # Relationships
-    company = db.relationship('Company', backref='jobs')
-    # 'opportunities' backref is now automatically added via JobOpportunity model
+    company = db.relationship('Company', backref=db.backref('jobs', lazy=True))
 
     def to_dict(self):
         return {
@@ -204,13 +200,11 @@ class Job(db.Model):
             'job_description_hash': self.job_description_hash,
         }
 
-# MODIFIED MODEL: TrackedJob
 class TrackedJob(db.Model):
     __tablename__ = 'tracked_jobs'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    # job_id = db.Column(db.Integer, db.ForeignKey('jobs.id', ondelete='CASCADE'), nullable=False) # OLD COLUMN
-    job_opportunity_id = db.Column(db.Integer, db.ForeignKey('job_opportunities.id', ondelete='CASCADE'), nullable=False) # NEW COLUMN
+    job_opportunity_id = db.Column(db.Integer, db.ForeignKey('job_opportunities.id', ondelete='CASCADE'), nullable=False)
     applied_at = db.Column(db.DateTime(timezone=True))
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), default=get_utc_now)
@@ -224,12 +218,10 @@ class TrackedJob(db.Model):
     next_action_at = db.Column(db.DateTime(timezone=True))
     next_action_notes = db.Column(db.Text)
 
-    # Relationships
-    user = db.relationship('User', backref='tracked_jobs')
-    job_opportunity = db.relationship('JobOpportunity', backref=db.backref('tracked_by_users', lazy=True)) # Added lazy=True
+    user = db.relationship('User', backref=db.backref('tracked_jobs', lazy=True))
+    job_opportunity = db.relationship('JobOpportunity', backref=db.backref('tracked_by_users', lazy=True))
 
     def to_dict(self):
-        # This will be updated further in the next step to fetch nested job and company data
         return {
             'id': self.id,
             'user_id': self.user_id,
@@ -246,29 +238,25 @@ class TrackedJob(db.Model):
             'resolved_at': self.resolved_at.isoformat() if self.resolved_at else None,
             'next_action_at': self.next_action_at.isoformat() if self.next_action_at else None,
             'next_action_notes': self.next_action_notes,
-            # 'job_opportunity': self.job_opportunity.to_dict() if self.job_opportunity else None, # Relationship needs to be manually fetched
         }
 
-# MODIFIED MODEL: JobAnalysis
 class JobAnalysis(db.Model):
     __tablename__ = 'job_analyses'
-    # Primary key is (job_id, user_id)
-    job_id = db.Column(db.Integer, db.ForeignKey('jobs.id', ondelete='CASCADE'), primary_key=True) # This still links to the canonical Job
+    job_id = db.Column(db.Integer, db.ForeignKey('jobs.id', ondelete='CASCADE'), primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
     position_relevance_score = db.Column(db.Integer)
     environment_fit_score = db.Column(db.Integer)
     hiring_manager_view = db.Column(db.Text)
     matrix_rating = db.Column(db.String(50))
     summary = db.Column(db.Text)
-    qualification_gaps = db.Column(db.JSONB)
-    recommended_testimonials = db.Column(db.JSONB)
+    qualification_gaps = db.Column(JSONB)
+    recommended_testimonials = db.Column(JSONB)
     created_at = db.Column(db.DateTime(timezone=True), default=get_utc_now)
     updated_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, onupdate=get_utc_now)
     analysis_protocol_version = db.Column(db.String(20), nullable=False)
 
-    # Relationships
-    job = db.relationship('Job', backref=db.backref('analyses', lazy=True)) # Added lazy=True
-    user = db.relationship('User', backref=db.backref('job_analyses', lazy=True)) # Added lazy=True
+    job = db.relationship('Job', backref=db.backref('analyses', lazy=True))
+    user = db.relationship('User', backref=db.backref('job_analyses', lazy=True))
 
     def to_dict(self):
         return {
@@ -292,15 +280,15 @@ class ResumeSubmission(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     raw_text = db.Column(db.Text, nullable=False)
     submitted_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, nullable=False)
-    source = db.Column(db.String(50)) # e.g., 'file_upload', 'copy_paste'
+    source = db.Column(db.String(50))
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
     __table_args__ = (
         db.UniqueConstraint('user_id', 'is_active', name='_user_active_resume_uc',
-                            postgresql_where=db.text('is_active IS TRUE')),
+                            postgresql_where=text('is_active IS TRUE')),
     )
 
-    user = db.relationship('User', backref=db.backref('resume_submissions', lazy=True)) # Added lazy=True
+    user = db.relationship('User', backref=db.backref('resume_submissions', lazy=True))
 
     def to_dict(self):
         return {
@@ -309,7 +297,7 @@ class ResumeSubmission(db.Model):
             'submitted_at': self.submitted_at.isoformat() if self.submitted_at else None,
             'source': self.source,
             'is_active': self.is_active,
-            'raw_text_length': len(self.raw_text) # Don't return raw text for security/payload size
+            'raw_text_length': len(self.raw_text)
         }
 
 class JobOffer(db.Model):
@@ -318,7 +306,7 @@ class JobOffer(db.Model):
     tracked_job_id = db.Column(db.Integer, db.ForeignKey('tracked_jobs.id', ondelete='CASCADE'), nullable=False)
     salary = db.Column(db.Integer)
     bonus = db.Column(db.Integer)
-    equity = db.Column(db.Text) # Stored as text for flexibility (e.g., "0.1% shares", "1000 RSUs")
+    equity = db.Column(db.Text)
     is_accepted = db.Column(db.Boolean, default=False, nullable=False)
     offer_date = db.Column(db.DateTime(timezone=True))
     expiration_date = db.Column(db.DateTime(timezone=True))
@@ -326,7 +314,7 @@ class JobOffer(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=get_utc_now)
     updated_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, onupdate=get_utc_now)
 
-    tracked_job = db.relationship('TrackedJob', backref=db.backref('offers', uselist=True, lazy=True)) # Added lazy=True
+    tracked_job = db.relationship('TrackedJob', backref=db.backref('offers', uselist=True, lazy=True))
 
     def to_dict(self):
         return {
