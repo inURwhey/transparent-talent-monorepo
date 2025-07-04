@@ -26,6 +26,15 @@ export default function UserDashboard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
+  // --- DIAGNOSTIC LOGGING ---
+  console.log("--- DASHBOARD RENDER ---");
+  console.log("Value of trackedJobs:", trackedJobs);
+  console.log("Is trackedJobs an array?", Array.isArray(trackedJobs));
+  console.log("Value of recommendedJobs:", recommendedJobs);
+  console.log("Is recommendedJobs an array?", Array.isArray(recommendedJobs));
+  console.log("------------------------");
+  // --- END DIAGNOSTIC LOGGING ---
+
   const handleUpdateJobField = useCallback(async (trackedJobId: number, field: keyof UpdatePayload, value: any) => {
     try {
       await trackedJobsActions.updateTrackedJob(trackedJobId, { [field]: value } as UpdatePayload);
@@ -69,6 +78,13 @@ export default function UserDashboard() {
   
   const dashboardError = recsError || trackedJobsError;
   if (dashboardError) return <div className="min-h-screen flex items-center justify-center text-red-600">Error loading dashboard: {String(dashboardError)}</div>;
+  
+  // --- DIAGNOSTIC CHECK ---
+  if (!Array.isArray(trackedJobs) || !Array.isArray(recommendedJobs)) {
+    console.error("CRITICAL RENDER BLOCK: A data variable is not an array right before rendering.");
+    return <div className="min-h-screen flex items-center justify-center text-red-600">A critical data error occurred. Check the console for details.</div>;
+  }
+  // --- END DIAGNOSTIC CHECK ---
 
   return (
     <main className="min-h-screen bg-gray-50 p-8 font-sans">
@@ -82,7 +98,7 @@ export default function UserDashboard() {
         </div>
 
         <JobsForYou 
-          jobs={recommendedJobs || []}
+          jobs={recommendedJobs}
           isLoading={isLoadingRecs} 
           error={recsError ? String(recsError) : null}
           onTrack={handleJobSubmit}
@@ -103,7 +119,7 @@ export default function UserDashboard() {
           isLoading={isLoadingTrackedJobs}
           error={trackedJobsError ? String(trackedJobsError) : null}
           handleUpdateJobField={handleUpdateJobField}
-          actions={trackedJobsActions} 
+          actions={trackedJobsActions}
         />
         
       </div>
