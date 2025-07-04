@@ -2,16 +2,24 @@
 import os
 import re
 from flask import Flask, jsonify
+from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy # NEW IMPORT
+
+# Initialize SQLAlchemy globally, but don't bind it to an app yet
+db = SQLAlchemy() # NEW GLOBAL DB OBJECT
 
 def create_app():
     app = Flask(__name__)
 
     from . import config
     app.config.from_object(config.Config)
-    
+
+    # Configure SQLAlchemy
+    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['DATABASE_URL'] # Use existing DATABASE_URL
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # Disable event system for performance
+    db.init_app(app) # Initialize db with the Flask app
+
     # Re-instantiate Flask-CORS with a robust configuration
-    from flask_cors import CORS
-    
     # Define allowed origins, including a regex for Vercel preview deployments
     allowed_origins = [
         "https://www.transparenttalent.ai",
@@ -27,8 +35,8 @@ def create_app():
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     )
 
-    from . import database
-    database.init_app(app)
+    # REMOVED: from . import database
+    # REMOVED: database.init_app(app) # SQLAlchemy will manage connections now
 
     # Import all blueprints
     from .routes.profile import profile_bp
@@ -36,7 +44,7 @@ def create_app():
     from .routes.admin import admin_bp
     from .routes.onboarding import onboarding_bp
     from .routes.recommendations import reco_bp
-    from .routes.companies import companies_bp # <-- ADDED IMPORT
+    from .routes.companies import companies_bp
 
     # Register all blueprints with a consistent /api prefix
     app.register_blueprint(profile_bp, url_prefix='/api')
@@ -44,9 +52,7 @@ def create_app():
     app.register_blueprint(admin_bp, url_prefix='/api')
     app.register_blueprint(onboarding_bp, url_prefix='/api')
     app.register_blueprint(reco_bp, url_prefix='/api')
-    app.register_blueprint(companies_bp, url_prefix='/api') # <-- ADDED REGISTRATION
-
-    # The manual CORS middleware has been removed in favor of Flask-CORS.
+    app.register_blueprint(companies_bp, url_prefix='/api')
 
     @app.route('/')
     def index(): return "Backend server is running."
@@ -61,6 +67,8 @@ def create_app():
 
     return app
 
+# The app object is created here so that `db` can be accessed by models and services.
+# This assumes that models.py and services.py will import `db` directly from this module.
 app = create_app()
 
 if __name__ == '__main__':

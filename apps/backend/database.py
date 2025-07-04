@@ -1,3 +1,4 @@
+'''
 import psycopg2
 from psycopg2.extras import DictCursor
 from flask import g
@@ -26,4 +27,5 @@ def init_app(app):
     Register database functions with the Flask app. This is called from
     the application factory.
     """
-    app.teardown_appcontext(close_db)
+    app.teardown_appcontext(close_db) 
+'''
