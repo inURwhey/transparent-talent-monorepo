@@ -7,9 +7,8 @@ import jwt
 from jwt.algorithms import RSAAlgorithm
 import requests
 
-from .app import db # CORRECTED IMPORT: Import the SQLAlchemy instance from the main app factory
-from .models import User # Import the User model
-
+from .app import db
+from .models import User
 from .config import config
 
 def get_jwks():
@@ -25,9 +24,11 @@ def get_jwks():
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.headers.get('Authorization', '').split(" ")[1] if 'Authorization' in request.headers else None
-        if not token:
-            return jsonify({"message": "Token is missing!"}), 401
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"message": "Authorization header is missing or malformed."}), 401
+        
+        token = auth_header.split(" ")[1]
         
         jwks = get_jwks()
         if not jwks:
@@ -40,77 +41,66 @@ def token_required(f):
                 raise jwt.exceptions.InvalidKeyError("Public key not found in JWKS.")
             
             public_key = RSAAlgorithm.from_jwk(rsa_key)
+            
+            # This will also validate 'exp' and 'iss' claims
             claims = jwt.decode(token, public_key, algorithms=["RS256"], issuer=config.CLERK_ISSUER_URL, options={"verify_aud": False})
 
             authorized_party = claims.get('azp')
-            # Assuming CLERK_AUTHORIZED_PARTY can be a list or a string of comma-separated URLs
-            allowed_azp_regexes = [re.compile(pattern) for pattern in config.CLERK_AUTHORIZED_PARTY]
-            
             is_azp_allowed = False
-            for pattern in allowed_azp_regexes:
-                if pattern.match(authorized_party):
+            for pattern_str in config.CLERK_AUTHORIZED_PARTY:
+                if re.match(pattern_str, authorized_party):
                     is_azp_allowed = True
                     break
 
             if not is_azp_allowed:
-                current_app.logger.warning(f"JWT validation failed: Invalid authorized party (azp): {authorized_party}")
                 raise jwt.exceptions.InvalidAudienceError(f"Invalid authorized party: {authorized_party}")
             
             clerk_user_id = claims.get('sub')
             if not clerk_user_id:
                 raise Exception("Token is missing 'sub' (subject) claim.")
             
-            # --- START SQLAlchemy DB INTERACTION ---
             user = User.query.filter_by(clerk_user_id=clerk_user_id).first()
             
-            if user:
-                g.current_user = user
-            else:
+            if not user:
                 current_app.logger.info(f"First-time user with Clerk ID {clerk_user_id}. Creating new user record.")
                 email = claims.get('primary_email') or claims.get('email')
-                
-                new_user = User(clerk_user_id=clerk_user_id, email=email)
-                db.session.add(new_user)
-                db.session.commit() # Commit the new user to get their ID
-                db.session.refresh(new_user) # Refresh to get the ID and other defaults
-                g.current_user = new_user
+                user = User(clerk_user_id=clerk_user_id, email=email)
+                db.session.add(user)
+                db.session.commit()
+            
+            g.current_user = user
 
         except jwt.ExpiredSignatureError:
-            db.session.rollback() # Rollback any pending transactions
             return jsonify({"message": "Token has expired!"}), 401
-        except jwt.exceptions.InvalidAudienceError as e:
-            db.session.rollback()
+        except jwt.PyJWTError as e: # Catch specific JWT errors
             return jsonify({"message": f"JWT validation failed: {e}"}), 401
         except Exception as e:
-            db.session.rollback() # Ensure rollback on any unexpected error
-            current_app.logger.error(f"An unexpected error occurred during token validation: {e}")
+            db.session.rollback()
+            current_app.logger.error(f"An unexpected error occurred during token validation: {e}", exc_info=True)
             return jsonify({"message": "An unexpected error occurred during token validation."}), 500
         
         return f(*args, **kwargs)
     return decorated
 
 def admin_required(f):
-    """
-    A decorator to ensure the user is an admin.
-    Must be used *after* @token_required.
-    """
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not hasattr(config, 'CLERK_ADMIN_USER_IDS') or not config.CLERK_ADMIN_USER_IDS:
+        # This decorator must be used after @token_required, so g.current_user is guaranteed to exist.
+        if not hasattr(g, 'current_user'):
+             return jsonify({"message": "Authentication context not found."}), 500
+
+        admin_ids_str = config.CLERK_ADMIN_USER_IDS
+        if not admin_ids_str:
             current_app.logger.error("CLERK_ADMIN_USER_IDS is not set in the configuration.")
             return jsonify({"message": "Server configuration error: Admin list not set."}), 500
 
-        admin_ids = [id.strip() for id in config.CLERK_ADMIN_USER_IDS.split(',')]
+        admin_ids = {admin_id.strip() for admin_id in admin_ids_str.split(',')}
         
-        # Access clerk_user_id directly from the User object
-        user_clerk_id = g.current_user.clerk_user_id if hasattr(g, 'current_user') and g.current_user else None
-        
-        # --- DEBUGGING LOGS ---
-        current_app.logger.info(f"Admin Check: User Clerk ID is '{user_clerk_id}' (Type: {type(user_clerk_id)})")
-        current_app.logger.info(f"Admin Check: Admin ID list is {admin_ids} (Types: {[type(i) for i in admin_ids]})")
-        
-        if not user_clerk_id or user_clerk_id not in admin_ids:
-            current_app.logger.warning(f"Admin access DENIED for user '{user_clerk_id}'. Not in admin list.")
+        # CORRECTED: Safely get clerk_user_id from the SQLAlchemy object
+        user_clerk_id = str(g.current_user.clerk_user_id)
+
+        if user_clerk_id not in admin_ids:
+            current_app.logger.warning(f"Admin access DENIED for user '{user_clerk_id}'. Not in admin list {admin_ids}.")
             return jsonify({"message": "Admin access required."}), 403
         
         current_app.logger.info(f"Admin access GRANTED for user '{user_clerk_id}'.")
