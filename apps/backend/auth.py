@@ -7,12 +7,11 @@ import jwt
 from jwt.algorithms import RSAAlgorithm
 import requests
 
-# NEW IMPORTS for Flask-SQLAlchemy
-from ..app import db # Import the SQLAlchemy instance from the main app factory
+# CORRECTED IMPORT: Import the SQLAlchemy instance from the app.py within the same package
+from .app import db
 from .models import User # Import the User model
 
 from .config import config
-# REMOVED: from .database import get_db # No longer needed with Flask-SQLAlchemy
 
 def get_jwks():
     jwks_url = f"{config.CLERK_ISSUER_URL}/.well-known/jwks.json"
