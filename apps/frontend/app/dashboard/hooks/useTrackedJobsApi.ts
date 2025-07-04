@@ -1,15 +1,16 @@
-// Path: apps/frontend/hooks/useTrackedJobsApi.ts
+// Path: apps/frontend/app/dashboard/hooks/useTrackedJobsApi.ts
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
-import { type TrackedJob, type UpdatePayload, type CompanyProfile } from '../types';
+import { type TrackedJob, type UpdatePayload, type Profile, type CompanyProfile } from '../types'; // Ensure CompanyProfile is imported
 
 export function useTrackedJobsApi() {
   const { getToken, isLoaded: isUserLoaded } = useAuth();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +27,6 @@ export function useTrackedJobsApi() {
     if (!isUserLoaded) return;
     setIsLoading(true);
     setError(null);
-    // Removed: console.log("Fetching tracked jobs...");
     authedFetch(`${apiBaseUrl}/api/tracked-jobs?page=1&limit=1000`)
       .then(async (res) => {
         if (!res.ok) {
@@ -36,89 +36,73 @@ export function useTrackedJobsApi() {
         return res.json();
       })
       .then(data => {
-          // Removed: console.log("Tracked jobs fetched successfully:", data.tracked_jobs);
-          setTrackedJobs(data.tracked_jobs || []);
+          setTrackedJobs(data.jobs || []);
+          setTotalCount(data.total_count || 0);
       })
       .catch(err => {
-          // Changed to console.error for actual errors, removed general console.log
           console.error("Error fetching tracked jobs:", err); 
           setError(err.message);
           setTrackedJobs([]);
+          setTotalCount(0);
       })
       .finally(() => setIsLoading(false));
   }, [isUserLoaded, apiBaseUrl, authedFetch]);
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
-  const submitNewJob = useCallback(async (jobUrl: string): Promise<TrackedJob> => {
-    const response = await authedFetch(`${apiBaseUrl}/api/jobs/submit`, { method: 'POST', body: JSON.stringify({ job_url: jobUrl }) });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Failed to submit job.');
-    setTrackedJobs(prev => [result, ...prev]);
-    return result;
-  }, [apiBaseUrl, authedFetch]);
+  const submitNewJob = useCallback(async (jobUrl: string) => {
+    await authedFetch(`${apiBaseUrl}/api/jobs/submit`, { method: 'POST', body: JSON.stringify({ job_url: jobUrl }) });
+    fetchJobs();
+  }, [apiBaseUrl, authedFetch, fetchJobs]);
 
   const updateTrackedJob = useCallback(async (trackedJobId: number, payload: UpdatePayload) => {
-    // Removed: console.log(`[useTrackedJobsApi] Optimistically updating job ${trackedJobId} with payload:`, payload);
-    // Optimistic update: Temporarily update state
-    setTrackedJobs(prev => prev.map(job => job.tracked_job_id === trackedJobId ? { ...job, ...payload } : job));
+    setTrackedJobs(prev => prev.map(job => (job.id === trackedJobId ? { ...job, ...payload } : job)));
     
     try {
       const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, { method: 'PUT', body: JSON.stringify(payload) });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: `Server responded with ${response.status}` }));
-        throw new Error(errorData.error || `Update failed for job ${trackedJobId}.`);
-      }
+      if (!response.ok) throw new Error('Update failed');
       const updatedFromServer = await response.json();
-      // Removed: console.log(`[useTrackedJobsApi] Update successful for job ${trackedJobId}. Data from server:`, updatedFromServer);
-      // Re-set with data from server for final consistency (and to ensure all fields are correctly synced)
-      setTrackedJobs(prev => prev.map(job => job.tracked_job_id === trackedJobId ? updatedFromServer : job));
+      setTrackedJobs(prev => prev.map(job => (job.id === trackedJobId ? updatedFromServer : job)));
     } catch (err) {
-      console.error(`[useTrackedJobsApi] Error during update for job ${trackedJobId}:`, err);
+      console.error(`Error during update for job ${trackedJobId}:`, err);
       setError(err instanceof Error ? err.message : "Update failed.");
-      fetchJobs(); // Refetch if update fails to ensure consistency (rollback)
+      fetchJobs();
     }
   }, [apiBaseUrl, authedFetch, fetchJobs]);
 
   const removeTrackedJob = useCallback(async (trackedJobId: number) => {
     const originalJobs = [...trackedJobs];
-    setTrackedJobs(prev => prev.filter(job => job.tracked_job_id !== trackedJobId));
+    setTrackedJobs(prev => prev.filter(job => job.id !== trackedJobId));
+    setTotalCount(prev => prev - 1);
     try {
       const response = await authedFetch(`${apiBaseUrl}/api/tracked-jobs/${trackedJobId}`, { method: 'DELETE' });
-      if (!response.ok) {
-        setTrackedJobs(originalJobs); // Revert if delete fails
-        const errorData = await response.json().catch(() => ({ error: `Server responded with ${response.status}` }));
-        throw new Error(errorData.error || `Delete failed for job ${trackedJobId}.`);
-      }
-      // Removed: console.log(`[useTrackedJobsApi] Successfully removed job ${trackedJobId}.`);
+      if (!response.ok) throw new Error('Delete failed');
     } catch (err) {
-      console.error(`[useTrackedJobsApi] Error during remove for job ${trackedJobId}:`, err);
+      console.error(`Error during remove for job ${trackedJobId}:`, err);
       setError(err instanceof Error ? err.message : "Delete failed.");
-      setTrackedJobs(originalJobs); // Revert if delete fails
+      setTrackedJobs(originalJobs);
+      setTotalCount(originalJobs.length);
     }
   }, [apiBaseUrl, authedFetch, trackedJobs]);
 
   const fetchCompanyProfile = useCallback(async (companyId: number): Promise<CompanyProfile | null> => {
     try {
       const response = await authedFetch(`${apiBaseUrl}/api/companies/${companyId}/profile`);
-      if (response.status === 404) {
-        // Removed: console.log(`[useTrackedJobsApi] Company profile not found for ID ${companyId}.`);
-        return null;
-      }
-      if (!response.ok) {
-        throw new Error('Failed to fetch company profile.');
-      }
-      const profileData = await response.json();
-      // Removed: console.log(`[useTrackedJobsApi] Fetched company profile for ID ${companyId}:`, profileData);
-      return profileData;
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error('Failed to fetch company profile.');
+      // The profile might not exist, so we need to handle the JSON parsing carefully
+      const text = await response.text();
+      return text ? JSON.parse(text) : null;
     } catch (err) {
       console.error("[useTrackedJobsApi] Error fetching company profile:", err);
       return null;
     }
   }, [apiBaseUrl, authedFetch]);
 
+
   return {
     trackedJobs,
+    totalCount,
     isLoading,
     error,
     refetch: fetchJobs,
@@ -126,7 +110,7 @@ export function useTrackedJobsApi() {
       submitNewJob,
       updateTrackedJob,
       removeTrackedJob,
-      fetchCompanyProfile
+      fetchCompanyProfile // RESTORED
     }
   };
 }
