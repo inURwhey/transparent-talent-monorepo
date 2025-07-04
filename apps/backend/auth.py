@@ -6,8 +6,13 @@ from flask import request, jsonify, g, current_app
 import jwt
 from jwt.algorithms import RSAAlgorithm
 import requests
+
+# NEW IMPORTS for Flask-SQLAlchemy
+from ..app import db # Import the SQLAlchemy instance from the main app factory
+from .models import User # Import the User model
+
 from .config import config
-from .database import get_db
+# REMOVED: from .database import get_db # No longer needed with Flask-SQLAlchemy
 
 def get_jwks():
     jwks_url = f"{config.CLERK_ISSUER_URL}/.well-known/jwks.json"
@@ -22,52 +27,64 @@ def get_jwks():
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.headers['Authorization'].split(" ")[1] if 'Authorization' in request.headers else None
-        if not token: return jsonify({"message": "Token is missing!"}), 401
+        token = request.headers.get('Authorization', '').split(" ")[1] if 'Authorization' in request.headers else None
+        if not token:
+            return jsonify({"message": "Token is missing!"}), 401
         
         jwks = get_jwks()
-        if not jwks: return jsonify({"message": "Could not fetch JWKS for token validation."}), 500
+        if not jwks:
+            return jsonify({"message": "Could not fetch JWKS for token validation."}), 500
 
         try:
             unverified_header = jwt.get_unverified_header(token)
             rsa_key = next((key for key in jwks["keys"] if key["kid"] == unverified_header["kid"]), None)
-            if not rsa_key: raise jwt.exceptions.InvalidKeyError("Public key not found in JWKS.")
+            if not rsa_key:
+                raise jwt.exceptions.InvalidKeyError("Public key not found in JWKS.")
             
             public_key = RSAAlgorithm.from_jwk(rsa_key)
             claims = jwt.decode(token, public_key, algorithms=["RS256"], issuer=config.CLERK_ISSUER_URL, options={"verify_aud": False})
 
             authorized_party = claims.get('azp')
-            if not authorized_party or authorized_party not in config.CLERK_AUTHORIZED_PARTY:
+            # Assuming CLERK_AUTHORIZED_PARTY can be a list or a string of comma-separated URLs
+            allowed_azp_regexes = [re.compile(pattern) for pattern in config.CLERK_AUTHORIZED_PARTY]
+            
+            is_azp_allowed = False
+            for pattern in allowed_azp_regexes:
+                if pattern.match(authorized_party):
+                    is_azp_allowed = True
+                    break
+
+            if not is_azp_allowed:
                 current_app.logger.warning(f"JWT validation failed: Invalid authorized party (azp): {authorized_party}")
                 raise jwt.exceptions.InvalidAudienceError(f"Invalid authorized party: {authorized_party}")
             
             clerk_user_id = claims.get('sub')
-            if not clerk_user_id: raise Exception("Token is missing 'sub' (subject) claim.")
+            if not clerk_user_id:
+                raise Exception("Token is missing 'sub' (subject) claim.")
             
-            db = get_db()
-            with db.cursor() as cursor:
-                cursor.execute("SELECT * FROM users WHERE clerk_user_id = %s", (clerk_user_id,))
-                user = cursor.fetchone()
+            # --- START SQLAlchemy DB INTERACTION ---
+            user = User.query.filter_by(clerk_user_id=clerk_user_id).first()
+            
+            if user:
+                g.current_user = user
+            else:
+                current_app.logger.info(f"First-time user with Clerk ID {clerk_user_id}. Creating new user record.")
+                email = claims.get('primary_email') or claims.get('email')
                 
-                if user:
-                    g.current_user = user
-                else:
-                    current_app.logger.info(f"First-time user with Clerk ID {clerk_user_id}. Creating new user record.")
-                    email = claims.get('primary_email') or claims.get('email')
-                    
-                    cursor.execute(
-                        "INSERT INTO users (clerk_user_id, email) VALUES (%s, %s) RETURNING *",
-                        (clerk_user_id, email)
-                    )
-                    new_user = cursor.fetchone()
-                    g.current_user = new_user
-                    db.commit()
+                new_user = User(clerk_user_id=clerk_user_id, email=email)
+                db.session.add(new_user)
+                db.session.commit() # Commit the new user to get their ID
+                db.session.refresh(new_user) # Refresh to get the ID and other defaults
+                g.current_user = new_user
 
         except jwt.ExpiredSignatureError:
+            db.session.rollback() # Rollback any pending transactions
             return jsonify({"message": "Token has expired!"}), 401
         except jwt.exceptions.InvalidAudienceError as e:
+            db.session.rollback()
             return jsonify({"message": f"JWT validation failed: {e}"}), 401
         except Exception as e:
+            db.session.rollback() # Ensure rollback on any unexpected error
             current_app.logger.error(f"An unexpected error occurred during token validation: {e}")
             return jsonify({"message": "An unexpected error occurred during token validation."}), 500
         
@@ -87,7 +104,8 @@ def admin_required(f):
 
         admin_ids = [id.strip() for id in config.CLERK_ADMIN_USER_IDS.split(',')]
         
-        user_clerk_id = g.current_user.get('clerk_user_id') if hasattr(g, 'current_user') and g.current_user else None
+        # Access clerk_user_id directly from the User object
+        user_clerk_id = g.current_user.clerk_user_id if hasattr(g, 'current_user') and g.current_user else None
         
         # --- DEBUGGING LOGS ---
         current_app.logger.info(f"Admin Check: User Clerk ID is '{user_clerk_id}' (Type: {type(user_clerk_id)})")

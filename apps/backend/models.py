@@ -1,5 +1,5 @@
 # apps/backend/models.py
-from apps.backend.database import db
+from apps.backend.app import db # Import db from app.py now
 from datetime import datetime
 import pytz
 
@@ -10,8 +10,8 @@ def get_utc_now():
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    clerk_user_id = db.Column(db.String(255), unique=True, nullable=True) # Made nullable to prevent new user sign up issues
-    email = db.Column(db.String(255), unique=True, nullable=True) # Made nullable to prevent new user sign up issues
+    clerk_user_id = db.Column(db.String(255), unique=True, nullable=True)
+    email = db.Column(db.String(255), unique=True, nullable=True)
     full_name = db.Column(db.String(255))
     created_at = db.Column(db.DateTime(timezone=True), default=get_utc_now)
     updated_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, onupdate=get_utc_now)
@@ -226,7 +226,7 @@ class TrackedJob(db.Model):
 
     # Relationships
     user = db.relationship('User', backref='tracked_jobs')
-    job_opportunity = db.relationship('JobOpportunity', backref='tracked_by_users')
+    job_opportunity = db.relationship('JobOpportunity', backref=db.backref('tracked_by_users', lazy=True)) # Added lazy=True
 
     def to_dict(self):
         # This will be updated further in the next step to fetch nested job and company data
@@ -246,7 +246,7 @@ class TrackedJob(db.Model):
             'resolved_at': self.resolved_at.isoformat() if self.resolved_at else None,
             'next_action_at': self.next_action_at.isoformat() if self.next_action_at else None,
             'next_action_notes': self.next_action_notes,
-            'job_opportunity': self.job_opportunity.to_dict() if self.job_opportunity else None,
+            # 'job_opportunity': self.job_opportunity.to_dict() if self.job_opportunity else None, # Relationship needs to be manually fetched
         }
 
 # MODIFIED MODEL: JobAnalysis
@@ -267,8 +267,8 @@ class JobAnalysis(db.Model):
     analysis_protocol_version = db.Column(db.String(20), nullable=False)
 
     # Relationships
-    job = db.relationship('Job', backref='analyses') # This relationship remains to the canonical Job
-    user = db.relationship('User', backref='job_analyses')
+    job = db.relationship('Job', backref=db.backref('analyses', lazy=True)) # Added lazy=True
+    user = db.relationship('User', backref=db.backref('job_analyses', lazy=True)) # Added lazy=True
 
     def to_dict(self):
         return {
@@ -300,7 +300,7 @@ class ResumeSubmission(db.Model):
                             postgresql_where=db.text('is_active IS TRUE')),
     )
 
-    user = db.relationship('User', backref='resume_submissions')
+    user = db.relationship('User', backref=db.backref('resume_submissions', lazy=True)) # Added lazy=True
 
     def to_dict(self):
         return {
@@ -326,7 +326,7 @@ class JobOffer(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=get_utc_now)
     updated_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, onupdate=get_utc_now)
 
-    tracked_job = db.relationship('TrackedJob', backref=db.backref('offers', uselist=True))
+    tracked_job = db.relationship('TrackedJob', backref=db.backref('offers', uselist=True, lazy=True)) # Added lazy=True
 
     def to_dict(self):
         return {
