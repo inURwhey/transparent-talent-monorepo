@@ -17,17 +17,16 @@ export default function CompanyProfileCard({ companyId, fetchCompanyProfile, isE
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // We only want to fetch data if the row is expanded.
         if (isExpanded) {
             const loadProfile = async () => {
-                // Also, ensure we have a valid ID before fetching.
                 if (!companyId) {
-                    setIsLoading(false); // Stop loading if no ID
+                    setIsLoading(false);
                     return;
                 }
                 
                 setIsLoading(true);
                 setError(null);
+                setProfile(null); // Reset profile on fetch
 
                 try {
                     const fetchedProfile = await fetchCompanyProfile(companyId);
@@ -40,17 +39,27 @@ export default function CompanyProfileCard({ companyId, fetchCompanyProfile, isE
                 }
             };
             
-            // Invoke the fetch
             loadProfile();
         }
-    // This effect should re-run if the component is re-expanded or if the ID changes.
     }, [isExpanded, companyId, fetchCompanyProfile]);
 
 
-    // If the row is not expanded, don't render anything.
     if (!isExpanded) {
         return null;
     }
+    
+    // Helper to format employee count
+    const formatEmployeeCount = (profile: CompanyProfile | null) => {
+        if (!profile) return 'N/A';
+        const { company_size_min, company_size_max } = profile as any; // Using 'any' to access properties that might not be on the final type
+        if (company_size_min && company_size_max) {
+            return `${company_size_min.toLocaleString()} - ${company_size_max.toLocaleString()}`;
+        }
+        if (company_size_min) {
+            return `~${company_size_min.toLocaleString()}`;
+        }
+        return 'N/A';
+    };
 
     return (
         <div className="p-4 bg-gray-50/50 border-l-4 border-blue-500">
@@ -75,15 +84,18 @@ export default function CompanyProfileCard({ companyId, fetchCompanyProfile, isE
                     </div>
                     <div className="space-y-1">
                         <p className="font-semibold text-gray-600">Employee Count</p>
-                        <p className="text-gray-800">{profile.employee_count_range || 'N/A'}</p>
+                        {/* CORRECTED: Use the formatter with the correct properties */}
+                        <p className="text-gray-800">{formatEmployeeCount(profile)}</p>
                     </div>
                     <div className="space-y-1 col-span-1 md:col-span-2">
                         <p className="font-semibold text-gray-600">Business Model</p>
-                        <p className="text-gray-800">{profile.primary_business_model || 'N/A'}</p>
+                        {/* CORRECTED: Use the correct property name */}
+                        <p className="text-gray-800">{profile.business_model || 'N/A'}</p>
                     </div>
                     <div className="space-y-1 col-span-1 md:col-span-2">
                         <p className="font-semibold text-gray-600">Stated Mission</p>
-                        <p className="text-gray-800 italic">"{profile.publicly_stated_mission || 'N/A'}"</p>
+                         {/* CORRECTED: Use the correct property name */}
+                        <p className="text-gray-800 italic">"{profile.mission || 'N/A'}"</p>
                     </div>
                 </div>
             )}
