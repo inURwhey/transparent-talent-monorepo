@@ -23,15 +23,17 @@ class JobService:
         self.logger = logger or current_app.logger
         self.profile_service = ProfileService(self.logger)
 
-    def _call_gemini_api(self, prompt, model_name="gemini-pro"): # CORRECTED: Reverted to gemini-pro
+    def _call_gemini_api(self, prompt, model_name="gemini-pro"): # CORRECTED: Reverted to gemini-pro as the default
         api_key = config.GEMINI_API_KEY
         if not api_key:
             self.logger.error("Gemini API key is not configured.")
             return None
 
+        # CORRECTED: Reverted to the v1beta endpoint which was working before.
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
         
         headers = { "Content-Type": "application/json" }
+        # CORRECTED: Removed generationConfig, as it was causing errors with the v1beta endpoint.
         payload = { "contents": [{"parts": [{"text": prompt}]}] }
 
         try:
@@ -40,7 +42,7 @@ class JobService:
             response.raise_for_status()
             data = response.json()
             
-            text_content = data.get('candidates', [{}]).get('content', {}).get('parts', [{}]).get('text', '')
+            text_content = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}]).get('text', '')
             
             if not text_content:
                 self.logger.error("Gemini API returned an empty text response.", extra={'full_response': data})
@@ -68,7 +70,6 @@ class JobService:
         return text
 
     def _lightweight_scrape(self, url):
-        # ... (no change to this method)
         try:
             response = requests.get(url, timeout=10)
             response.raise_for_status()
@@ -84,7 +85,6 @@ class JobService:
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Error during lightweight scrape of {url}: {e}")
             return None
-
 
     def _validate_enum(self, value, enum_class):
         if value is None: return None
@@ -117,8 +117,6 @@ class JobService:
             
             parsed_data['job_title'] = parsed_data.get('job_title', 'Unknown Title').strip()
             parsed_data['company_name'] = parsed_data.get('company_name', 'Unknown Company').strip()
-            
-            # ... (rest of parsing logic is unchanged)
             parsed_data['salary_min'] = self._parse_and_validate_int(parsed_data.get('salary_min'))
             parsed_data['salary_max'] = self._parse_and_validate_int(parsed_data.get('salary_max'))
             parsed_data['required_experience_years'] = self._parse_and_validate_int(parsed_data.get('required_experience_years'))
@@ -128,7 +126,6 @@ class JobService:
             parsed_data['deduced_job_level'] = self._validate_enum(parsed_data.get('deduced_job_level'), deduced_job_level_enum)
             matrix_rating = parsed_data.get('matrix_rating', 'N/A')
             parsed_data['matrix_rating'] = str(matrix_rating)[:50]
-
             return parsed_data
         except (json.JSONDecodeError, AttributeError) as e:
             self.logger.error(f"Failed to decode or parse cleaned JSON from AI response: {e}. Cleaned text: {json_string}")
@@ -147,10 +144,18 @@ class JobService:
         company_str = json.dumps(company_profile_data, indent=2) if company_profile_data else "{}"
 
         prompt = f"""
-        Analyze the following job posting and user profile to determine the candidate's fit. Provide a JSON output matching the schema provided.
-        User Profile: {profile_str}
-        Job Posting: {job_text}
-        Company Context: {company_str}
+        Analyze the following job posting and user profile to determine the candidate's fit.
+        Provide a JSON output matching the schema provided.
+
+        User Profile:
+        {profile_str}
+
+        Job Posting:
+        {job_text}
+
+        Company Context:
+        {company_str}
+
         Output a JSON object with the following structure.
         - job_title (string, max 255 chars)
         - company_name (string, max 255 chars)
@@ -166,6 +171,7 @@ class JobService:
         - qualification_gaps (array of strings)
         - recommended_testimonials (array of strings)
         - hiring_manager_view (string)
+        
         Strictly conform to the JSON structure. Your response MUST be valid JSON wrapped in ```json ... ```.
         """
         self.logger.info("Sending job posting to Gemini for analysis.")
@@ -176,8 +182,22 @@ class JobService:
         
         self.logger.error("AI analysis failed or returned no data.")
         return None
-    
-    # ... (Rest of the file is identical) ...
+
+    def get_job_details(self, job_id: int):
+        job = db.session.query(Job).options(
+            joinedload(Job.company),
+            joinedload(Job.opportunities)
+        ).filter(Job.id == job_id).first()
+
+        if not job:
+            return None
+        
+        job_dict = job.to_dict()
+        job_dict['company'] = job.company.to_dict() if job.company else None
+        job_dict['opportunities'] = [o.to_dict() for o in job.opportunities]
+        
+        return job_dict
+
     def create_or_get_canonical_job(self, url: str, user_id: int, commit: bool = True):
         existing_opportunity = JobOpportunity.query.filter_by(url=url).first()
         if existing_opportunity and existing_opportunity.job:
