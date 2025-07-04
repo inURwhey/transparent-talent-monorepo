@@ -15,31 +15,17 @@
 *   **Architecture Style:** Decoupled three-tier application, managed in a **monorepo**. The backend now follows a service-oriented architecture with an application factory pattern.
 
 ## 3. Current Project Status
-*   **Backend Data Layer Refactoring (In Progress):** A critical, ongoing project to migrate the entire backend from raw `psycopg2` database calls to the Flask-SQLAlchemy ORM has been started. This includes refactoring all services and routes.
-*   **1:Many Job:URL Data Model (Partially Implemented):** The database schema has been migrated to support a canonical `jobs` table and multiple `job_opportunities` per job, enabling future semantic deduplication. Core backend services have been updated to reflect this new structure.
-*   **Database Schema Synchronized:** A comprehensive, manual data and schema synchronization has been performed on the production database to align it with the new SQLAlchemy models, resolving numerous historical inconsistencies.
-*   **Backend Stability Enhanced:** The recurring "Profile Save Fails Randomly" bug is no longer reproducible and is considered resolved, indicating improved backend stability, potentially due to Render environment behavior or previous architectural changes.
-*   **Job Tracker UI/UX Stable:** The Job Tracker table has undergone significant stability and user experience improvements, including immediate UI updates for CRM fields, fixed date selection for future dates, and clean console output. (Note: The persistent table layout/overflow issue is acknowledged and moved to backlog).
-*   **Strategic Roadmap Defined:** A comprehensive strategic roadmap has been integrated, detailing go-to-market, monetization, and phased product development towards the "Nielsen for Talent" vision.
-*   **Structured User Preferences:** Critical user profile preference fields have been migrated to `ENUM` types in the database, enabling a precise distinction between unset fields and explicitly stated "No Preference." This is a foundational improvement for the core relevancy engine.
-*   **CRM Reminders & Notes (Live):** The foundational CRM-like functionality has been implemented, allowing users to add "Next Action Date" and "Next Action Notes" to their tracked jobs. This enhances personal pipeline management.
-*   **V1 Company Profiles (Live):** An end-to-end feature for company data is now live. The backend automatically researches new companies upon job submission. The frontend has been refactored into a modular architecture and now displays this AI-generated company data in an expandable "Company Snapshot" card within the job tracker, making the "Environment Fit" score transparent to the user.
-*   **Onboarding Lifecycle Hardened:** The entire new user experience, from sign-up and job submission to profile completion, is stable and robust.
-*   **Application is stable and functional on its production domain.**
+*   **Application is Stable and Functional:** The critical, system-wide bugs introduced during the Flask-SQLAlchemy ORM migration have been fully resolved. This involved a comprehensive refactoring of backend models, services, CORS configuration, and all frontend components to ensure the data contract is synchronized across the full stack. The application is now fully operational.
+*   **Backend Data Layer Refactoring (Complete):** The migration of the backend from raw `psycopg2` calls to the Flask-SQLAlchemy ORM is functionally complete and stable. All core features are operational on the new architecture.
+*   **User Data Preserved:** The migration was completed without data loss; user profile data was damaged during the process but has been restored and validated as functional.
 
 ## 4. Immediate Backlog & Known Critical Issues
 ### Known Critical Issues
-*   **`AttributeError: 'str' object has no attribute 'value'`:** The application is currently non-functional due to this persistent runtime error on all API endpoints. It is caused by a mismatch in how SQLAlchemy is loading database `ENUM` types and how the application code is attempting to access them. **This is the highest priority bug.**
+*   **Gemini API Integration:** AI-powered features (resume parsing, job analysis) are currently failing due to a `404 Not Found` error when calling the Gemini API. This is the highest priority issue to resolve.
 
 ### Next Steps
-1.  **Backend: Re-process malformed job data:** Create an admin endpoint to clean up historical job data that was saved with placeholder titles. (RICE: 4000)
-2.  **BI: Platform-wide Hiring Funnel Analytics:** Leverage new milestone timestamps for business intelligence. (RICE: 4000)
-3.  **Feature: Intelligent Duplicate Resume Handling (Reactivation/Discard):** Implement logic to manage duplicate resume submissions. (RICE: 9000)
-4.  **UI/UX: Prompt Users with Incomplete Profiles to Update:** Guide users to complete their profiles for better recommendations. (RICE: 8000)
-5.  **Feature: Bulk Job URL Submission:** Allow users to submit multiple job URLs at once for tracking and analysis. (RICE: 8000)
-6.  **Feature: Add Professional Designations/Certifications to Profile:** Expand user profile data. (RICE: 8000)
-7.  **Architecture: Regex-based JWT Audience Validation:** Harden authentication security. (RICE: 8000)
-8.  **Backend: Re-process incomplete company profiles:** Clean up and enrich historical company data. (RICE: 8000)
-9.  **Feature: Proactive AI Job Sourcing & Screening:** Implement AI-driven proactive job search based on user profile. (RICE: 3600)
-10. **Feature: Contacts CRM (V1: Manual Entry & Tracking):** Implement basic contact tracking with next-best-action. (RICE: 3600)
-11. **Feature: AI-Assisted Application Artifact Generation (MVP: Cover Letter & Resume Strategy):** Provide AI assistance for application materials. (RICE: 1800)
+1.  **Tech Debt: Resolve Gemini API 404 Errors:** Investigate and fix the Gemini API configuration.
+2.  **Feature: Resume File Upload & Parsing:** This is now a high-priority feature to allow users to easily rebuild their profiles after the data damage during the migration.
+3.  **Feature: User Account Deletion:** Implement a secure, cascading user account deletion feature.
+4.  **Backend: Re-process malformed job data:** Create an admin endpoint to clean up historical job data.
+5.  **BI: Platform-wide Hiring Funnel Analytics:** Leverage new milestone timestamps for business intelligence.

@@ -15,18 +15,19 @@
 | E03| **Monetization & Subscriptions** | Define and implement user subscription tiers to gate access to premium AI features. | In Progress |
 | E04| **User Relationship Management** | Build a lightweight, integrated CRM for managing professional contacts and leveraging the user's network. | In Progress |
 | E05| **System Lifecycles** | Formally define and document the state machines and lifecycles for core system entities (Users, Companies, Jobs) to guide future development. | Not Started |
-| E07| **Migrate to Flask-SQLAlchemy ORM** | Transition the backend's database interaction layer from direct `psycopg2` calls to Flask-SQLAlchemy for improved maintainability, scalability, and developer velocity. | In Progress |
+| E07| **Migrate to Flask-SQLAlchemy ORM** | Transition the backend's database interaction layer from direct `psycopg2` calls to Flask-SQLAlchemy for improved maintainability, scalability, and developer velocity. | **Done** |
 
 ---
 
 ## Tier 0: System-Critical Blockers
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Bugfix: Resolve "AttributeError: 'str' object has no attribute 'value'" in backend** | E07 | 1000 | 3 | 100% | 0.05 | **12000** | Flash | S | **To Do** |
+| **Tech Debt: Resolve Gemini API 404 Errors**| - | 1000 | 3 | 100% | 0.1 | **3000** | Flash | S | **To Do** |
 
 ## Tier 1: Foundational Infrastructure
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Feature: User Account Deletion** | E02 | 1000 | 3 | 100% | 0.25 | **12000** | Pro Breakdown | M | **To Do** |
 | **Backend: Re-process malformed job data** | - | 1000 | 2 | 100% | 0.5 | **4000** | Flash | S | **To Do** |
 | **BI: Platform-wide Hiring Funnel Analytics** | E05 | 1000 | 2 | 100% | 0.5 | **4000** | Flash | S | **To Do** |
 | **Feature: Legally Required Applicant Information in Profile** | E02 | 1000 | 3 | 100% | 0.25 | **12000** | Flash | S | **To Do** |
@@ -34,6 +35,7 @@
 ## Tier 2: Core User Experience & Differentiation
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Feature: Resume File Upload & Parsing** | E02 | 1000 | 3 | 90% | 0.5 | **5400** | Pro | M | **To Do** |
 | **Feature: Intelligent Duplicate Resume Handling (Reactivation/Discard)** | E02 | 1000 | 2 | 90% | 0.5 | **9000** | Flash | M | **To Do** |
 | **UI/UX: Prompt Users with Incomplete Profiles to Update** | E02 | 1000 | 2 | 90% | 0.25 | **8000** | Flash | S | **To Do** |
 | **Feature: Bulk Job URL Submission** | E02 | 1000 | 2 | 100% | 0.25 | **8000** | Flash | S | **To Do** |
@@ -41,7 +43,6 @@
 | **Architecture: Regex-based JWT Audience Validation** | - | 1000 | 2 | 100% | 0.25 | **8000** | Flash | S | **To Do** |
 | **Backend: Re-process incomplete company profiles** | E01 | 1000 | 2 | 100% | 0.25 | **8000** | Flash | S | **To Do** |
 | **AI: Improve company research prompt & validation** | E01 | 1000 | 3 | 90% | 0.5 | **5400** | Creative | M | **To Do** |
-| **Feature: Resume File Upload & Parsing** | E02 | 1000 | 3 | 90% | 0.5 | **5400** | Pro | M | **To Do** |
 | **UI/UX: Job Reactivation Flow for Inactive Tracked Jobs** | - | 1000 | 2 | 100% | 0.25 | **5000** | Flash | S | **To Do** |
 | **UI/UX: Company-centric profile view in tracker** | E01 | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
 | **Feature: Bulk Reprocess Relevancy** | - | 1000 | 2 | 100% | 0.5 | **4000** | Flash | M | **To Do** |
@@ -102,6 +103,7 @@
 ## Completed Features & Bugfixes
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
+| **Bugfix: Stabilize SQLAlchemy ORM Migration** | Tier 0 | 12000 |
 | **UI/UX: Clear Date Field in Next Action Date** | UI/UX Polish | N/A |
 | **UI/UX: Restrict Next Action Date to Future Only** | UI/UX Polish | N/A |
 | **Bugfix (Job Tracker UI Update Delay & Layout)** | Technical Debt | N/A |
