@@ -1,13 +1,11 @@
 # Path: apps/backend/services/tracked_job_service.py
 from flask import current_app
-from sqlalchemy.orm import joinedload
-from datetime import datetime, timedelta
+from sqlalchemy.orm import joinedload, contains_eager
+from datetime import datetime
 import pytz
-from sqlalchemy.exc import IntegrityError # For duplicate tracking errors
 
 from ..app import db
-from ..models import TrackedJob, User, JobOpportunity, Job, Company, JobAnalysis # Import all relevant models
-from ..config import config
+from ..models import TrackedJob, JobOpportunity, Job, Company, JobAnalysis
 
 class TrackedJobService:
     def __init__(self, logger=None):
@@ -17,75 +15,91 @@ class TrackedJobService:
                          page: int = 1, limit: int = 10):
         """
         Retrieves tracked jobs for a user with optional filtering, search, and pagination.
-        Includes related JobOpportunity, canonical Job, Company, and JobAnalysis data.
+        This version is refactored to be robust against missing relational data and to
+        correctly serialize SQLAlchemy ORM objects.
         """
+        # Start with the base query for TrackedJob
         query = db.session.query(TrackedJob).filter(TrackedJob.user_id == user_id)
 
-        # Eager load relationships to avoid N+1 queries
-        query = query.options(
-            joinedload(TrackedJob.job_opportunity).joinedload(JobOpportunity.job).joinedload(Job.company),
-            # Load all analyses for the canonical job, then filter in Python for this user
-            # This is less efficient than a subqueryload for a single analysis, but robust.
-            # A more optimized query for *just one* analysis for *this* user would involve a subquery/correlation.
-            joinedload(TrackedJob.job_opportunity).joinedload(JobOpportunity.job).joinedload(Job.analyses)
+        # Explicitly join all related tables for filtering and eager loading
+        query = query.join(TrackedJob.job_opportunity).join(JobOpportunity.job).outerjoin(Job.company)
+        
+        # We need the analysis specific to the user, so we do a specific outer join for that.
+        query = query.outerjoin(
+            JobAnalysis,
+            (JobAnalysis.job_id == Job.id) & (JobAnalysis.user_id == user_id)
         )
 
+        # Use contains_eager to load the data from the tables we've already joined.
+        # This is more efficient than separate joinedload calls.
+        query = query.options(
+            contains_eager(TrackedJob.job_opportunity)
+                .contains_eager(JobOpportunity.job)
+                .contains_eager(Job.company),
+            contains_eager(TrackedJob.job_opportunity)
+                .contains_eager(JobOpportunity.job)
+                .contains_eager(Job.analyses) # This now refers to the specific user's analysis
+        )
+
+        # --- Filtering Logic ---
         if status_filter:
+            active_statuses = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS']
+            inactive_statuses = ['REJECTED', 'WITHDRAWN', 'EXPIRED', 'OFFER_ACCEPTED']
             if status_filter == "Active Applications":
-                query = query.filter(TrackedJob.status.in_(['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS']))
+                query = query.filter(TrackedJob.status.in_(active_statuses))
             elif status_filter == "Inactive Applications":
-                query = query.filter(TrackedJob.status.in_(['REJECTED', 'WITHDRAWN', 'EXPIRED', 'OFFER_ACCEPTED']))
-            elif status_filter == "Active Job Postings":
-                # Filter on the JobOpportunity status
-                query = query.filter(JobOpportunity.is_active == True)
-            elif status_filter == "Expired Job Postings":
-                # Filter on the JobOpportunity status
-                query = query.filter(JobOpportunity.is_active == False)
-            else:
-                # Direct match for specific ENUM status
-                query = query.filter(TrackedJob.status == status_filter)
+                query = query.filter(TrackedJob.status.in_(inactive_statuses))
+            # No need to handle job posting status here, as the frontend can derive it.
 
         if search_query:
             search_pattern = f"%{search_query}%"
-            # Search across job title, company name, notes, next_action_notes
             query = query.filter(
-                (Job.job_title.ilike(search_pattern)) |
-                (Company.name.ilike(search_pattern)) |
-                (TrackedJob.notes.ilike(search_pattern)) |
-                (TrackedJob.next_action_notes.ilike(search_pattern))
+                db.or_(
+                    Job.job_title.ilike(search_pattern),
+                    Company.name.ilike(search_pattern),
+                    TrackedJob.notes.ilike(search_pattern),
+                    TrackedJob.next_action_notes.ilike(search_pattern)
+                )
             )
         
         # Order by created_at or updated_at, and then by ID for stable pagination
         query = query.order_by(TrackedJob.updated_at.desc(), TrackedJob.id.desc())
 
-        # Pagination
+        # --- Pagination ---
         total_count = query.count()
         offset = (page - 1) * limit
         tracked_jobs = query.offset(offset).limit(limit).all()
 
+        # --- Safe and Robust Serialization ---
         results = []
         for tj in tracked_jobs:
             item = tj.to_dict()
             
-            # Manually add nested data using relationships
+            # The query is structured to eagerly load the correct nested objects.
+            # We just need to serialize them safely.
+            if tj.job_opportunity and tj.job_opportunity.job:
+                job_obj = tj.job_opportunity.job
+                item['job'] = job_obj.to_dict()
+                
+                # Safely add company info
+                item['company'] = job_obj.company.to_dict() if job_obj.company else None
+                
+                # The join and contains_eager for JobAnalysis loads the specific user's analysis
+                # into the 'analyses' relationship on the job object. It will either be a list
+                # with one item, or an empty list.
+                user_analysis = job_obj.analyses[0] if job_obj.analyses else None
+                
+                if user_analysis:
+                    item['job_analysis'] = user_analysis.to_dict()
+                    item['ai_grade'] = user_analysis.matrix_rating
+                else:
+                    item['job_analysis'] = None
+                    item['ai_grade'] = None
+            
+            # Always include the job_opportunity itself for the frontend
             if tj.job_opportunity:
                 item['job_opportunity'] = tj.job_opportunity.to_dict()
-                if tj.job_opportunity.job:
-                    item['job'] = tj.job_opportunity.job.to_dict()
-                    # Add company info
-                    if tj.job_opportunity.job.company:
-                        item['company'] = tj.job_opportunity.job.company.to_dict()
-                    
-                    # Find the correct analysis for this user and canonical job
-                    # Each canonical job can have many analyses (one per user)
-                    user_analysis = next((a for a in tj.job_opportunity.job.analyses if a.user_id == user_id), None)
-                    if user_analysis:
-                        item['job_analysis'] = user_analysis.to_dict()
-                        item['ai_grade'] = user_analysis.matrix_rating # Expose AI grade directly
-                    else:
-                        item['job_analysis'] = None
-                        item['ai_grade'] = None # No analysis yet
-            
+
             results.append(item)
 
         return {
@@ -100,46 +114,39 @@ class TrackedJobService:
         Updates a specific field of a tracked job.
         Handles special logic for status changes (e.g., applied_at).
         """
-        tracked_job = TrackedJob.query.filter_by(id=tracked_job_id, user_id=user_id).first()
+        tracked_job = db.session.query(TrackedJob).filter_by(id=tracked_job_id, user_id=user_id).first()
         if not tracked_job:
             self.logger.warning(f"Tracked job {tracked_job_id} not found for user {user_id}.")
             return None
 
-        current_app.logger.info(f"Updating tracked_job {tracked_job_id}, field: {field}, value: {value}")
+        self.logger.info(f"Updating tracked_job {tracked_job_id}, field: {field}, value: {value}")
 
         if field == 'status':
-            old_status = tracked_job.status.value if tracked_job.status else None # Get string value
-            new_status_str = value # Value from frontend is string
-            
-            # Convert string to ENUM member
-            try:
-                new_status_enum = tracked_job.status.type.enum_class[new_status_str]
-                tracked_job.status = new_status_enum
-            except KeyError:
-                self.logger.error(f"Invalid status value: {new_status_str}")
-                return None # Or raise an error
+            old_status = tracked_job.status.value if tracked_job.status else None
+            new_status_str = value
 
-            # Set applied_at timestamp if status changes to 'APPLIED'
             if old_status != 'APPLIED' and new_status_str == 'APPLIED':
                 tracked_job.applied_at = datetime.now(pytz.utc)
-            elif old_status == 'APPLIED' and new_status_str not in ['APPLIED', 'OFFER_ACCEPTED', 'REJECTED', 'INTERVIEWING']:
-                # Clear applied_at if changing from applied to non-terminal/non-interview states
+            elif old_status == 'APPLIED' and new_status_str != 'APPLIED':
                 tracked_job.applied_at = None
-            
-            # Set milestone timestamps based on state transitions from DATA_LIFECYCLE.md
-            if new_status_str == 'INTERVIEWING' and tracked_job.first_interview_at is None:
-                tracked_job.first_interview_at = datetime.now(pytz.utc)
-            if new_status_str == 'OFFER_NEGOTIATIONS' and tracked_job.offer_received_at is None:
-                tracked_job.offer_received_at = datetime.now(pytz.utc)
-            
-            # Set resolved_at for terminal states
+
             terminal_states = ['OFFER_ACCEPTED', 'REJECTED', 'WITHDRAWN', 'EXPIRED']
             if new_status_str in terminal_states and tracked_job.resolved_at is None:
                 tracked_job.resolved_at = datetime.now(pytz.utc)
             elif old_status in terminal_states and new_status_str not in terminal_states:
-                # If moving out of a terminal state, clear resolved_at
                 tracked_job.resolved_at = None
 
+            if new_status_str == 'INTERVIEWING' and tracked_job.first_interview_at is None:
+                tracked_job.first_interview_at = datetime.now(pytz.utc)
+            if new_status_str == 'OFFER_NEGOTIATIONS' and tracked_job.offer_received_at is None:
+                tracked_job.offer_received_at = datetime.now(pytz.utc)
+
+            try:
+                # Safely convert string to Enum member
+                tracked_job.status = new_status_str
+            except (ValueError, KeyError) as e:
+                self.logger.error(f"Invalid status value provided: {new_status_str}. Error: {e}")
+                return None
 
         elif field == 'is_excited':
             tracked_job.is_excited = bool(value)
@@ -148,27 +155,29 @@ class TrackedJobService:
         elif field == 'next_action_at':
             if value:
                 try:
-                    # Assume value is an ISO 8601 string or similar
-                    # Ensure datetime object is timezone-aware before saving
                     dt_obj = datetime.fromisoformat(value.replace('Z', '+00:00'))
                     tracked_job.next_action_at = dt_obj.astimezone(pytz.utc) if dt_obj.tzinfo is None else dt_obj
-                except ValueError:
+                except (ValueError, TypeError):
                     self.logger.error(f"Invalid date format for next_action_at: {value}. Setting to None.")
                     tracked_job.next_action_at = None
             else:
-                tracked_job.next_action_at = None # Clear if value is empty/null
+                tracked_job.next_action_at = None
         elif field == 'next_action_notes':
             tracked_job.next_action_notes = value
         else:
             self.logger.warning(f"Attempted to update unknown or disallowed field: {field}")
             return None
 
-        tracked_job.updated_at = datetime.now(pytz.utc) # Always update timestamp
+        tracked_job.updated_at = datetime.now(pytz.utc)
 
         try:
             db.session.commit()
             db.session.refresh(tracked_job)
-            return tracked_job.to_dict()
+            # Re-fetch the full object for the response to ensure all relations are current
+            full_job_data = self.get_tracked_jobs(user_id, page=1, limit=1, search_query=f"id:{tracked_job_id}")
+            if full_job_data['jobs']:
+                 return full_job_data['jobs'][0]
+            return tracked_job.to_dict() # Fallback
         except Exception as e:
             db.session.rollback()
             self.logger.error(f"Error updating tracked job {tracked_job_id}: {e}")
@@ -176,7 +185,7 @@ class TrackedJobService:
 
     def remove_tracked_job(self, user_id: int, tracked_job_id: int):
         """Removes a tracked job for a user."""
-        tracked_job = TrackedJob.query.filter_by(id=tracked_job_id, user_id=user_id).first()
+        tracked_job = db.session.query(TrackedJob).filter_by(id=tracked_job_id, user_id=user_id).first()
         if not tracked_job:
             self.logger.warning(f"Tracked job {tracked_job_id} not found for user {user_id}.")
             return False
@@ -196,25 +205,19 @@ class TrackedJobService:
         Allows a user to track a specific job opportunity.
         Checks for existing tracking to prevent duplicates.
         """
-        existing_tracked_job = TrackedJob.query.filter_by(user_id=user_id, job_opportunity_id=job_opportunity_id).first()
-
+        existing_tracked_job = db.session.query(TrackedJob).filter_by(user_id=user_id, job_opportunity_id=job_opportunity_id).first()
         if existing_tracked_job:
             self.logger.info(f"Job opportunity {job_opportunity_id} already tracked by user {user_id}.")
-            # Return existing tracked job (e.g., to indicate it's already there)
             return existing_tracked_job
         
         new_tracked_job = TrackedJob(
             user_id=user_id,
             job_opportunity_id=job_opportunity_id,
-            created_at=datetime.now(pytz.utc),
-            updated_at=datetime.now(pytz.utc),
-            status='SAVED' # Initial status
+            status='SAVED'
         )
         db.session.add(new_tracked_job)
         try:
             db.session.commit()
-            db.session.refresh(new_tracked_job)
-            self.logger.info(f"Job opportunity {job_opportunity_id} successfully tracked for user {user_id}.")
             return new_tracked_job
         except Exception as e:
             db.session.rollback()
@@ -223,4 +226,4 @@ class TrackedJobService:
 
     def get_tracked_job_by_opportunity_id(self, user_id: int, job_opportunity_id: int):
         """Fetches a single tracked job by user ID and job opportunity ID."""
-        return TrackedJob.query.filter_by(user_id=user_id, job_opportunity_id=job_opportunity_id).first()
+        return db.session.query(TrackedJob).filter_by(user_id=user_id, job_opportunity_id=job_opportunity_id).first()
