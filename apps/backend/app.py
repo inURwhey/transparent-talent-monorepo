@@ -3,10 +3,14 @@ import os
 import re
 from flask import Flask, jsonify
 from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy # NEW IMPORT
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate # NEW IMPORT: Flask-Migrate
 
 # Initialize SQLAlchemy globally, but don't bind it to an app yet
-db = SQLAlchemy() # NEW GLOBAL DB OBJECT
+db = SQLAlchemy()
+
+# Initialize Migrate globally
+migrate = Migrate() # NEW: Migrate instance
 
 def create_app():
     app = Flask(__name__)
@@ -15,12 +19,14 @@ def create_app():
     app.config.from_object(config.Config)
 
     # Configure SQLAlchemy
-    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['DATABASE_URL'] # Use existing DATABASE_URL
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # Disable event system for performance
+    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['DATABASE_URL']
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app) # Initialize db with the Flask app
 
+    # Initialize Flask-Migrate
+    migrate.init_app(app, db) # NEW: Initialize Migrate with app and db
+
     # Re-instantiate Flask-CORS with a robust configuration
-    # Define allowed origins, including a regex for Vercel preview deployments
     allowed_origins = [
         "https://www.transparenttalent.ai",
         "https://transparenttalent.ai",
@@ -34,9 +40,6 @@ def create_app():
         allow_headers=["Authorization", "Content-Type"],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     )
-
-    # REMOVED: from . import database
-    # REMOVED: database.init_app(app) # SQLAlchemy will manage connections now
 
     # Import all blueprints
     from .routes.profile import profile_bp
@@ -67,8 +70,6 @@ def create_app():
 
     return app
 
-# The app object is created here so that `db` can be accessed by models and services.
-# This assumes that models.py and services.py will import `db` directly from this module.
 app = create_app()
 
 if __name__ == '__main__':
