@@ -4,13 +4,13 @@ import re
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate # NEW IMPORT: Flask-Migrate
+from flask_migrate import Migrate
 
 # Initialize SQLAlchemy globally, but don't bind it to an app yet
 db = SQLAlchemy()
 
 # Initialize Migrate globally
-migrate = Migrate() # NEW: Migrate instance
+migrate = Migrate()
 
 def create_app():
     app = Flask(__name__)
@@ -24,21 +24,21 @@ def create_app():
     db.init_app(app) # Initialize db with the Flask app
 
     # Initialize Flask-Migrate
-    migrate.init_app(app, db) # NEW: Initialize Migrate with app and db
+    migrate.init_app(app, db) # Initialize Migrate with app and db
 
-    # Re-instantiate Flask-CORS with a robust configuration
+    # Define allowed origins for CORS
     allowed_origins = [
+        "http://localhost:3000", # For local development
         "https://www.transparenttalent.ai",
         "https://transparenttalent.ai",
         re.compile(r"^https://transparent-talent-git-.*-greg-p-projects\.vercel\.app$")
     ]
 
+    # Initialize Flask-CORS with a simpler, more robust configuration
     CORS(
         app,
-        resources={r"/api/*": {"origins": allowed_origins}},
-        supports_credentials=True,
-        allow_headers=["Authorization", "Content-Type"],
-        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        origins=allowed_origins,
+        supports_credentials=True
     )
 
     # Import all blueprints
