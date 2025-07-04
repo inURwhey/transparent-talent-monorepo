@@ -32,12 +32,24 @@ export function useJobRecommendationsApi() {
         throw new Error(`Failed to fetch recommendations. Status: ${response.status}`);
       }
       
-      const responseData: RecommendedJob[] = await response.json();
-      setData(responseData);
+      const responseData = await response.json();
+      
+      // THE FIX: Check if the response is an object with a 'jobs' property,
+      // otherwise, default to an empty array to prevent map errors.
+      if (responseData && Array.isArray(responseData.jobs)) {
+          setData(responseData.jobs);
+      } else if (Array.isArray(responseData)) {
+          // Fallback for if the API returns a simple array
+          setData(responseData);
+      } else {
+          console.warn("Received unexpected data structure for recommendations:", responseData);
+          setData([]); // Ensure data is an array to prevent crashes.
+      }
 
     } catch (err: any) {
       setError(err.message || 'An unknown error occurred.');
       console.error("Failed to fetch job recommendations:", err);
+      setData([]); // CRITICAL: Ensure data is an empty array on error.
     } finally {
       setIsLoading(false);
     }
