@@ -18,9 +18,9 @@ from .profile_service import ProfileService
 MAX_RESUME_TEXT_LENGTH = 25000
 MAX_JOB_TEXT_LENGTH = 50000
 
-# Define models centrally
-GEMINI_FLASH_MODEL = "models/gemini-1.5-flash-latest"
-GEMINI_PRO_MODEL = "models/gemini-1.5-pro-latest"
+# Define models centrally WITHOUT the 'models/' prefix
+GEMINI_FLASH_MODEL = "gemini-1.5-flash-latest"
+GEMINI_PRO_MODEL = "gemini-1.5-pro-latest"
 
 class JobService:
     def __init__(self, logger=None):
@@ -33,7 +33,7 @@ class JobService:
             self.logger.error("Gemini API key is not configured.")
             return None
 
-        # Updated to the stable v1 endpoint
+        # The 'models/' prefix is correctly placed here in the URL construction
         url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent?key={api_key}"
         
         headers = { "Content-Type": "application/json" }
@@ -337,7 +337,14 @@ class JobService:
         self.logger.info(f"Found {len(jobs_to_reanalyze)} jobs to re-analyze for user {user_id}.")
 
         for job in jobs_to_reanalyze:
-            company_data = job.company.to_dict() if job.company and job.company.profile else {}
+            # Need to get company profile data here
+            company_data = {}
+            if job.company:
+                # Assuming company.profile is a relationship to a CompanyProfile model
+                # If not, you'd fetch it differently.
+                # For now, let's just use the basic company dict.
+                company_data = job.company.to_dict()
+
             job_description = job.notes
             if job_description:
                 self.logger.info(f"Re-analyzing job {job.id} for user {user_id}")
