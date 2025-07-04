@@ -5,57 +5,60 @@ from datetime import datetime
 import pytz
 
 from ..app import db
-from ..models import UserProfile, User, ResumeSubmission, CompanySize, WorkStyleType, ConflictResolution, CommunicationPref, ChangeTolerance, WorkLocation
+from ..models import (
+    UserProfile, User, ResumeSubmission, 
+    CompanySizeEnum, WorkStyleTypeEnum, ConflictResolutionEnum, 
+    CommunicationPrefEnum, ChangeToleranceEnum, WorkLocationEnum
+)
 
-# Mappings are now more for display layer logic, less for DB conversion
+# Mappings are now correctly keyed by the Enum objects from models.py
 COMPANY_SIZE_MAPPING = {
-    CompanySize.SMALL_BUSINESS: 'Small Business (1-50 employees)',
-    CompanySize.MEDIUM_BUSINESS: 'Medium Business (51-250 employees)',
-    CompanySize.LARGE_ENTERPRISE: 'Large Enterprise (250+ employees)',
-    CompanySize.STARTUP: 'Startup (1-50 employees)',
-    CompanySize.NO_PREFERENCE: 'No Preference'
+    CompanySizeEnum.SMALL_BUSINESS: 'Small Business (1-50 employees)',
+    CompanySizeEnum.MEDIUM_BUSINESS: 'Medium Business (51-250 employees)',
+    CompanySizeEnum.LARGE_ENTERPRISE: 'Large Enterprise (250+ employees)',
+    CompanySizeEnum.STARTUP: 'Startup (1-50 employees)',
+    CompanySizeEnum.NO_PREFERENCE: 'No Preference'
 }
-# Create reverse mappings for efficient lookups
 REVERSE_COMPANY_SIZE_MAPPING = {v: k for k, v in COMPANY_SIZE_MAPPING.items()}
 
 WORK_STYLE_MAPPING = {
-    WorkStyleType.STRUCTURED: 'Structured (Clear processes, predictable)',
-    WorkStyleType.AUTONOMOUS: 'Autonomous (Independent, self-directed)',
-    WorkStyleType.COLLABORATIVE: 'Collaborative (Team-oriented, frequent interaction)',
-    WorkStyleType.HYBRID: 'Hybrid (Mix of structure and autonomy)',
-    WorkStyleType.NO_PREFERENCE: 'No Preference'
+    WorkStyleTypeEnum.STRUCTURED: 'Structured (Clear processes, predictable)',
+    WorkStyleTypeEnum.AUTONOMOUS: 'Autonomous (Independent, self-directed)',
+    WorkStyleTypeEnum.COLLABORATIVE: 'Collaborative (Team-oriented, frequent interaction)',
+    WorkStyleTypeEnum.HYBRID: 'Hybrid (Mix of structure and autonomy)',
+    WorkStyleTypeEnum.NO_PREFERENCE: 'No Preference'
 }
 REVERSE_WORK_STYLE_MAPPING = {v: k for k, v in WORK_STYLE_MAPPING.items()}
 
 CONFLICT_RESOLUTION_MAPPING = {
-    ConflictResolution.DIRECT: 'Direct (Face-to-face, immediate)',
-    ConflictResolution.MEDIATED: 'Mediated (Involving a third party)',
-    ConflictResolution.AVOIDANT: 'Avoidant (Prefer to de-escalate or avoid)',
-    ConflictResolution.NO_PREFERENCE: 'No Preference'
+    ConflictResolutionEnum.DIRECT: 'Direct (Face-to-face, immediate)',
+    ConflictResolutionEnum.MEDIATED: 'Mediated (Involving a third party)',
+    ConflictResolutionEnum.AVOIDANT: 'Avoidant (Prefer to de-escalate or avoid)',
+    ConflictResolutionEnum.NO_PREFERENCE: 'No Preference'
 }
 REVERSE_CONFLICT_RESOLUTION_MAPPING = {v: k for k, v in CONFLICT_RESOLUTION_MAPPING.items()}
 
 COMMUNICATION_PREFERENCE_MAPPING = {
-    CommunicationPref.WRITTEN: 'Written (Email, documentation)',
-    CommunicationPref.VERBAL: 'Verbal (Meetings, calls)',
-    CommunicationPref.VISUAL: 'Visual (Diagrams, presentations)',
-    CommunicationPref.NO_PREFERENCE: 'No Preference'
+    CommunicationPrefEnum.WRITTEN: 'Written (Email, documentation)',
+    CommunicationPrefEnum.VERBAL: 'Verbal (Meetings, calls)',
+    CommunicationPrefEnum.VISUAL: 'Visual (Diagrams, presentations)',
+    CommunicationPrefEnum.NO_PREFERENCE: 'No Preference'
 }
 REVERSE_COMMUNICATION_PREFERENCE_MAPPING = {v: k for k, v in COMMUNICATION_PREFERENCE_MAPPING.items()}
 
 CHANGE_TOLERANCE_MAPPING = {
-    ChangeTolerance.HIGH: 'High (Thrive in fast-paced, evolving environments)',
-    ChangeTolerance.MEDIUM: 'Medium (Adaptable but prefer some stability)',
-    ChangeTolerance.LOW: 'Low (Prefer stability and established routines)',
-    ChangeTolerance.NO_PREFERENCE: 'No Preference'
+    ChangeToleranceEnum.HIGH: 'High (Thrive in fast-paced, evolving environments)',
+    ChangeToleranceEnum.MEDIUM: 'Medium (Adaptable but prefer some stability)',
+    ChangeToleranceEnum.LOW: 'Low (Prefer stability and established routines)',
+    ChangeToleranceEnum.NO_PREFERENCE: 'No Preference'
 }
 REVERSE_CHANGE_TOLERANCE_MAPPING = {v: k for k, v in CHANGE_TOLERANCE_MAPPING.items()}
 
 WORK_LOCATION_MAPPING = {
-    WorkLocation.ON_SITE: 'On-site',
-    WorkLocation.REMOTE: 'Remote',
-    WorkLocation.HYBRID: 'Hybrid',
-    WorkLocation.NO_PREFERENCE: 'No Preference'
+    WorkLocationEnum.ON_SITE: 'On-site',
+    WorkLocationEnum.REMOTE: 'Remote',
+    WorkLocationEnum.HYBRID: 'Hybrid',
+    WorkLocationEnum.NO_PREFERENCE: 'No Preference'
 }
 REVERSE_WORK_LOCATION_MAPPING = {v: k for k, v in WORK_LOCATION_MAPPING.items()}
 
@@ -98,17 +101,17 @@ class ProfileService:
 
     def get_profile(self, user_id: int):
         profile = self._get_or_create_profile(user_id)
-        profile_dict = {c.name: getattr(profile, c.name) for c in profile.__table__.columns}
+        # Use the model's to_dict() but then override Enums with display strings
+        profile_dict = profile.to_dict()
         
-        # Manually convert ENUM objects to display strings for the frontend
-        for field, (fwd_map, _) in self.enum_field_mappings.items():
-            enum_obj = profile_dict.get(field)
-            if enum_obj:
-                profile_dict[field] = fwd_map.get(enum_obj, None)
-        
-        # Ensure lat/long are floats
-        if profile_dict.get('latitude') is not None: profile_dict['latitude'] = float(profile_dict['latitude'])
-        if profile_dict.get('longitude') is not None: profile_dict['longitude'] = float(profile_dict['longitude'])
+        # Manually convert ENUM values (which are strings from to_dict) to display strings
+        for field, (fwd_map, rev_map) in self.enum_field_mappings.items():
+            db_value_str = profile_dict.get(field)
+            if db_value_str:
+                # Find the Enum object corresponding to the string value
+                enum_obj = next((k for k, v in fwd_map.items() if k.value == db_value_str), None)
+                if enum_obj:
+                    profile_dict[field] = fwd_map.get(enum_obj)
 
         return profile_dict
 
@@ -155,36 +158,27 @@ class ProfileService:
         
         update_data = {}
         for key, value in ai_data.items():
+            # Check if the field is allowed and if the current value in the model is None
             if key in self.allowed_fields and getattr(profile, key) is None:
                 update_data[key] = value
 
         if update_data:
             self.logger.info(f"Enriching profile for user {user_id} with AI data: {list(update_data.keys())}")
             # Use the existing update_profile logic to handle type conversions
-            return self.update_profile(user_id, update_data)
+            self.update_profile(user_id, update_data)
         
         return self.get_profile(user_id)
 
+
     def get_profile_for_analysis(self, user_id: int):
         profile = self._get_or_create_profile(user_id)
-        profile_dict = {c.name: getattr(profile, c.name) for c in profile.__table__.columns}
-
-        # Manually convert ENUM objects to their string values for JSON serialization
-        for field in self.enum_field_mappings.keys():
-            enum_obj = profile_dict.get(field)
-            if enum_obj:
-                profile_dict[field] = enum_obj.value
+        # The model's to_dict() method is perfect for this as it already returns enum values
+        profile_dict = profile.to_dict()
         
-        # Ensure lat/long are floats
-        if profile_dict.get('latitude') is not None: profile_dict['latitude'] = float(profile_dict['latitude'])
-        if profile_dict.get('longitude') is not None: profile_dict['longitude'] = float(profile_dict['longitude'])
-        
-        # Remove fields that are not useful for AI analysis
+        # Remove fields that are not useful for AI analysis or are internal
         profile_dict.pop('id', None)
         profile_dict.pop('user_id', None)
-        profile_dict.pop('created_at', None)
-        profile_dict.pop('updated_at', None)
-
+        
         return profile_dict
 
     def has_completed_required_profile_fields(self, user_id: int):
