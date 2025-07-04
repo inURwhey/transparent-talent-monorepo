@@ -18,9 +18,9 @@ from .profile_service import ProfileService
 MAX_RESUME_TEXT_LENGTH = 25000
 MAX_JOB_TEXT_LENGTH = 50000
 
-# Define models centrally WITHOUT the 'models/' prefix
-GEMINI_FLASH_MODEL = "gemini-1.5-flash-latest"
-GEMINI_PRO_MODEL = "gemini-1.5-pro-latest"
+# Using stable model names that are known to work with the v1beta endpoint
+GEMINI_FLASH_MODEL = "gemini-1.5-flash"
+GEMINI_PRO_MODEL = "gemini-1.5-pro"
 
 class JobService:
     def __init__(self, logger=None):
@@ -33,19 +33,22 @@ class JobService:
             self.logger.error("Gemini API key is not configured.")
             return None
 
-        # The 'models/' prefix is correctly placed here in the URL construction
-        url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent?key={api_key}"
+        # CORRECTED: Reverting to the v1beta endpoint as per successful Postman test.
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
         
-        headers = { "Content-Type": "application/json" }
+        # CORRECTED: Passing API key in the header, not the URL.
+        headers = { 
+            "Content-Type": "application/json",
+            "x-goog-api-key": api_key
+        }
         payload = { "contents": [{"parts": [{"text": prompt}]}] }
 
         try:
-            self.logger.info(f"Calling Gemini with model: {model_name}")
+            self.logger.info(f"Calling Gemini with model {model_name} on endpoint {url}")
             response = requests.post(url, headers=headers, json=payload, timeout=90)
             response.raise_for_status()
             data = response.json()
             
-            # Robustly parse the response
             candidates = data.get('candidates', [])
             if not candidates:
                 self.logger.error("Gemini API returned no candidates.", extra={'full_response': data})
@@ -242,7 +245,7 @@ class JobService:
             self.logger.info(f"No canonical job found for hash. Creating new job for '{job_title}' at '{company_name}'.")
             
             # Use a default empty profile for initial job creation analysis
-            company_profile_for_ai = company.to_dict() if company.profile else {}
+            company_profile_for_ai = company.to_dict() if hasattr(company, 'profile') and company.profile else {}
             # NOTE: We are NOT passing user profile here, because this is for a CANONICAL job
             # The user-specific analysis happens later.
             ai_analysis_data = self.analyze_job_posting(job_description, {}, company_profile_for_ai)
