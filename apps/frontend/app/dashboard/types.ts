@@ -6,7 +6,6 @@ export interface CompanyProfile {
     description: string | null;
     mission: string | null;
     business_model: string | null;
-    // Added missing fields required by CompanyProfileCard
     company_size_min: number | null;
     company_size_max: number | null;
 }
@@ -16,7 +15,6 @@ export interface Job {
     company_id: number;
     company_name: string;
     job_title: string;
-    // Added to fix filtering logic
     status: string; 
 }
 
@@ -31,18 +29,16 @@ export interface AIAnalysis {
     job_id: number;
     user_id: number;
     matrix_rating: string | null;
-    // ... other analysis fields
 }
 
 export interface TrackedJob {
-    id: number; // The correct primary key
+    id: number;
     user_id: number;
     status: string;
     notes: string | null;
     created_at: string;
     updated_at: string;
     is_excited: boolean;
-    // Added all missing timestamp fields
     applied_at: string | null;
     first_interview_at: string | null;
     offer_received_at: string | null;
@@ -64,7 +60,6 @@ export interface Profile {
   full_name: string | null;
   location: string | null;
   has_completed_onboarding: boolean;
-  // ... other profile fields
 }
 
 export interface RecommendedJob {
@@ -74,6 +69,9 @@ export interface RecommendedJob {
   job_url: string;
   match_score: number;
   matrix_rating: string | null;
+  // CORRECTED: Added the missing properties that JobsForYou.tsx requires
+  job_modality: string | null;
+  deduced_job_level: string | null;
 }
 
 export type UpdatePayload = Partial<Omit<TrackedJob, 'id' | 'user_id' | 'job_opportunity' | 'job' | 'company' | 'job_analysis' | 'ai_grade'>>;
