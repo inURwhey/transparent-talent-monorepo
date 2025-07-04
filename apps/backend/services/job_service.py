@@ -23,38 +23,30 @@ class JobService:
         self.logger = logger or current_app.logger
         self.profile_service = ProfileService(self.logger)
 
-    def _call_gemini_api(self, prompt, model_name="gemini-1.5-flash"):
+    def _call_gemini_api(self, prompt, model_name="gemini-1.5-pro-latest"):
         api_key = config.GEMINI_API_KEY
         if not api_key:
             self.logger.error("Gemini API key is not configured.")
             return None
 
-        url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent"
+        # CORRECTED: Reverted to the simpler, working v1beta endpoint and payload structure.
+        # Removed the 'generationConfig' that was causing the 400 Bad Request error.
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
         
-        headers = {
-            "Content-Type": "application/json",
-            "x-goog-api-key": api_key
-        }
-
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                # CORRECTED: Changed 'response_mime_type' to 'responseMimeType' (camelCase)
-                "responseMimeType": "application/json",
-            }
-        }
+        headers = { "Content-Type": "application/json" }
+        payload = { "contents": [{"parts": [{"text": prompt}]}] }
 
         try:
-            self.logger.info(f"Calling Gemini API with model {model_name} at URL {url}")
+            self.logger.info(f"Calling Gemini API with model {model_name}")
             response = requests.post(url, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
             
+            # Reinstated robust parsing from the original working version.
             text_content = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
             
             if not text_content:
-                self.logger.error("Gemini API returned an empty text response.")
-                self.logger.error(f"Full Gemini Response: {data}")
+                self.logger.error("Gemini API returned an empty text response.", extra={'full_response': data})
                 return None
             
             return text_content
@@ -65,8 +57,7 @@ class JobService:
                 self.logger.error(f"Gemini API Response Body: {e.response.text}")
             return None
         except (KeyError, IndexError) as e:
-            self.logger.error(f"Error parsing Gemini API response structure: {e}")
-            self.logger.error(f"Full Gemini Response: {data}")
+            self.logger.error(f"Error parsing Gemini API response structure: {e}", extra={'full_response': data})
             return None
 
     def _extract_text_from_html(self, html_content):
@@ -124,7 +115,10 @@ class JobService:
             
     def _parse_ai_response(self, ai_response_text):
         try:
-            parsed_data = json.loads(ai_response_text)
+            # Reinstated robust JSON extraction from markdown code fences.
+            match = re.search(r"```json\n(.+?)\n```", ai_response_text, re.DOTALL)
+            json_string = match.group(1) if match else ai_response_text
+            parsed_data = json.loads(json_string)
             
             parsed_data['job_title'] = parsed_data.get('job_title', 'Unknown Title').strip()
             parsed_data['company_name'] = parsed_data.get('company_name', 'Unknown Company').strip()
@@ -143,8 +137,8 @@ class JobService:
             parsed_data['matrix_rating'] = str(matrix_rating)[:50]
 
             return parsed_data
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Failed to decode JSON from AI response: {e}. Raw text: {ai_response_text}")
+        except (json.JSONDecodeError, AttributeError) as e:
+            self.logger.error(f"Failed to decode or parse JSON from AI response: {e}. Raw text: {ai_response_text}")
             return None
         except Exception as e:
             self.logger.error(f"Error processing AI response: {e}. Raw text: {ai_response_text}")
@@ -160,7 +154,8 @@ class JobService:
         company_str = json.dumps(company_profile_data, indent=2) if company_profile_data else "{}"
 
         prompt = f"""
-        Analyze the following job posting, user profile, and company context to determine the candidate's fit.
+        Analyze the following job posting and user profile to determine the candidate's fit.
+        Provide a JSON output matching the schema provided.
 
         User Profile:
         {profile_str}
@@ -187,7 +182,8 @@ class JobService:
         - recommended_testimonials (array of strings)
         - hiring_manager_view (string)
 
-        Your response MUST be valid JSON.
+        Strictly conform to the JSON structure. If a field cannot be determined, use null or appropriate default.
+        Your response MUST be valid JSON wrapped in ```json ... ```.
         """
         self.logger.info("Sending job posting to Gemini for analysis.")
         ai_response = self._call_gemini_api(prompt, model_name="gemini-1.5-pro-latest")
@@ -233,7 +229,8 @@ class JobService:
         ).first()
 
         if not canonical_job:
-            ai_analysis_data = self.analyze_job_posting(job_description, {}, company.to_dict()) if company else self.analyze_job_posting(job_description, {})
+            company_profile_for_ai = company.to_dict() if company else {}
+            ai_analysis_data = self.analyze_job_posting(job_description, {}, company_profile_for_ai)
             
             if not ai_analysis_data: ai_analysis_data = {}
 
