@@ -4,9 +4,78 @@ from datetime import datetime
 import pytz
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import text, Index
+import enum
 
 def get_utc_now():
     return datetime.now(pytz.utc)
+
+# --- Enum Definitions ---
+class CompanySizeEnum(enum.Enum):
+    SMALL_BUSINESS = 'SMALL_BUSINESS'
+    MEDIUM_BUSINESS = 'MEDIUM_BUSINESS'
+    LARGE_ENTERPRISE = 'LARGE_ENTERPRISE'
+    STARTUP = 'STARTUP'
+    NO_PREFERENCE = 'NO_PREFERENCE'
+
+class WorkStyleTypeEnum(enum.Enum):
+    STRUCTURED = 'STRUCTURED'
+    AUTONOMOUS = 'AUTONOMOUS'
+    COLLABORATIVE = 'COLLABORATIVE'
+    HYBRID = 'HYBRID'
+    NO_PREFERENCE = 'NO_PREFERENCE'
+
+class ConflictResolutionEnum(enum.Enum):
+    DIRECT = 'DIRECT'
+    MEDIATED = 'MEDIATED'
+    AVOIDANT = 'AVOIDANT'
+    NO_PREFERENCE = 'NO_PREFERENCE'
+
+class CommunicationPrefEnum(enum.Enum):
+    WRITTEN = 'WRITTEN'
+    VERBAL = 'VERBAL'
+    VISUAL = 'VISUAL'
+    NO_PREFERENCE = 'NO_PREFERENCE'
+
+class ChangeToleranceEnum(enum.Enum):
+    HIGH = 'HIGH'
+    MEDIUM = 'MEDIUM'
+    LOW = 'LOW'
+    NO_PREFERENCE = 'NO_PREFERENCE'
+
+class WorkLocationEnum(enum.Enum):
+    ON_SITE = 'ON_SITE'
+    REMOTE = 'REMOTE'
+    HYBRID = 'HYBRID'
+    NO_PREFERENCE = 'NO_PREFERENCE'
+
+class JobModalityEnum(enum.Enum):
+    ON_SITE = 'ON_SITE'
+    REMOTE = 'REMOTE'
+    HYBRID = 'HYBRID'
+
+class JobLevelEnum(enum.Enum):
+    ENTRY = 'ENTRY'
+    ASSOCIATE = 'ASSOCIATE'
+    MID = 'MID'
+    SENIOR = 'SENIOR'
+    LEAD = 'LEAD'
+    PRINCIPAL = 'PRINCIPAL'
+    DIRECTOR = 'DIRECTOR'
+    VP = 'VP'
+    EXECUTIVE = 'EXECUTIVE'
+
+class TrackedJobStatusEnum(enum.Enum):
+    SAVED = 'SAVED'
+    APPLIED = 'APPLIED'
+    INTERVIEWING = 'INTERVIEWING'
+    OFFER_NEGOTIATIONS = 'OFFER_NEGOTIATIONS'
+    OFFER_ACCEPTED = 'OFFER_ACCEPTED'
+    REJECTED = 'REJECTED'
+    WITHDRAWN = 'WITHDRAWN'
+    EXPIRED = 'EXPIRED'
+
+
+# --- Model Definitions ---
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -44,12 +113,12 @@ class UserProfile(db.Model):
     desired_salary_max = db.Column(db.Integer, nullable=True)
     target_industries = db.Column(db.Text, nullable=True)
     career_goals = db.Column(db.Text, nullable=True)
-    preferred_company_size = db.Column(db.Enum('SMALL_BUSINESS', 'MEDIUM_BUSINESS', 'LARGE_ENTERPRISE', 'STARTUP', 'NO_PREFERENCE', name='company_size_enum', native_enum=True), nullable=True)
-    work_style_preference = db.Column(db.Enum('STRUCTURED', 'AUTONOMOUS', 'COLLABORATIVE', 'HYBRID', 'NO_PREFERENCE', name='work_style_type_enum', native_enum=True), nullable=True)
-    conflict_resolution_style = db.Column(db.Enum('DIRECT', 'MEDIATED', 'AVOIDANT', 'NO_PREFERENCE', name='conflict_resolution_enum', native_enum=True), nullable=True)
-    communication_preference = db.Column(db.Enum('WRITTEN', 'VERBAL', 'VISUAL', 'NO_PREFERENCE', name='communication_pref_enum', native_enum=True), nullable=True)
-    change_tolerance = db.Column(db.Enum('HIGH', 'MEDIUM', 'LOW', 'NO_PREFERENCE', name='change_tolerance_enum', native_enum=True), nullable=True)
-    preferred_work_style = db.Column(db.Enum('ON_SITE', 'REMOTE', 'HYBRID', 'NO_PREFERENCE', name='work_location_enum', native_enum=True), nullable=True)
+    preferred_company_size = db.Column(db.Enum(CompanySizeEnum, name='company_size_enum', native_enum=True), nullable=True)
+    work_style_preference = db.Column(db.Enum(WorkStyleTypeEnum, name='work_style_type_enum', native_enum=True), nullable=True)
+    conflict_resolution_style = db.Column(db.Enum(ConflictResolutionEnum, name='conflict_resolution_enum', native_enum=True), nullable=True)
+    communication_preference = db.Column(db.Enum(CommunicationPrefEnum, name='communication_pref_enum', native_enum=True), nullable=True)
+    change_tolerance = db.Column(db.Enum(ChangeToleranceEnum, name='change_tolerance_enum', native_enum=True), nullable=True)
+    preferred_work_style = db.Column(db.Enum(WorkLocationEnum, name='work_location_enum', native_enum=True), nullable=True)
     is_remote_preferred = db.Column(db.Boolean, default=False, nullable=True)
     skills = db.Column(db.Text, nullable=True)
     education = db.Column(db.Text, nullable=True)
@@ -77,12 +146,12 @@ class UserProfile(db.Model):
             'desired_salary_max': self.desired_salary_max,
             'target_industries': self.target_industries,
             'career_goals': self.career_goals,
-            'preferred_company_size': self.preferred_company_size,
-            'work_style_preference': self.work_style_preference,
-            'conflict_resolution_style': self.conflict_resolution_style,
-            'communication_preference': self.communication_preference,
-            'change_tolerance': self.change_tolerance,
-            'preferred_work_style': self.preferred_work_style,
+            'preferred_company_size': self.preferred_company_size.value if self.preferred_company_size else None,
+            'work_style_preference': self.work_style_preference.value if self.work_style_preference else None,
+            'conflict_resolution_style': self.conflict_resolution_style.value if self.conflict_resolution_style else None,
+            'communication_preference': self.communication_preference.value if self.communication_preference else None,
+            'change_tolerance': self.change_tolerance.value if self.change_tolerance else None,
+            'preferred_work_style': self.preferred_work_style.value if self.preferred_work_style else None,
             'is_remote_preferred': self.is_remote_preferred,
             'skills': self.skills,
             'education': self.education,
@@ -151,8 +220,8 @@ class Job(db.Model):
     salary_min = db.Column(db.Integer, nullable=True)
     salary_max = db.Column(db.Integer, nullable=True)
     required_experience_years = db.Column(db.Integer, nullable=True)
-    job_modality = db.Column(db.Enum('ON_SITE', 'REMOTE', 'HYBRID', name='job_modality_enum', native_enum=True), nullable=True)
-    deduced_job_level = db.Column(db.Enum('ENTRY', 'ASSOCIATE', 'MID', 'SENIOR', 'LEAD', 'PRINCIPAL', 'DIRECTOR', 'VP', 'EXECUTIVE', name='job_level_enum', native_enum=True), nullable=True)
+    job_modality = db.Column(db.Enum(JobModalityEnum, name='job_modality_enum', native_enum=True), nullable=True)
+    deduced_job_level = db.Column(db.Enum(JobLevelEnum, name='job_level_enum', native_enum=True), nullable=True)
     job_description_hash = db.Column(db.Text, nullable=True)
 
     company = db.relationship('Company', backref=db.backref('jobs', lazy=True))
@@ -171,8 +240,8 @@ class Job(db.Model):
             'salary_min': self.salary_min,
             'salary_max': self.salary_max,
             'required_experience_years': self.required_experience_years,
-            'job_modality': self.job_modality,
-            'deduced_job_level': self.deduced_job_level,
+            'job_modality': self.job_modality.value if self.job_modality else None,
+            'deduced_job_level': self.deduced_job_level.value if self.deduced_job_level else None,
             'job_description_hash': self.job_description_hash,
         }
 
@@ -186,7 +255,7 @@ class TrackedJob(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, nullable=True)
     updated_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, onupdate=get_utc_now, nullable=True)
     is_excited = db.Column(db.Boolean, default=False, nullable=True)
-    status = db.Column(db.Enum('SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS', 'OFFER_ACCEPTED', 'REJECTED', 'WITHDRAWN', 'EXPIRED', name='tracked_job_status_enum', native_enum=True), nullable=False, default='SAVED')
+    status = db.Column(db.Enum(TrackedJobStatusEnum, name='tracked_job_status_enum', native_enum=True), nullable=False, default=TrackedJobStatusEnum.SAVED)
     status_reason = db.Column(db.Text, nullable=True)
     first_interview_at = db.Column(db.DateTime(timezone=True), nullable=True)
     offer_received_at = db.Column(db.DateTime(timezone=True), nullable=True)
@@ -207,7 +276,7 @@ class TrackedJob(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'is_excited': self.is_excited,
-            'status': self.status,
+            'status': self.status.value if self.status else None,
             'status_reason': self.status_reason,
             'first_interview_at': self.first_interview_at.isoformat() if self.first_interview_at else None,
             'offer_received_at': self.offer_received_at.isoformat() if self.offer_received_at else None,
