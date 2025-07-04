@@ -3,6 +3,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.53.0 - 2025-07-04 - Architecture: Backend Data Layer Migration to SQLAlchemy
+### Added
+- **Architecture (Flask-Migrate):** Installed and configured Flask-Migrate to manage future database schema changes.
+- **Backend (run.py):** Added a `run.py` launcher to facilitate local Flask CLI commands within the monorepo structure.
+
+### Changed
+- **Architecture (SQLAlchemy ORM):** Initiated a critical, foundational migration of the entire backend data access layer from raw `psycopg2` calls to the Flask-SQLAlchemy ORM. This is a major architectural enhancement for future scalability and maintainability.
+- **Architecture (1:Many Job:URL):** The database schema was migrated to support a canonical `jobs` table and multiple `job_opportunities`, enabling future semantic deduplication.
+- **Backend:** Refactored `app.py` to initialize Flask-SQLAlchemy and Flask-Migrate.
+- **Backend:** Refactored `auth.py`, all service files (`job_service.py`, `profile_service.py`, etc.), and all route blueprints (`jobs.py`, `profile.py`, etc.) to use SQLAlchemy ORM queries instead of direct SQL execution.
+
+### Fixed
+- **Database Schema:** Performed a comprehensive manual synchronization of the production database schema to align with the new `models.py` definitions, fixing dozens of discrepancies in column names, types, and constraints across `users`, `user_profiles`, `companies`, and other tables.
+- **Database Data:** Corrected widespread data integrity issues with `ENUM` types, updating legacy or improperly-cased values (e.g., 'FLEXIBLE', 'On-site', 'Mid') to the required `SCREAMING_SNAKE_CASE` format (e.g., 'HYBRID', 'ON_SITE', 'MID').
+
+### Known Issues
+- **Critical `AttributeError`:** The application is currently non-functional due to a persistent `AttributeError: 'str' object has no attribute 'value'` on all API endpoints. This is caused by a mismatch in how SQLAlchemy is loading Enum data and how the application code is trying to access it. **This is the highest priority bug.**
+
 ## v0.52.0 - 2025-07-04 - Job Tracker UI & Stability Refinements
 
 This release significantly enhances the Job Tracker's user experience by resolving critical UI update delays, fixing layout issues, and refining date selection, and the observed resolution of a critical backend stability issue related to random profile save failures, likely due to improvements in Render instance spin-up/spin-down behavior or previous architectural refinements.

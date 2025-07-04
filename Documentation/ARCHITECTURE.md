@@ -16,18 +16,19 @@ A foundational principle of the system is the separation of user-provided data f
 
 ## Tier 2: The Backend (Server/API)
 
-*   **Technology:** Python with the Flask framework.
+*   **Technology:** Python with the Flask framework, using **Flask-SQLAlchemy** as the ORM.
 *   **Purpose:** This is the "brain" of the application. It is responsible for all business logic, data processing, and security. It serves as the single, authoritative gateway to the database and other services.
 *   **How it Works:** It exposes a RESTful API with specific endpoints (e.g., `/api/users/profile`). It receives requests from the Frontend, validates the included JWT, interacts with the Database, calls external services, and sends back structured data (JSON) as a response.
 *   **Automated Data Enrichment:** The system intelligently enriches its own data. For example, when a job from a new company is submitted, the backend automatically triggers an AI research task to build a detailed company profile, which is then used to enrich job analysis and displayed to the user.
 *   **Data Lifecycle Management:** The business logic for core entities follows a strictly defined state machine to ensure data integrity and predictable behavior. For a detailed breakdown of these state machines, see the **[Data Lifecycle Management](DATA_LIFECYCLE.md)** document.
+*   **Database Migrations:** Database schema changes are managed using **Flask-Migrate**, which integrates with Alembic to provide version-controlled, programmatic migrations.
 *   **Deployment:** Deployed as a web service on **Render**. It is connected to a production database and its deployment is automatically triggered by a git push to the `main` branch. Feature branch testing is supported by creating temporary, parallel backend services on Render that deploy from their respective branches.
 
 ## Tier 3: The Database (Persistence Layer)
 
 *   **Technology:** PostgreSQL.
 *   **Purpose:** This is the application's permanent memory. It is responsible for storing all structured data in a reliable, organized, and efficient manner.
-*   **How it Works:** It contains a relational schema with tables like `users`, `jobs`, `companies`, `tracked_jobs`, and `user_profiles`. The Backend is the only component that communicates directly with the database.
+*   **How it Works:** It contains a relational schema with tables like `users`, `jobs`, `companies`, `tracked_jobs`, and `user_profiles`. The Backend is the only component that communicates directly with the database, managed through the **Flask-SQLAlchemy ORM**.
 *   **Deployment:** Hosted as a managed PostgreSQL instance on **Render**.
 
 ## External Service: Authentication

@@ -15,14 +15,21 @@
 | E03| **Monetization & Subscriptions** | Define and implement user subscription tiers to gate access to premium AI features. | In Progress |
 | E04| **User Relationship Management** | Build a lightweight, integrated CRM for managing professional contacts and leveraging the user's network. | In Progress |
 | E05| **System Lifecycles** | Formally define and document the state machines and lifecycles for core system entities (Users, Companies, Jobs) to guide future development. | Not Started |
+| E07| **Migrate to Flask-SQLAlchemy ORM** | Transition the backend's database interaction layer from direct `psycopg2` calls to Flask-SQLAlchemy for improved maintainability, scalability, and developer velocity. | In Progress |
 
 ---
 
-## Tier 1: Foundational Infrastructure (Highest Priority)
+## Tier 0: System-Critical Blockers
+| Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Bugfix: Resolve "AttributeError: 'str' object has no attribute 'value'" in backend** | E07 | 1000 | 3 | 100% | 0.05 | **12000** | Flash | S | **To Do** |
+
+## Tier 1: Foundational Infrastructure
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Backend: Re-process malformed job data** | - | 1000 | 2 | 100% | 0.5 | **4000** | Flash | S | **To Do** |
 | **BI: Platform-wide Hiring Funnel Analytics** | E05 | 1000 | 2 | 100% | 0.5 | **4000** | Flash | S | **To Do** |
+| **Feature: Legally Required Applicant Information in Profile** | E02 | 1000 | 3 | 100% | 0.25 | **12000** | Flash | S | **To Do** |
 
 ## Tier 2: Core User Experience & Differentiation
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
@@ -58,8 +65,6 @@
 | **Feature (Coaching): AI-Powered Interview Prep** | E03 | 1000 | 3 | 90% | 1.0 | **2700** | Pro | L | **To Do** |
 | **Feature: User Feedback Loop** | E01 | 1000 | 3 | 100% | 2.5 | **1200** | Pro | L | **To Do** |
 | **Feature: "Jobs For You" Pagination & Tabular View** | E01 | 1000 | 2 | 90% | 0.25 | **800** | Flash | S | **To Do** |
-| **UI/UX: Clear Date Field in Next Action Date** | - | 1000 | 1 | 90% | 0.1 | **900** | Flash | S | **To Do** |
-| **UI/UX: Restrict Next Action Date to Future Only** | - | 1000 | 1 | 90% | 0.1 | **900** | Flash | S | **To Do** |
 
 ---
 
@@ -97,8 +102,10 @@
 ## Completed Features & Bugfixes
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
-| **Bugfix: Profile Save Fails Randomly (Likely Render Instance Spin-down)** | Tier 1 | 1400 |
-| **Bugfix: Immediate UI Update for CRM Fields** | Technical Debt | N/A |
+| **UI/UX: Clear Date Field in Next Action Date** | UI/UX Polish | N/A |
+| **UI/UX: Restrict Next Action Date to Future Only** | UI/UX Polish | N/A |
+| **Bugfix (Job Tracker UI Update Delay & Layout)** | Technical Debt | N/A |
+| **Bugfix (Backend Stability): "Profile Save Fails Randomly"** | Tier 1 | 1400 |
 | **Architecture: Distinguish 'Unset' vs 'No Preference' in DB** | Tier 1 | 4000 |
 | **Feature: User-set Reminders & Next Action Notifications** | Tier 1 | 4000 |
 | **Feature: Enhanced Company Profiles & Research** | Tier 2 | 1200 |

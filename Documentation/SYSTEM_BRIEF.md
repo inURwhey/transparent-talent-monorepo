@@ -8,13 +8,16 @@
 
 ## 2. Technology Stack & Architecture
 *   **Frontend:** Next.js (React) hosted on **Vercel**.
-*   **Backend:** Python with **Flask**, hosted as a web service on **Render**.
+*   **Backend:** Python with **Flask**, hosted as a web service on **Render**. The backend now uses **Flask-SQLAlchemy** as its ORM and **Flask-Migrate** for database migrations.
 *   **Database:** **PostgreSQL**, hosted on **Render**.
 *   **AI Service:** Google **Gemini API**, called exclusively from the backend.
 *   **Authentication:** **Clerk**, integrated with the frontend. Backend uses manual JWT verification.
 *   **Architecture Style:** Decoupled three-tier application, managed in a **monorepo**. The backend now follows a service-oriented architecture with an application factory pattern.
 
 ## 3. Current Project Status
+*   **Backend Data Layer Refactoring (In Progress):** A critical, ongoing project to migrate the entire backend from raw `psycopg2` database calls to the Flask-SQLAlchemy ORM has been started. This includes refactoring all services and routes.
+*   **1:Many Job:URL Data Model (Partially Implemented):** The database schema has been migrated to support a canonical `jobs` table and multiple `job_opportunities` per job, enabling future semantic deduplication. Core backend services have been updated to reflect this new structure.
+*   **Database Schema Synchronized:** A comprehensive, manual data and schema synchronization has been performed on the production database to align it with the new SQLAlchemy models, resolving numerous historical inconsistencies.
 *   **Backend Stability Enhanced:** The recurring "Profile Save Fails Randomly" bug is no longer reproducible and is considered resolved, indicating improved backend stability, potentially due to Render environment behavior or previous architectural changes.
 *   **Job Tracker UI/UX Stable:** The Job Tracker table has undergone significant stability and user experience improvements, including immediate UI updates for CRM fields, fixed date selection for future dates, and clean console output. (Note: The persistent table layout/overflow issue is acknowledged and moved to backlog).
 *   **Strategic Roadmap Defined:** A comprehensive strategic roadmap has been integrated, detailing go-to-market, monetization, and phased product development towards the "Nielsen for Talent" vision.
@@ -24,7 +27,11 @@
 *   **Onboarding Lifecycle Hardened:** The entire new user experience, from sign-up and job submission to profile completion, is stable and robust.
 *   **Application is stable and functional on its production domain.**
 
-## 4. Immediate Backlog & Next Steps
+## 4. Immediate Backlog & Known Critical Issues
+### Known Critical Issues
+*   **`AttributeError: 'str' object has no attribute 'value'`:** The application is currently non-functional due to this persistent runtime error on all API endpoints. It is caused by a mismatch in how SQLAlchemy is loading database `ENUM` types and how the application code is attempting to access them. **This is the highest priority bug.**
+
+### Next Steps
 1.  **Backend: Re-process malformed job data:** Create an admin endpoint to clean up historical job data that was saved with placeholder titles. (RICE: 4000)
 2.  **BI: Platform-wide Hiring Funnel Analytics:** Leverage new milestone timestamps for business intelligence. (RICE: 4000)
 3.  **Feature: Intelligent Duplicate Resume Handling (Reactivation/Discard):** Implement logic to manage duplicate resume submissions. (RICE: 9000)

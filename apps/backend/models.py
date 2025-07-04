@@ -17,6 +17,16 @@ class User(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, nullable=True)
     updated_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, onupdate=get_utc_now, nullable=True)
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'clerk_user_id': self.clerk_user_id,
+            'email': self.email,
+            'full_name': self.full_name,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
 class UserProfile(db.Model):
     __tablename__ = 'user_profiles'
     id = db.Column(db.Integer, primary_key=True)
@@ -113,6 +123,20 @@ class JobOpportunity(db.Model):
 
     job = db.relationship('Job', backref=db.backref('opportunities', lazy=True))
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'job_id': self.job_id,
+            'url': self.url,
+            'source_platform': self.source_platform,
+            'posted_at': self.posted_at.isoformat() if self.posted_at else None,
+            'extracted_location': self.extracted_location,
+            'is_active': self.is_active,
+            'last_checked_at': self.last_checked_at.isoformat() if self.last_checked_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
 class Job(db.Model):
     __tablename__ = 'jobs'
     id = db.Column(db.Integer, primary_key=True)
@@ -132,6 +156,25 @@ class Job(db.Model):
     job_description_hash = db.Column(db.Text, nullable=True)
 
     company = db.relationship('Company', backref=db.backref('jobs', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'company_id': self.company_id,
+            'company_name': self.company_name,
+            'job_title': self.job_title,
+            'source': self.source,
+            'notes': self.notes,
+            'found_at': self.found_at.isoformat() if self.found_at else None,
+            'status': self.status,
+            'last_checked_at': self.last_checked_at.isoformat() if self.last_checked_at else None,
+            'salary_min': self.salary_min,
+            'salary_max': self.salary_max,
+            'required_experience_years': self.required_experience_years,
+            'job_modality': self.job_modality,
+            'deduced_job_level': self.deduced_job_level,
+            'job_description_hash': self.job_description_hash,
+        }
 
 class TrackedJob(db.Model):
     __tablename__ = 'tracked_jobs'
