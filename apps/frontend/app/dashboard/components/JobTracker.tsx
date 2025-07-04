@@ -29,34 +29,29 @@ export default function JobTracker({
     trackedJobs,
     isLoading,
     error,
-    totalCount,
+    actions,
     handleUpdateJobField,
-    actions
 }: JobTrackerProps) {
     
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
     const [filterStatus, setFilterStatus] = useState<'all' | 'active_pipeline' | 'closed_pipeline' | 'active_posting' | 'expired_posting'>('all');
 
     const handleStatusChange = useCallback(async (trackedJobId: number, newStatus: string) => {
-        const currentJob = trackedJobs.find(job => job.tracked_job_id === trackedJobId);
+        const currentJob = trackedJobs.find(job => job.id === trackedJobId);
         if (!currentJob) return;
+
         const payload: UpdatePayload = { status: newStatus };
         const now = new Date().toISOString();
 
-        if (newStatus === 'APPLIED' && !currentJob.applied_at) {
-            payload.applied_at = now;
-        } else if (newStatus === 'SAVED' && currentJob.applied_at) {
-            payload.applied_at = null;
-        }
-        
+        if (newStatus === 'APPLIED' && !currentJob.applied_at) payload.applied_at = now;
+        if (newStatus === 'SAVED' && currentJob.applied_at) payload.applied_at = null;
         if (newStatus === 'INTERVIEWING' && !currentJob.first_interview_at) payload.first_interview_at = now;
         if (newStatus === 'OFFER_NEGOTIATIONS' && !currentJob.offer_received_at) payload.offer_received_at = now;
         
-        if (!ACTIVE_PIPELINE_STATUSES.includes(newStatus) && !currentJob.resolved_at) {
-            payload.resolved_at = now;
-        } else if (ACTIVE_PIPELINE_STATUSES.includes(newStatus) && currentJob.resolved_at) {
-            payload.resolved_at = null;
-        }
+        const isTerminal = !ACTIVE_PIPELINE_STATUSES.includes(newStatus);
+        if (isTerminal && !currentJob.resolved_at) payload.resolved_at = now;
+        if (!isTerminal && currentJob.resolved_at) payload.resolved_at = null;
+        
         await actions.updateTrackedJob(trackedJobId, payload);
     }, [actions, trackedJobs]);
 
@@ -69,16 +64,13 @@ export default function JobTracker({
     }, [actions]);
 
     const filteredTrackedJobs = useMemo(() => {
-        let filtered = trackedJobs;
         switch (filterStatus) {
-            case 'active_pipeline': filtered = trackedJobs.filter(job => ACTIVE_PIPELINE_STATUSES.includes(job.status)); break;
-            case 'closed_pipeline': filtered = trackedJobs.filter(job => !ACTIVE_PIPELINE_STATUSES.includes(job.status)); break;
-            case 'active_posting': filtered = trackedJobs.filter(job => job.job_posting_status === 'Active'); break;
-            case 'expired_posting': filtered = trackedJobs.filter(job => job.job_posting_status !== 'Active'); break;
-            case 'all': // fall through
-            default: filtered = trackedJobs; break;
+            case 'active_pipeline': return trackedJobs.filter(job => ACTIVE_PIPELINE_STATUSES.includes(job.status));
+            case 'closed_pipeline': return trackedJobs.filter(job => !ACTIVE_PIPELINE_STATUSES.includes(job.status));
+            case 'active_posting': return trackedJobs.filter(job => job.job?.status === 'Active');
+            case 'expired_posting': return trackedJobs.filter(job => job.job?.status !== 'Active');
+            default: return trackedJobs;
         }
-        return filtered;
     }, [trackedJobs, filterStatus]);
 
     useEffect(() => { setPagination(prev => ({ ...prev, pageIndex: 0 })); }, [filterStatus]);
@@ -94,19 +86,13 @@ export default function JobTracker({
             handleStatusChange,
             handleRemoveJob,
             handleToggleExcited,
-            handleUpdateJobField,
-            allTableData: filteredTrackedJobs,
+            handleUpdateJobField
         }),
-        [handleStatusChange, handleRemoveJob, handleToggleExcited, handleUpdateJobField, filteredTrackedJobs]
+        [handleStatusChange, handleRemoveJob, handleToggleExcited, handleUpdateJobField]
     );
     
-    if (isLoading) {
-        return <div className="text-center p-8">Loading your tracked jobs...</div>;
-    }
-
-    if (error) {
-        return <div className="text-center p-8 text-red-600">Error loading jobs: {error}</div>;
-    }
+    if (isLoading) return <div className="text-center p-8">Loading your tracked jobs...</div>;
+    if (error) return <div className="text-center p-8 text-red-600">Error loading jobs: {error}</div>;
 
     return (
         <div className="bg-white p-6 rounded-lg shadow-md">

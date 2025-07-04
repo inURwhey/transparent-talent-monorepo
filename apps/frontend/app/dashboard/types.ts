@@ -1,17 +1,14 @@
 // Path: apps/frontend/app/dashboard/types.ts
-
-// --- CORE BACKEND MODELS ---
-// These interfaces now match the backend's to_dict() methods exactly.
-
-// CORRECTED: Renamed 'Company' to 'CompanyProfile' to match its usage in hooks and components.
-export interface CompanyProfile { 
+export interface CompanyProfile {
     id: number;
     name: string;
     industry: string | null;
     description: string | null;
     mission: string | null;
     business_model: string | null;
-    // ... add other company fields if needed by the UI
+    // Added missing fields required by CompanyProfileCard
+    company_size_min: number | null;
+    company_size_max: number | null;
 }
 
 export interface Job {
@@ -19,7 +16,8 @@ export interface Job {
     company_id: number;
     company_name: string;
     job_title: string;
-    // ... add other job fields if needed by the UI
+    // Added to fix filtering logic
+    status: string; 
 }
 
 export interface JobOpportunity {
@@ -27,73 +25,46 @@ export interface JobOpportunity {
     job_id: number;
     url: string;
     is_active: boolean;
-    // ... add other job opportunity fields if needed
 }
 
 export interface AIAnalysis {
     job_id: number;
     user_id: number;
-    position_relevance_score: number | null;
-    environment_fit_score: number | null;
-    hiring_manager_view: string | null;
     matrix_rating: string | null;
-    summary: string | null;
-    qualification_gaps: string[] | null;
-    recommended_testimonials: string[] | null;
+    // ... other analysis fields
 }
 
 export interface TrackedJob {
-    id: number; // The primary key for the tracked_jobs table
+    id: number; // The correct primary key
     user_id: number;
-    job_opportunity_id: number;
     status: string;
     notes: string | null;
     created_at: string;
     updated_at: string;
     is_excited: boolean;
+    // Added all missing timestamp fields
     applied_at: string | null;
+    first_interview_at: string | null;
+    offer_received_at: string | null;
+    resolved_at: string | null;
     next_action_at: string | null;
     next_action_notes: string | null;
-    // --- NESTED OBJECTS FROM THE BACKEND ---
+    
+    // Nested objects from the backend
     job_opportunity: JobOpportunity;
     job: Job;
-    company: CompanyProfile | null; // This now correctly references the renamed CompanyProfile
+    company: CompanyProfile | null;
     job_analysis: AIAnalysis | null;
-    ai_grade: string | null; // This is a convenience property added by the service
+    ai_grade: string | null;
 }
-
-
-// --- PROFILE & OTHER UI-SPECIFIC TYPES ---
 
 export interface Profile {
   id: number;
   user_id: number;
   full_name: string | null;
   location: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  linkedin_url: string | null;
-  github_url: string | null;
-  portfolio_url: string | null;
-  current_role: string | null;
-  desired_job_titles: string | null;
-  desired_salary_min: number | null;
-  desired_salary_max: number | null;
-  target_industries: string | null;
-  career_goals: string | null;
-  preferred_company_size: string | null;
-  work_style_preference: string | null;
-  conflict_resolution_style: string | null;
-  communication_preference: string | null;
-  change_tolerance: string | null;
-  preferred_work_style: string | null;
-  is_remote_preferred: boolean | null;
-  skills: string | null;
-  education: string | null;
-  work_experience: string | null;
-  personality_16_personalities: string | null;
-  other_personal_attributes: string | null;
   has_completed_onboarding: boolean;
+  // ... other profile fields
 }
 
 export interface RecommendedJob {
@@ -103,9 +74,6 @@ export interface RecommendedJob {
   job_url: string;
   match_score: number;
   matrix_rating: string | null;
-  job_modality: string | null;
-  deduced_job_level: string | null;
 }
 
-// UpdatePayload is used for sending updates. It can be a partial of any top-level TrackedJob field.
-export type UpdatePayload = Partial<Omit<TrackedJob, 'job_opportunity' | 'job' | 'company' | 'job_analysis' | 'ai_grade'>>;
+export type UpdatePayload = Partial<Omit<TrackedJob, 'id' | 'user_id' | 'job_opportunity' | 'job' | 'company' | 'job_analysis' | 'ai_grade'>>;
