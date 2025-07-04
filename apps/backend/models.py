@@ -177,6 +177,23 @@ class Company(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, nullable=True)
     updated_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, onupdate=get_utc_now, nullable=True)
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'industry': self.industry,
+            'description': self.description,
+            'mission': self.mission,
+            'business_model': self.business_model,
+            'company_size_min': self.company_size_min,
+            'company_size_max': self.company_size_max,
+            'headquarters': self.headquarters,
+            'founded_year': self.founded_year,
+            'website_url': self.website_url,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
 class JobOpportunity(db.Model):
     __tablename__ = 'job_opportunities'
     id = db.Column(db.Integer, primary_key=True)
@@ -303,6 +320,22 @@ class JobAnalysis(db.Model):
     job = db.relationship('Job', backref=db.backref('analyses', lazy=True))
     user = db.relationship('User', backref=db.backref('job_analyses', lazy=True))
 
+    def to_dict(self):
+        return {
+            'job_id': self.job_id,
+            'user_id': self.user_id,
+            'position_relevance_score': self.position_relevance_score,
+            'environment_fit_score': self.environment_fit_score,
+            'hiring_manager_view': self.hiring_manager_view,
+            'matrix_rating': self.matrix_rating,
+            'summary': self.summary,
+            'qualification_gaps': self.qualification_gaps,
+            'recommended_testimonials': self.recommended_testimonials,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'analysis_protocol_version': self.analysis_protocol_version
+        }
+
 class ResumeSubmission(db.Model):
     __tablename__ = 'resume_submissions'
     id = db.Column(db.Integer, primary_key=True)
@@ -319,6 +352,16 @@ class ResumeSubmission(db.Model):
 
     user = db.relationship('User', backref=db.backref('resume_submissions', lazy=True))
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'raw_text': self.raw_text,
+            'submitted_at': self.submitted_at.isoformat() if self.submitted_at else None,
+            'source': self.source,
+            'is_active': self.is_active
+        }
+
 class JobOffer(db.Model):
     __tablename__ = 'job_offers'
     id = db.Column(db.Integer, primary_key=True)
@@ -334,3 +377,18 @@ class JobOffer(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, onupdate=get_utc_now, nullable=True)
 
     tracked_job = db.relationship('TrackedJob', backref=db.backref('offers', uselist=True, lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tracked_job_id': self.tracked_job_id,
+            'salary': self.salary,
+            'bonus': self.bonus,
+            'equity': self.equity,
+            'is_accepted': self.is_accepted,
+            'offer_date': self.offer_date.isoformat() if self.offer_date else None,
+            'expiration_date': self.expiration_date.isoformat() if self.expiration_date else None,
+            'notes': self.notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
