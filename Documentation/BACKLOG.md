@@ -1,4 +1,4 @@
-# Transparent Talent: Product Backlog & Roadmap v1.32
+# Transparent Talent: Product Backlog & Roadmap v1.34
 
 ## Column Definitions
 *   **AI Model:** The complexity required from the AI. (Flash, Pro [Breakdown/Execute], Creative, N/A)
@@ -22,7 +22,7 @@
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Backend: Re-process malformed job data** | - | 1000 | 2 | 100% | 0.5 | **4000** | Flash | S | **To Do** |
-| **Bugfix: Profile Save Fails Randomly (Likely Render Instance Spin-down)** | - | 1000 | 1 | 70% | 0.5 | **1400** | Flash | S | **To Do** |
+| **BI: Platform-wide Hiring Funnel Analytics** | E05 | 1000 | 2 | 100% | 0.5 | **4000** | Flash | S | **To Do** |
 
 ## Tier 2: Core User Experience & Differentiation
 | Feature | Epic | Reach | Impact | Confidence | Effort (months) | RICE Score | AI Model | Session Cost | Status |
@@ -41,6 +41,7 @@
 | **UI/UX: Implement Autosave for Profile and Resume Pages** | E02 | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI/UX: Enhance Profile Completion UX** | E02 | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI/UX: Multi-step Archiving/Hiding Workflow for Tracked Jobs** | - | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
+| **Feature: Detailed Interview Stage Tracking** | E04 | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
 | **UI: Transparent Relevance Scorecard** | E01 | 1000 | 3 | 100% | 1.0 | **3000** | Flash | M | **To Do** |
 | **Architecture: Implement 'AI Suggested Edits' and UI** | E02 | 1000 | 3 | 90% | 1.0 | **2700** | Pro Breakdown | L | **To Do** |
 | **Architecture: Implement "Knowledge Gap" Enrichment Engine** | E01 | 1000 | 3 | 90% | 1.0 | **2700** | Pro Breakdown | L | **To Do** |
@@ -52,13 +53,14 @@
 | **Feature: Contacts CRM (LinkedIn Import)** | E04 | 1000 | 3 | 90% | 0.75 | **3600** | Pro Execute| L | **To Do** |
 | **Feature: Add Contract Work Preferences** | E02 | 1000 | 1 | 90% | 0.25 | **3600** | Flash | S | **To Do** |
 | **Feature: Company Logos & Rich Content** | E01 | 1000 | 2 | 90% | 0.5 | **3600** | Flash | M | **To Do** |
+| **Feature: AI-Assisted Offer Negotiation** | E03 | 1000 | 3 | 80% | 1.0 | **2400** | Pro | L | **To Do** |
 | **Feature (Coaching): AI-Powered Interview Prep** | E03 | 1000 | 3 | 90% | 1.0 | **2700** | Pro | L | **To Do** |
 | **Feature: User-Facing Application Artifact Generation (Resumes, Cover Letters)** | E03 | 1000 | 3 | 90% | 1.5 | **1800** | Creative | L | **To Do** |
 | **Feature: User Feedback Loop** | E01 | 1000 | 3 | 100% | 2.5 | **1200** | Pro | L | **To Do** |
 | **Feature: "Jobs For You" Pagination & Tabular View** | E01 | 1000 | 2 | 90% | 0.25 | **800** | Flash | S | **To Do** |
 | **UI/UX: Clear Date Field in Next Action Date** | - | 1000 | 1 | 90% | 0.1 | **900** | Flash | S | **To Do** |
 | **UI/UX: Restrict Next Action Date to Future Only** | - | 1000 | 1 | 90% | 0.1 | **900** | Flash | S | **To Do** |
-| **UI/UX: Refine Job Tracker Table Layout** | - | 1000 | 2 | 90% | 0.25 | **1800** | Flash | S | **To Do** |
+| **UI/UX: Refine Job Tracker Table Layout** | - | 1000 | 2 | 90% | 0.25 | **1800** | Flash | M | **To Do** |
 
 ---
 
@@ -79,7 +81,6 @@
 | **Tech Debt: Improve Lightweight Scraper** | Enhance the simple title scraper to use more advanced techniques (e.g., CSS selectors, low-cost AI call) to improve the accuracy of company/title extraction for incomplete profiles. | Medium |
 | **Research: Long-lived, user-specific AI context windows** | Investigate the feasibility and cost-effectiveness of using advanced AI APIs (like OpenAI's Assistants API) to maintain stateful, long-running conversations and context for individual users. | Low |
 | **Tech Debt: Modernize JWT Validation Library** | Evaluate and potentially replace the current `PyJWT` library for token validation with a more modern alternative, such as Clerk's official backend SDK (`clerk-python`). | Low |
-| **Bugfix: UI Update Delay for Job Tracker Fields** | The "Next Action Date" and "Next Action Notes" fields do not visually update immediately after changes are saved, despite successful backend persistence and frontend data refetch. This requires further investigation into React's reconciliation and `react-table`'s rendering pipeline. | High | - |
 
 ---
 
@@ -96,6 +97,8 @@
 ## Completed Features & Bugfixes
 | Feature/Bugfix | Original Tier | RICE Score |
 | :--- | :--- | :--- |
+| **Bugfix: Profile Save Fails Randomly (Likely Render Instance Spin-down)** | Tier 1 | 1400 |
+| **Bugfix: Immediate UI Update for CRM Fields** | Technical Debt | N/A |
 | **Architecture: Distinguish 'Unset' vs 'No Preference' in DB** | Tier 1 | 4000 |
 | **Feature: User-set Reminders & Next Action Notifications** | Tier 1 | 4000 |
 | **Feature: Enhanced Company Profiles & Research** | Tier 2 | 1200 |

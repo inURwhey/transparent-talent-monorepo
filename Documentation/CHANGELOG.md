@@ -3,6 +3,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.52.0 - 2025-07-04 - Job Tracker UI & Stability Refinements
+
+This release significantly enhances the Job Tracker's user experience by resolving critical UI update delays, fixing layout issues, and refining date selection, and the observed resolution of a critical backend stability issue related to random profile save failures, likely due to improvements in Render instance spin-up/spin-down behavior or previous architectural refinements.
+
+### Changed
+-   **Frontend (`page.tsx`):** Removed redundant `refetchTrackedJobs()` call from `handleUpdateJobField` to prevent unnecessary full table re-renders and aggressive page refresh behavior for individual field updates.
+-   **Frontend (`columns.tsx`):** Adjusted column definitions to remove rigid `size` properties and instead use `minSize` and `maxSize` where appropriate, allowing `job_title` and `next_action_notes` columns to dynamically expand and better utilize available horizontal space. This improves table layout and reduces unnecessary horizontal scrolling.
+-   **Frontend (`columns.tsx`):** Modified the "Next Action Date" calendar to robustly prevent selection of past dates using the `disabled` prop (`disabled={(date) => date < today}`).
+-   **Frontend (`columns.tsx`):** Added a "Clear Date" button within the "Next Action Date" calendar popover for easy clearing of the selected date.
+
+### Fixed
+-   **Bugfix (UI Update Delay):** Resolved the primary bug where "Next Action Date" and "Next Action Notes" fields did not immediately reflect changes after saving, leading to a stale UI. Updates are now optimistically applied and re-synced correctly.
+-   **Bugfix (Table Overflow):** Addressed the issue where the Job Tracker table would visually overflow its container, forcing unnecessary horizontal scrolling due to inflexible column sizing. Columns now distribute space more intelligently.
+-   **Bugfix (Console Warnings):** Resolved a console warning regarding missing `id` and `name` attributes for the "Filter jobs by title..." input (`data-table.tsx`).
+-   **Bugfix (Console Output):** Removed all lingering debugging `console.log` statements from `apps/frontend/app/dashboard/data-table.tsx`, `apps/frontend/app/dashboard/components/columns.tsx`, and `apps/frontend/hooks/useTrackedJobsApi.ts`, leading to a cleaner console.
+-   **Bugfix (Backend Stability):** The "Profile Save Fails Randomly" bug has not been reproducible for a significant period, indicating a likely self-resolution or mitigation by prior system enhancements. It is now considered resolved.
+
+
 ## v0.51.0 - 2025-07-04 - Data Integrity: ENUMs for User Preferences
 
 This release significantly enhances data integrity and prepares the system for more accurate relevancy calculations by migrating key user profile preference fields to PostgreSQL ENUM types. It includes full-stack implementation to ensure seamless display and persistence of these structured preferences.
