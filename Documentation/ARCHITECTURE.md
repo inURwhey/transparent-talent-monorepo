@@ -41,3 +41,7 @@ A foundational principle of the system is the separation of user-provided data f
 *   **Technology:** Google Gemini API.
 *   **Purpose:** This service acts as a specialized "co-processor" for complex, creative, or analytical tasks.
 *   **How it Works:** The Backend API securely calls the Gemini API using a secret API key. The frontend never communicates directly with the AI service. The backend sends a carefully crafted prompt (which now includes richer user profile context like work style and remote preferences) and integrates the response data into the application's normal flow.
+
+## Strategic Roadmap Alignment
+
+The system architecture is designed to directly support the phased product roadmap outlined in the [Launching Transparent Talent Roadmap](BUSINESS_PLAN.md#v-the-transparent-talent-product-roadmap-a-phased-approach). Key architectural decisions, such as a scalable three-tier structure and externalized authentication/AI, lay the groundwork for future features like the "Transparent Relevance Scorecard" UI, contextual AI chat streams, and enterprise features.

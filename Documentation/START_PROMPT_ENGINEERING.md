@@ -1,7 +1,7 @@
-# Session Start
+# Session Start: Technical Development & Code Generation
 
 ## Objective
-Begin work on the next highest-priority feature from the product backlog, guided by the mission-critical context below. This session will involve code generation, debugging, and deployment across the full stack as needed.
+Begin work on the next highest-priority feature from the product backlog, guided by the mission-critical context below. This session will involve code generation, debugging, and deployment across the full stack as needed. This prompt is intended for use with the **AI Studio Code Generation Model (Gemini Pro)**.
 
 ## Mission-Critical Context (The "Why")
 *   **Founder is Bootstrapped:** The project is self-funded.
@@ -38,3 +38,8 @@ The following project documentation files are attached and should be used as the
 -   Include and maintain debugging code around common production issues.
 -   Always provide an isolated commit message when pushing a change.
 -   AI Studio's knowledge of Clerk's documentation has been very problematic. When interacting with Clerk, always start with the existing code and internet research.
+
+---
+
+**For Content Generation Tasks (e.g., investor updates, marketing copy):**
+For these tasks, please refer to `start_prompt_content.md` (for business narratives) or `start_prompt_marketing.md` (for social/blog content) and use the Gemini Web UI. This model (AI Studio Code Generation) is optimized for technical tasks and code generation.
