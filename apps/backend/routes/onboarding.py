@@ -2,7 +2,7 @@
 from flask import Blueprint, request, jsonify, g, current_app
 from ..auth import token_required
 from ..services.profile_service import ProfileService
-from ..services.job_service import JobService, select_generative_model
+from ..services.job_service import JobService
 from ..app import db
 from ..models import ResumeSubmission, UserProfile
 from ..config import config
@@ -17,18 +17,15 @@ def parse_resume():
     user_id = g.current_user.id
     resume_text = request.json.get('resume_text')
 
-    if not resume_text:
-        return jsonify({"message": "Resume text is required."}), 400
-    
-    if len(resume_text) > config.MAX_RESUME_TEXT_LENGTH:
-        return jsonify({"message": "Resume text exceeds max length."}), 400
+    if not resume_text: return jsonify({"message": "Resume text is required."}), 400
+    if len(resume_text) > config.MAX_RESUME_TEXT_LENGTH: return jsonify({"message": "Resume text exceeds max length."}), 400
 
     job_service = JobService(current_app.logger)
+    profile_service = ProfileService(current_app.logger)
 
     try:
         content_type_prompt = f"Is the following text a resume? Answer RESUME or OTHER.\n\n{resume_text[:1000]}"
-        classification_model = select_generative_model(prefer_flash=True)
-        classification_response = job_service._call_gemini_api(content_type_prompt, model_name=classification_model)
+        classification_response = job_service._call_gemini_api(content_type_prompt, model_name="gemini-1.5-flash-latest")
         
         if not classification_response or "RESUME" not in classification_response.upper():
             return jsonify({"message": "The submitted text does not appear to be a resume."}), 400
@@ -56,18 +53,15 @@ def parse_resume():
         - location (string, nullable)
         """
         
-        parsing_model = select_generative_model(prefer_flash=False)
-        ai_response = job_service._call_gemini_api(ai_profile_prompt, model_name=parsing_model)
+        ai_response = job_service._call_gemini_api(ai_profile_prompt, model_name="gemini-1.5-pro-latest")
         
         parsed_data = job_service._parse_ai_response(ai_response) if ai_response else None
 
         if parsed_data:
-            profile_service = ProfileService(current_app.logger)
             profile_service.enrich_profile(user_id, parsed_data)
 
         db.session.commit()
         
-        profile_service = ProfileService(current_app.logger)
         if profile_service.has_completed_required_profile_fields(user_id):
             profile = UserProfile.query.filter_by(user_id=user_id).first()
             if profile and not profile.has_completed_onboarding:

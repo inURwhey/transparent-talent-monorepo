@@ -6,78 +6,25 @@ import re
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
-from datetime import datetime, timedelta
+from datetime import datetime
 import pytz
 import hashlib
-from cachetools import cached, TTLCache
 
 from ..app import db
 from ..models import Job, Company, JobAnalysis, User, JobOpportunity
 from ..config import config
 from .profile_service import ProfileService
 
-MAX_RESUME_TEXT_LENGTH = 25000
-MAX_JOB_TEXT_LENGTH = 50000
-
-# NEW: Dynamic Model Discovery with Caching
-@cached(cache=TTLCache(maxsize=1, ttl=3600))
-def get_available_models():
-    """Fetches the list of available generative models from the Gemini API and caches the result."""
-    current_app.logger.info("Fetching available Gemini models from API...")
-    api_key = config.GEMINI_API_KEY
-    if not api_key:
-        current_app.logger.error("Cannot fetch models, Gemini API key is not configured.")
-        return []
-
-    url = f"https://generativelanguage.googleapis.com/v1/models?key={api_key}"
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        model_names = [model['name'] for model in data.get('models', []) if 'generateContent' in model.get('supportedGenerationMethods', [])]
-        current_app.logger.info(f"Successfully fetched and cached available models: {[name.split('/')[-1] for name in model_names]}")
-        return model_names
-    except requests.exceptions.RequestException as e:
-        current_app.logger.error(f"Failed to fetch available models from Google API: {e}")
-        return []
-
-def select_generative_model(prefer_flash=False):
-    """Selects the best available generative model from a dynamic list."""
-    available_models = get_available_models()
-    
-    if not available_models:
-        current_app.logger.warning("Falling back to static model list due to API fetch failure.")
-        available_models = ["models/gemini-1.5-pro-latest", "models/gemini-1.5-flash-latest"]
-
-    if prefer_flash:
-        preferred_order = ["models/gemini-1.5-flash-latest", "models/gemini-1.5-pro-latest"]
-    else:
-        preferred_order = ["models/gemini-1.5-pro-latest", "models/gemini-1.5-flash-latest"]
-    
-    for model_path in preferred_order:
-        if model_path in available_models:
-            model_name = model_path.split('/')[-1]
-            current_app.logger.info(f"Selected generative model: {model_name}")
-            return model_name
-            
-    fallback_model_path = available_models[0] if available_models else "models/gemini-1.5-pro-latest"
-    fallback_model_name = fallback_model_path.split('/')[-1]
-    current_app.logger.warning(f"No preferred models found, using fallback: {fallback_model_name}")
-    return fallback_model_name
-
 class JobService:
     def __init__(self, logger=None):
         self.logger = logger or current_app.logger
         self.profile_service = ProfileService(self.logger)
 
-    def _call_gemini_api(self, prompt, model_name=None):
+    def _call_gemini_api(self, prompt, model_name="gemini-1.5-pro-latest"):
         api_key = config.GEMINI_API_KEY
         if not api_key:
             self.logger.error("Gemini API key is not configured.")
             return None
-
-        if not model_name:
-            model_name = select_generative_model()
 
         url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent"
         
@@ -92,7 +39,9 @@ class JobService:
             response.raise_for_status()
             data = response.json()
             text_content = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
-            if not text_content: return None
+            if not text_content:
+                self.logger.error("Gemini API returned empty text response.", extra={'full_response': data})
+                return None
             return text_content
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Error calling Gemini API: {e}", exc_info=True)
@@ -121,7 +70,7 @@ class JobService:
             meta_og_site_name = soup.find('meta', property='og:site_name')
             if meta_og_site_name and meta_og_site_name.get('content'): company_name = meta_og_site_name.get('content')
             description = self._extract_text_from_html(html_content)
-            return {"title": title[:255], "company_name": company_name[:255], "description": description[:MAX_JOB_TEXT_LENGTH]}
+            return {"title": title[:255], "company_name": company_name[:255], "description": description}
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Error during lightweight scrape of {url}: {e}")
             return None
@@ -144,8 +93,6 @@ class JobService:
             json_string = re.sub(r"//.*", "", json_string)
             json_string = re.sub(r",\s*(\n\s*[\}\]])", r"\1", json_string)
             parsed_data = json.loads(json_string)
-            parsed_data['job_title'] = parsed_data.get('job_title', 'Unknown Title').strip()[:255]
-            parsed_data['company_name'] = parsed_data.get('company_name', 'Unknown Company').strip()[:255]
             return parsed_data
         except Exception as e:
             self.logger.error(f"Failed to parse AI response: {e}. Raw: {ai_response_text[:500]}")
@@ -169,8 +116,8 @@ class JobService:
         {company_str}
 
         Output a JSON object with the following structure.
-        - job_title (string, max 255 chars)
-        - company_name (string, max 255 chars)
+        - job_title (string)
+        - company_name (string)
         - salary_min (integer, nullable)
         - salary_max (integer, nullable)
         - required_experience_years (integer, nullable)
@@ -186,8 +133,8 @@ class JobService:
         
         Strictly conform to the JSON structure. Your response MUST be valid JSON.
         """
-        model_to_use = select_generative_model(prefer_flash=False)
-        ai_response = self._call_gemini_api(prompt, model_name=model_to_use)
+        
+        ai_response = self._call_gemini_api(prompt, model_name="gemini-1.5-pro-latest")
         
         if ai_response: return self._parse_ai_response(ai_response)
         return None
