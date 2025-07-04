@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover" // Corrected this line
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
@@ -70,13 +70,13 @@ export const getColumns = ({
     cell: ({ row }) => (<Checkbox checked={row.getIsSelected()} onCheckedChange={(value) => row.toggleSelected(!!value)} />),
     enableSorting: false,
     enableHiding: false,
-    size: 30, // Small fixed size for checkbox
+    // Removed explicit size to let it auto-size or be influenced by other columns
   },
   {
     accessorKey: "job_title",
     header: "Job",
     cell: ({ row }) => (<div className="font-medium">{row.original.job_title}<div className="text-sm text-muted-foreground">{row.original.company_name}</div></div>),
-    size: 250, // Give job title more space
+    // Removed explicit size to let it auto-size or be influenced by other columns
   },
   {
     accessorKey: "status",
@@ -109,7 +109,7 @@ export const getColumns = ({
         </Select>
       );
     },
-    size: 150, // Fixed size for status dropdown
+    // Removed explicit size to let it auto-size or be influenced by other columns
   },
   {
     accessorKey: "ai_grade",
@@ -124,6 +124,7 @@ export const getColumns = ({
       const gradeB = rowB.original.ai_analysis?.matrix_rating || 'Z';
       return gradeA.localeCompare(gradeB);
     }
+    // Removed explicit size
   },
   {
     accessorKey: "is_excited",
@@ -146,13 +147,13 @@ export const getColumns = ({
     },
     enableSorting: true,
     enableHiding: true,
-    size: 80, // Fixed size for checkbox column
+    // Removed explicit size
   },
   {
     accessorKey: "created_at",
     header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Date Saved<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
     cell: ({ row }) => (new Date(row.original.created_at).toLocaleDateString()),
-    size: 120, // Fixed size for dates
+    // Removed explicit size
   },
   {
     accessorKey: "applied_at",
@@ -162,7 +163,7 @@ export const getColumns = ({
       if (!appliedAt) { return <div className="text-center">-</div>; }
       return new Date(appliedAt).toLocaleDateString();
     },
-    size: 120, // Fixed size for dates
+    // Removed explicit size
   },
   {
     accessorKey: "next_action_at",
@@ -204,7 +205,8 @@ export const getColumns = ({
                 setOpen(false);
               }}
               initialFocus
-              fromDate={today}
+              // Using `disabled` prop to prevent selection of past dates more robustly
+              disabled={(date) => date < today} 
             />
             {dateValue && (
               <div className="p-2 pt-0">
@@ -224,7 +226,7 @@ export const getColumns = ({
         </Popover>
       );
     },
-    size: 180,
+    // Removed explicit size. Let it grow as needed.
   },
   {
     accessorKey: "next_action_notes",
@@ -253,7 +255,7 @@ export const getColumns = ({
         />
       );
     },
-    size: 200,
+    // Removed explicit size. Let it grow as needed.
   },
   {
     id: "actions",
@@ -272,6 +274,6 @@ export const getColumns = ({
         </DropdownMenu>
       )
     },
-    size: 50,
+    // Removed explicit size
   },
 ];
