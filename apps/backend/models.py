@@ -17,16 +17,6 @@ class User(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, nullable=True)
     updated_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, onupdate=get_utc_now, nullable=True)
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'clerk_user_id': self.clerk_user_id,
-            'email': self.email,
-            'full_name': self.full_name,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
-        }
-
 class UserProfile(db.Model):
     __tablename__ = 'user_profiles'
     id = db.Column(db.Integer, primary_key=True)
@@ -77,12 +67,12 @@ class UserProfile(db.Model):
             'desired_salary_max': self.desired_salary_max,
             'target_industries': self.target_industries,
             'career_goals': self.career_goals,
-            'preferred_company_size': self.preferred_company_size.value if self.preferred_company_size else None,
-            'work_style_preference': self.work_style_preference.value if self.work_style_preference else None,
-            'conflict_resolution_style': self.conflict_resolution_style.value if self.conflict_resolution_style else None,
-            'communication_preference': self.communication_preference.value if self.communication_preference else None,
-            'change_tolerance': self.change_tolerance.value if self.change_tolerance else None,
-            'preferred_work_style': self.preferred_work_style.value if self.preferred_work_style else None,
+            'preferred_company_size': self.preferred_company_size,
+            'work_style_preference': self.work_style_preference,
+            'conflict_resolution_style': self.conflict_resolution_style,
+            'communication_preference': self.communication_preference,
+            'change_tolerance': self.change_tolerance,
+            'preferred_work_style': self.preferred_work_style,
             'is_remote_preferred': self.is_remote_preferred,
             'skills': self.skills,
             'education': self.education,
@@ -107,23 +97,6 @@ class Company(db.Model):
     website_url = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, nullable=True)
     updated_at = db.Column(db.DateTime(timezone=True), default=get_utc_now, onupdate=get_utc_now, nullable=True)
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'industry': self.industry,
-            'description': self.description,
-            'mission': self.mission,
-            'business_model': self.business_model,
-            'company_size_min': self.company_size_min,
-            'company_size_max': self.company_size_max,
-            'headquarters': self.headquarters,
-            'founded_year': self.founded_year,
-            'website_url': self.website_url,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
-        }
 
 class JobOpportunity(db.Model):
     __tablename__ = 'job_opportunities'
@@ -191,7 +164,7 @@ class TrackedJob(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'is_excited': self.is_excited,
-            'status': self.status.value if self.status else None,
+            'status': self.status,
             'status_reason': self.status_reason,
             'first_interview_at': self.first_interview_at.isoformat() if self.first_interview_at else None,
             'offer_received_at': self.offer_received_at.isoformat() if self.offer_received_at else None,
