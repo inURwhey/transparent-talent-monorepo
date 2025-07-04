@@ -60,8 +60,6 @@ export function DataTable<TData extends TrackedJob, TValue>({
   const [rowSelection, setRowSelection] = React.useState({})
   const [expanded, setExpanded] = React.useState({})
 
-  // Removed: console.log("[DataTable] Data prop received/updated:", data);
-
   const table = useReactTable({
     data,
     columns,
@@ -95,10 +93,11 @@ export function DataTable<TData extends TrackedJob, TValue>({
         <Input
           id="job-title-filter"
           name="job_title_filter"
+          // CORRECTED: Access nested property for filtering
           placeholder="Filter jobs by title..."
-          value={(table.getColumn("job_title")?.getFilterValue() as string) ?? ""}
+          value={(table.getColumn("job.job_title")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("job_title")?.setFilterValue(event.target.value)
+            table.getColumn("job.job_title")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />
@@ -167,7 +166,8 @@ export function DataTable<TData extends TrackedJob, TValue>({
                     <TableRow>
                       <TableCell colSpan={columns.length}>
                         <CompanyProfileCard 
-                            companyId={row.original.company_id} 
+                            // CORRECTED: Access the nested company object's ID safely
+                            companyId={row.original.company?.id ?? null} 
                             fetchCompanyProfile={fetchCompanyProfile}
                             isExpanded={row.getIsExpanded()}
                         />
