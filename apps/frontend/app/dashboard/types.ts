@@ -15,7 +15,7 @@ export interface Job {
     company_id: number;
     company_name: string;
     job_title: string;
-    status: string; 
+    status: string;
 }
 
 export interface JobOpportunity {
@@ -45,8 +45,6 @@ export interface TrackedJob {
     resolved_at: string | null;
     next_action_at: string | null;
     next_action_notes: string | null;
-    
-    // Nested objects from the backend
     job_opportunity: JobOpportunity;
     job: Job;
     company: CompanyProfile | null;
@@ -54,11 +52,35 @@ export interface TrackedJob {
     ai_grade: string | null;
 }
 
+// CORRECTED: Restored all fields to the Profile interface to match its usage.
 export interface Profile {
   id: number;
   user_id: number;
   full_name: string | null;
   location: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  linkedin_url: string | null;
+  github_url: string | null;
+  portfolio_url: string | null;
+  current_role: string | null;
+  desired_job_titles: string | null;
+  desired_salary_min: number | null;
+  desired_salary_max: number | null;
+  target_industries: string | null;
+  career_goals: string | null;
+  preferred_company_size: string | null;
+  work_style_preference: string | null;
+  conflict_resolution_style: string | null;
+  communication_preference: string | null;
+  change_tolerance: string | null;
+  preferred_work_style: string | null;
+  is_remote_preferred: boolean | null;
+  skills: string | null;
+  education: string | null;
+  work_experience: string | null;
+  personality_16_personalities: string | null;
+  other_personal_attributes: string | null;
   has_completed_onboarding: boolean;
 }
 
@@ -69,7 +91,6 @@ export interface RecommendedJob {
   job_url: string;
   match_score: number;
   matrix_rating: string | null;
-  // CORRECTED: Added the missing properties that JobsForYou.tsx requires
   job_modality: string | null;
   deduced_job_level: string | null;
 }
