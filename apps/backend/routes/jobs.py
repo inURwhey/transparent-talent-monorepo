@@ -1,192 +1,179 @@
 # Path: apps/backend/routes/jobs.py
-
 from flask import Blueprint, request, jsonify, g, current_app
-from psycopg2.extras import Json
-import json
 from ..auth import token_required
-from ..services.job_service import JobService
 from ..services.profile_service import ProfileService
+from ..services.job_service import JobService
 from ..services.tracked_job_service import TrackedJobService
-from ..database import get_db
-from ..config import config
-import psycopg2
-import requests
+from ..app import db # NEW: Import db for rollback in routes
+from sqlalchemy.exc import IntegrityError # NEW: Import IntegrityError for specific handling
 
-jobs_bp = Blueprint('jobs_bp', __name__)
+jobs_bp = Blueprint('jobs', __name__)
 
 @jobs_bp.route('/jobs/submit', methods=['POST'])
 @token_required
 def submit_job():
-    user_id = g.current_user['id']
-    data = request.get_json()
+    user_id = g.current_user.id
+    data = request.json
     job_url = data.get('job_url')
+
     if not job_url:
-        return jsonify({"error": "job_url is required"}), 400
+        return jsonify({"message": "Job URL is required."}), 400
 
     job_service = JobService(current_app.logger)
     profile_service = ProfileService(current_app.logger)
-    db = get_db()
-    
+    tracked_job_service = TrackedJobService(current_app.logger)
+
     try:
-        with db.cursor() as cursor:
-            cursor.execute("SELECT id FROM jobs WHERE job_url = %s", (job_url,))
-            job_row = cursor.fetchone()
-
-            if job_row:
-                job_id = job_row['id']
-                cursor.execute("SELECT id FROM tracked_jobs WHERE user_id = %s AND job_id = %s", (user_id, job_id))
-                if cursor.fetchone():
-                    return jsonify({"error": "You are already tracking this job."}), 409
-                
-                current_app.logger.info(f"User {user_id} is re-tracking existing job_id {job_id}.")
-                user_profile = profile_service.get_profile(user_id)
-                
-                if user_profile.get('has_completed_onboarding', False):
-                    # --- FIX: Changed SELECT id to SELECT 1 ---
-                    cursor.execute("SELECT 1 FROM job_analyses WHERE user_id = %s AND job_id = %s", (user_id, job_id))
-                    if not cursor.fetchone():
-                        current_app.logger.info(f"No analysis found for user {user_id} and job {job_id}. Generating one.")
-                        user_profile_text = profile_service.get_profile_for_analysis(user_id)
-                        job_data = job_service.analyze_existing_job(job_id, user_profile_text)
-                        analysis_result = job_data.get('analysis')
-
-                        if analysis_result:
-                            cursor.execute("""
-                                INSERT INTO job_analyses (job_id, user_id, analysis_protocol_version, position_relevance_score, environment_fit_score, hiring_manager_view, matrix_rating, summary, qualification_gaps, recommended_testimonials)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                                ON CONFLICT (job_id, user_id) DO UPDATE SET
-                                    analysis_protocol_version = EXCLUDED.analysis_protocol_version, position_relevance_score = EXCLUDED.position_relevance_score,
-                                    environment_fit_score = EXCLUDED.environment_fit_score, hiring_manager_view = EXCLUDED.hiring_manager_view,
-                                    matrix_rating = EXCLUDED.matrix_rating, summary = EXCLUDED.summary, qualification_gaps = EXCLUDED.qualification_gaps,
-                                    recommended_testimonials = EXCLUDED.recommended_testimonials, updated_at = NOW();
-                            """, (
-                                job_id, user_id, config.ANALYSIS_PROTOCOL_VERSION,
-                                analysis_result.get('position_relevance_score'), analysis_result.get('environment_fit_score'),
-                                analysis_result.get('hiring_manager_view'), analysis_result.get('matrix_rating'),
-                                analysis_result.get('summary'), Json(analysis_result.get('qualification_gaps', [])),
-                                Json(analysis_result.get('recommended_testimonials', []))
-                            ))
-
-                cursor.execute("INSERT INTO tracked_jobs (user_id, job_id) VALUES (%s, %s) RETURNING id;", (user_id, job_id))
-                tracked_job_id = cursor.fetchone()['id']
-                db.commit()
-                service = TrackedJobService(current_app.logger)
-                new_job_data = service._get_formatted_job_by_id(cursor, tracked_job_id, user_id)
-                return jsonify(new_job_data), 201
-            
-            basic_details = job_service.get_basic_job_details(job_url)
-            company_name_guess = basic_details.get('company_name', 'Unknown Company')
-
-            cursor.execute("SELECT id FROM companies WHERE LOWER(name) = LOWER(%s)", (company_name_guess,))
-            company_row = cursor.fetchone()
-            if company_row:
-                company_id = company_row['id']
-            else:
-                cursor.execute("INSERT INTO companies (name) VALUES (%s) RETURNING id", (company_name_guess,))
-                company_id = cursor.fetchone()['id']
-            
-            company_profile = job_service.research_and_get_company_profile(company_id)
-            company_profile_text = json.dumps(company_profile, indent=2, default=str) if company_profile else "No company profile available."
-
-            user_profile = profile_service.get_profile(user_id)
-            perform_ai_analysis = user_profile.get('has_completed_onboarding', False)
+        # 1. Create or get the canonical Job and JobOpportunity
+        # The create_or_get_canonical_job now handles lightweight scrape and initial AI analysis
+        # for new canonical jobs.
+        canonical_job, job_opportunity = job_service.create_or_get_canonical_job(job_url, user_id=user_id, commit=True) # Pass user_id
         
-            analysis_result = None
-            if perform_ai_analysis:
-                current_app.logger.info(f"User {user_id} is onboarded. Performing full analysis with enriched context.")
-                user_profile_text = profile_service.get_profile_for_analysis(user_id)
-                job_data = job_service.get_job_details_and_analysis(job_url, user_profile_text, company_profile_text)
-                analysis_result = job_data['analysis']
+        if not canonical_job or not job_opportunity:
+            db.session.rollback() # Ensure rollback if job or opportunity creation failed
+            return jsonify({"message": "Failed to process job URL. Could not extract core details."}), 500
+
+        # Check for user's profile completion status. This happens in job_service for new canonical jobs.
+        # But if it's an existing canonical job, we might need to trigger analysis here.
+        
+        # 2. Track the job opportunity for the user
+        tracked_job = tracked_job_service.track_job(user_id, job_opportunity.id)
+        # track_job will return existing_tracked_job if already tracked
+        if not tracked_job:
+            # This branch should typically not be hit if track_job returns the existing object
+            return jsonify({"message": "Failed to track job opportunity (internal error). Please try again."}), 500
+
+        # 3. If it's a newly tracked job and profile is complete, ensure analysis happened or trigger it
+        # If the canonical job was new, initial analysis was triggered by create_or_get_canonical_job
+        # If the canonical job existed, we need to ensure analysis for *this user* has happened.
+        # Check if an analysis exists for this user and canonical job
+        from ..models import JobAnalysis # Import model here to avoid circular if needed
+        existing_analysis = JobAnalysis.query.filter_by(user_id=user_id, job_id=canonical_job.id).first()
+
+        if not existing_analysis and profile_service.has_completed_required_profile_fields(user_id):
+            current_app.logger.info(f"No existing analysis for user {user_id} and canonical job {canonical_job.id}. Triggering now.")
+            user_profile_data = profile_service.get_profile_for_analysis(user_id)
+            job_description_to_analyze = canonical_job.notes # Assume notes has the description for analysis
+            if not job_description_to_analyze and canonical_job.opportunities:
+                # If notes doesn't have it, try scraping one of the opportunity URLs
+                scraped_data = job_service._lightweight_scrape(canonical_job.opportunities[0].url)
+                job_description_to_analyze = scraped_data.get('description') if scraped_data else None
+
+            if job_description_to_analyze:
+                ai_analysis_data = job_service.analyze_job_posting(job_description_to_analyze, user_profile_data, canonical_job.company.to_dict() if canonical_job.company else {})
+                if ai_analysis_data:
+                    job_service.create_or_update_job_analysis(user_id, canonical_job.id, ai_analysis_data)
+                    current_app.logger.info(f"AI analysis completed for user {user_id}, canonical job {canonical_job.id}")
+                else:
+                    current_app.logger.warning(f"AI analysis failed for job {job_url}. Will not save analysis.")
             else:
-                current_app.logger.info(f"User {user_id} is not onboarded. Using basic details.")
-                analysis_result = basic_details
+                current_app.logger.warning(f"Could not get job description for AI analysis of {job_url}")
 
-            company_name = analysis_result.get('company_name', company_name_guess)
-            job_title = analysis_result.get('job_title', 'Unknown Title')
+        # 4. Prepare response data by re-fetching the tracked_job with all relationships loaded
+        response_tracked_job = tracked_job_service.get_tracked_job_by_opportunity_id(user_id, job_opportunity.id)
+        if response_tracked_job:
+            # Manually load related data for response, similar to get_tracked_jobs service method
+            response_data = response_tracked_job.to_dict()
+            response_data['job_opportunity'] = response_tracked_job.job_opportunity.to_dict()
+            response_data['job'] = response_tracked_job.job_opportunity.job.to_dict()
+            response_data['company'] = response_tracked_job.job_opportunity.job.company.to_dict() if response_tracked_job.job_opportunity.job.company else None
             
-            cursor.execute("SELECT id FROM companies WHERE LOWER(name) = LOWER(%s)", (company_name,))
-            company_row = cursor.fetchone()
-            if not company_row:
-                cursor.execute("INSERT INTO companies (name) VALUES (%s) RETURNING id", (company_name,))
-                company_id = cursor.fetchone()['id']
+            # Get the specific analysis for this user and the canonical job
+            user_analysis = JobAnalysis.query.filter_by(user_id=user_id, job_id=response_tracked_job.job_opportunity.job.id).first()
+            if user_analysis:
+                response_data['job_analysis'] = user_analysis.to_dict()
+                response_data['ai_grade'] = user_analysis.matrix_rating
             else:
-                company_id = company_row['id']
-            
-            salary_min = analysis_result.get('salary_min') if perform_ai_analysis else None
-            salary_max = analysis_result.get('salary_max') if perform_ai_analysis else None
-            required_experience_years = analysis_result.get('required_experience_years') if perform_ai_analysis else None
-            job_modality = analysis_result.get('job_modality') if perform_ai_analysis else None
-            deduced_job_level = analysis_result.get('deduced_job_level') if perform_ai_analysis else None
+                response_data['job_analysis'] = None
+                response_data['ai_grade'] = None
 
-            cursor.execute("""
-                INSERT INTO jobs (company_id, company_name, job_title, job_url, source, status, last_checked_at, salary_min, salary_max, required_experience_years, job_modality, deduced_job_level)
-                VALUES (%s, %s, %s, %s, %s, 'Active', NOW(), %s, %s, %s, %s, %s)
-                ON CONFLICT (job_url) DO UPDATE SET job_title = EXCLUDED.job_title
-                RETURNING id;
-            """, (company_id, company_name, job_title, job_url, 'User Submission', salary_min, salary_max, required_experience_years, job_modality, deduced_job_level))
-            job_id = cursor.fetchone()['id']
+            return jsonify(response_data), 201
+        else:
+            # Fallback if somehow tracking succeeded but retrieval failed
+            return jsonify({"message": "Job tracked, but failed to retrieve full details for response."}), 201
 
-            if perform_ai_analysis:
-                cursor.execute("""
-                    INSERT INTO job_analyses (job_id, user_id, analysis_protocol_version, position_relevance_score, environment_fit_score, hiring_manager_view, matrix_rating, summary, qualification_gaps, recommended_testimonials)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (job_id, user_id, config.ANALYSIS_PROTOCOL_VERSION, analysis_result.get('position_relevance_score'), analysis_result.get('environment_fit_score'), analysis_result.get('hiring_manager_view'), analysis_result.get('matrix_rating'), analysis_result.get('summary'), Json(analysis_result.get('qualification_gaps', [])), Json(analysis_result.get('recommended_testimonials', []))))
+    except IntegrityError as e:
+        db.session.rollback()
+        # Check for duplicate entry error specifically (e.g., if track_job hit unique constraint)
+        if "tracked_jobs_user_id_job_opportunity_id_key" in str(e):
+             current_app.logger.info(f"User {user_id} attempted to track duplicate job opportunity for URL: {job_url}.")
+             # Attempt to fetch and return the existing tracked job to the client
+             # Need to re-create canonical_job and job_opportunity without committing
+             canonical_job_temp, job_opportunity_temp = job_service.create_or_get_canonical_job(job_url, user_id=user_id, commit=False)
+             if job_opportunity_temp:
+                 existing_tracked = tracked_job_service.get_tracked_job_by_opportunity_id(user_id, job_opportunity_temp.id)
+                 if existing_tracked:
+                     # Load relations for existing tracked job
+                     response_data = existing_tracked.to_dict()
+                     response_data['job_opportunity'] = existing_tracked.job_opportunity.to_dict()
+                     response_data['job'] = existing_tracked.job_opportunity.job.to_dict()
+                     response_data['company'] = existing_tracked.job_opportunity.job.company.to_dict() if existing_tracked.job_opportunity.job.company else None
+                     user_analysis = JobAnalysis.query.filter_by(user_id=user_id, job_id=existing_tracked.job_opportunity.job.id).first()
+                     if user_analysis:
+                         response_data['job_analysis'] = user_analysis.to_dict()
+                         response_data['ai_grade'] = user_analysis.matrix_rating
+                     else:
+                         response_data['job_analysis'] = None
+                         response_data['ai_grade'] = None
+                     return jsonify({"message": "Job already tracked.", "tracked_job": response_data}), 200
+             return jsonify({"message": "Job already tracked or other database conflict."}), 409 # Conflict
 
-            cursor.execute("INSERT INTO tracked_jobs (user_id, job_id) VALUES (%s, %s) RETURNING id;", (user_id, job_id))
-            tracked_job_id = cursor.fetchone()['id']
-            
-            db.commit()
-
-            service = TrackedJobService(current_app.logger)
-            new_job_data = service._get_formatted_job_by_id(cursor, tracked_job_id, user_id)
-            return jsonify(new_job_data), 201
-
-    except ValueError as e: return jsonify({"error": str(e)}), 400
-    except (requests.exceptions.RequestException, ConnectionError) as e: return jsonify({"error": f"Service Error: {str(e)}"}), 503
-    except psycopg2.Error as e:
-        if db: db.rollback()
-        current_app.logger.error(f"DATABASE ERROR in submit_job route: {e}")
-        return jsonify({"error": "A database error occurred."}), 500
     except Exception as e:
-        if db: db.rollback()
-        current_app.logger.error(f"An unexpected error occurred in submit_job route: {e}")
-        return jsonify({"error": "An internal server error occurred."}), 500
+        db.session.rollback()
+        current_app.logger.error(f"Error submitting job for user {user_id}: {e}", exc_info=True)
+        return jsonify({"message": "An unexpected error occurred while submitting the job."}), 500
 
 
 @jobs_bp.route('/tracked-jobs', methods=['GET'])
 @token_required
 def get_tracked_jobs():
-    user_id = g.current_user['id']
-    try: page = int(request.args.get('page', 1)); limit = int(request.args.get('limit', 10))
-    except (ValueError, TypeError): return jsonify({"error": "Invalid pagination parameters"}), 400
-    offset = (page - 1) * limit
-    db = get_db(); service = TrackedJobService(current_app.logger)
-    with db.cursor() as cursor:
-        cursor.execute("SELECT COUNT(*) FROM tracked_jobs WHERE user_id = %s;", (user_id,))
-        total_count = cursor.fetchone()[0]
-        cursor.execute("SELECT id FROM tracked_jobs WHERE user_id = %s ORDER BY created_at DESC, id DESC LIMIT %s OFFSET %s;", (user_id, limit, offset))
-        job_ids = [row['id'] for row in cursor.fetchall()]
-        tracked_jobs = [service._get_formatted_job_by_id(cursor, job_id, user_id) for job_id in job_ids]
-        return jsonify({"tracked_jobs": [j for j in tracked_jobs if j], "total_count": total_count, "page": page, "limit": limit})
+    user_id = g.current_user.id
+    status_filter = request.args.get('status_filter')
+    search_query = request.args.get('search_query')
+    page = int(request.args.get('page', 1))
+    limit = int(request.args.get('limit', 10))
+
+    tracked_job_service = TrackedJobService(current_app.logger)
+
+    try:
+        jobs_data = tracked_job_service.get_tracked_jobs(user_id, status_filter, search_query, page, limit)
+        return jsonify(jobs_data), 200
+    except Exception as e:
+        current_app.logger.error(f"Error getting tracked jobs for user {user_id}: {e}", exc_info=True)
+        return jsonify({"message": "Error fetching tracked jobs."}), 500
 
 @jobs_bp.route('/tracked-jobs/<int:tracked_job_id>', methods=['PUT'])
 @token_required
 def update_tracked_job(tracked_job_id):
-    user_id = g.current_user['id']; data = request.get_json()
-    if not data: return jsonify({"error": "No update data provided"}), 400
-    service = TrackedJobService(current_app.logger)
+    user_id = g.current_user.id
+    data = request.json
+    field = data.get('field')
+    value = data.get('value')
+
+    if not field:
+        return jsonify({"message": "Field to update is required."}), 400
+
+    tracked_job_service = TrackedJobService(current_app.logger)
+
     try:
-        updated_job = service.update_job(user_id, tracked_job_id, data)
-        if updated_job: return jsonify(updated_job), 200
-        else: return jsonify({"error": "Tracked job not found or permission denied"}), 404
-    except ValueError as e: return jsonify({"error": str(e)}), 400
-    except Exception as e: current_app.logger.error(f"Error in update_tracked_job route: {e}"); return jsonify({"error": "An internal server error occurred."}), 500
+        updated_job = tracked_job_service.update_tracked_job_field(user_id, tracked_job_id, field, value)
+        if updated_job:
+            return jsonify(updated_job), 200
+        return jsonify({"message": "Tracked job not found or update failed."}), 404
+    except Exception as e:
+        current_app.logger.error(f"Error updating tracked job {tracked_job_id} for user {user_id}: {e}", exc_info=True)
+        return jsonify({"message": "Error updating tracked job."}), 500
 
 @jobs_bp.route('/tracked-jobs/<int:tracked_job_id>', methods=['DELETE'])
 @token_required
 def remove_tracked_job(tracked_job_id):
-    user_id = g.current_user['id']; db = get_db()
-    with db.cursor() as cursor:
-        cursor.execute("DELETE FROM tracked_jobs WHERE id = %s AND user_id = %s RETURNING id", (tracked_job_id, user_id))
-        if cursor.fetchone(): db.commit(); return jsonify({"message": "Tracked job removed successfully"}), 200
-        else: return jsonify({"error": "Tracked job not found or permission denied"}), 404
+    user_id = g.current_user.id
+    tracked_job_service = TrackedJobService(current_app.logger)
+
+    try:
+        if tracked_job_service.remove_tracked_job(user_id, tracked_job_id):
+            return jsonify({"message": "Tracked job deleted successfully."}), 200
+        return jsonify({"message": "Tracked job not found or delete failed."}), 404
+    except Exception as e:
+        current_app.logger.error(f"Error deleting tracked job {tracked_job_id} for user {user_id}: {e}", exc_info=True)
+        return jsonify({"message": "Error deleting tracked job."}), 500

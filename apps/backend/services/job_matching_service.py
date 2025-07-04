@@ -1,98 +1,141 @@
 # Path: apps/backend/services/job_matching_service.py
-
 import re
-from ..database import get_db
+from flask import current_app
+from sqlalchemy.orm import joinedload
+from ..app import db
+from ..models import JobAnalysis, UserProfile, Job, Company # Import necessary models
 
 class JobMatchingService:
-    def __init__(self, logger):
-        self.logger = logger
-        self.GRADE_TO_SCORE = {
-            'A+': 100, 'A': 95, 'A-': 90,
-            'B+': 88, 'B': 85, 'B-': 80,
-            'C+': 75, 'C': 70, 'C-': 65,
-            'D': 60, 'F': 50
-        }
-        self.JOB_LEVEL_TO_INT = {
-            'Entry': 1, 'Mid': 2, 'Senior': 3, 'Staff': 4, 
-            'Principal': 5, 'Manager': 6, 'Director': 7, 'VP': 8, 'C-Suite': 9
-        }
+    def __init__(self, logger=None):
+        self.logger = logger or current_app.logger
 
-    def _get_user_profile(self, cursor, user_id):
-        cursor.execute("SELECT * FROM user_profiles WHERE user_id = %s", (user_id,))
-        return cursor.fetchone()
-
-    def _get_relevant_jobs(self, cursor, user_id):
-        query = """
-            SELECT
-                j.id, j.job_title, j.company_name, j.job_url,
-                j.salary_min, j.salary_max, j.required_experience_years,
-                j.job_modality, j.deduced_job_level,
-                a.matrix_rating
-            FROM jobs j
-            JOIN job_analyses a ON j.id = a.job_id
-            WHERE a.matrix_rating IS NOT NULL
-            AND j.id NOT IN (SELECT job_id FROM tracked_jobs WHERE user_id = %s);
+    def calculate_match_score(self, job_analysis: JobAnalysis, user_profile: UserProfile):
         """
-        cursor.execute(query, (user_id,))
-        return cursor.fetchall()
+        Calculates a comprehensive match score for a job based on AI analysis
+        and structured user preferences.
+        """
+        if not job_analysis or not user_profile:
+            return 0, "Missing analysis or profile data."
 
-    def _infer_user_leadership_tier(self, profile):
-        if not profile or not profile['desired_title']:
-            return 1 
-        title = profile['desired_title'].lower()
-        if 'c-suite' in title or 'chief' in title: return 9
-        if 'vp' in title or 'vice president' in title: return 8
-        if 'director' in title: return 7
-        if 'manager' in title: return 6
-        if 'principal' in title: return 5
-        if 'staff' in title: return 4
-        if 'senior' in title or 'sr.' in title: return 3
-        if 'mid' in title or 'intermediate' in title: return 2
-        return 1
+        score = 0
+        reasons = []
 
-    def get_recommendations(self, user_id: int, limit: int = 20):
+        # Base score from AI analysis
+        position_relevance = job_analysis.position_relevance_score or 0
+        environment_fit = job_analysis.environment_fit_score or 0
+        
+        # Simple weighted sum for now
+        score += position_relevance * 0.6
+        score += environment_fit * 0.4
+        reasons.append(f"Base AI Relevance (Position: {position_relevance}, Environment: {environment_fit})")
+
+        # --- Apply bonuses/penalties based on structured data ---
+
+        # Work Modality Preference
+        if user_profile.preferred_work_style and job_analysis.job.job_modality:
+            if user_profile.preferred_work_style.value == job_analysis.job.job_modality.value:
+                score += 10
+                reasons.append(f"Bonus: Preferred work style ({user_profile.preferred_work_style.value}) matches job.")
+            elif user_profile.preferred_work_style.value == 'HYBRID' and job_analysis.job.job_modality.value in ['ON_SITE', 'REMOTE']:
+                score += 5 # Hybrid users might tolerate either
+                reasons.append(f"Small Bonus: Hybrid preference matches On-site/Remote job.")
+            else:
+                score -= 5 # Minor penalty for mismatch
+                reasons.append(f"Penalty: Work style mismatch ({user_profile.preferred_work_style.value} vs {job_analysis.job.job_modality.value}).")
+
+        # Salary Range Preference
+        if user_profile.desired_salary_min and user_profile.desired_salary_max and job_analysis.job.salary_min and job_analysis.job.salary_max:
+            if (job_analysis.job.salary_min >= user_profile.desired_salary_min and
+                job_analysis.job.salary_max <= user_profile.desired_salary_max):
+                score += 15
+                reasons.append("Bonus: Job salary range perfectly within desired range.")
+            elif (job_analysis.job.salary_min <= user_profile.desired_salary_max and
+                  job_analysis.job.salary_max >= user_profile.desired_salary_min): # Overlap
+                score += 5
+                reasons.append("Small Bonus: Job salary range overlaps desired range.")
+            else:
+                score -= 10
+                reasons.append("Penalty: Job salary range outside desired range.")
+
+        # Company Size Preference
+        if user_profile.preferred_company_size and job_analysis.job.company and job_analysis.job.company.company_size_min:
+            user_pref = user_profile.preferred_company_size.value
+            company_size_min = job_analysis.job.company.company_size_min
+            company_size_max = job_analysis.job.company.company_size_max or company_size_min # Use min if max is null
+
+            # This mapping needs to be precise based on your ENUM definitions and company size ranges
+            if user_pref == 'STARTUP' and company_size_max and company_size_max <= 50:
+                score += 10
+                reasons.append("Bonus: Company is a Startup, matching preference.")
+            elif user_pref == 'SMALL_BUSINESS' and company_size_min and company_size_max and 1 <= company_size_max <= 50:
+                score += 10
+                reasons.append("Bonus: Company is Small Business, matching preference.")
+            elif user_pref == 'MEDIUM_BUSINESS' and company_size_min and company_size_max and 51 <= company_size_max <= 250:
+                score += 10
+                reasons.append("Bonus: Company is Medium Business, matching preference.")
+            elif user_pref == 'LARGE_ENTERPRISE' and company_size_min and company_size_min >= 251:
+                score += 10
+                reasons.append("Bonus: Company is Large Enterprise, matching preference.")
+            elif user_pref == 'NO_PREFERENCE':
+                pass # No bonus/penalty
+            else:
+                score -= 5 # Minor penalty for mismatch
+                reasons.append(f"Penalty: Company size mismatch ({user_pref} vs {company_size_min}-{company_size_max}).")
+
+
+        # Leadership Tier Gap (if applicable - needs more sophisticated logic)
+        # Assuming you have a way to deduce user's current level vs. desired job level
+        # For example: if user_profile.current_level and job_analysis.job.deduced_job_level:
+        #    if user is applying for a role significantly above/below their level
+        #    score -= penalty / score += bonus
+
+        # Ensure score is within 0-100 bounds
+        final_score = max(0, min(100, int(score)))
+        return final_score, reasons
+
+    def get_job_recommendations(self, user_id: int, limit: int = 10):
+        """
+        Generates job recommendations for a user based on their profile and existing analyses.
+        This will look for JobAnalysis records and then apply the match score logic.
+        """
         self.logger.info(f"Generating recommendations for user_id: {user_id}")
-        db = get_db()
-        try:
-            with db.cursor() as cursor:
-                user_profile = self._get_user_profile(cursor, user_id)
-                if not user_profile or not user_profile['has_completed_onboarding']:
-                    self.logger.warning(f"Profile for user_id {user_id} is incomplete or not found. No recommendations generated.")
-                    return []
 
-                all_jobs = self._get_relevant_jobs(cursor, user_id)
-                self.logger.info(f"Found {len(all_jobs)} candidate jobs for scoring.")
-                
-                scored_jobs = []
-                for job in all_jobs:
-                    score = 0
-                    score += self.GRADE_TO_SCORE.get(job['matrix_rating'], 60)
-                    if job['job_modality'] and user_profile['preferred_work_style'] and job['job_modality'] == user_profile['preferred_work_style']:
-                        score += 10
-                    user_sal_min = user_profile.get('desired_salary_min')
-                    user_sal_max = user_profile.get('desired_salary_max')
-                    job_sal_min = job.get('salary_min')
-                    job_sal_max = job.get('salary_max')
-                    if user_sal_min and user_sal_max and job_sal_min and job_sal_max:
-                        if max(user_sal_min, job_sal_min) <= min(user_sal_max, job_sal_max):
-                            score += 8
-                    user_tier = self._infer_user_leadership_tier(user_profile)
-                    job_tier = self.JOB_LEVEL_TO_INT.get(job['deduced_job_level'])
-                    if user_tier and job_tier:
-                        tier_gap = job_tier - user_tier
-                        if tier_gap == 1: score -= 1
-                        elif tier_gap == 2: score -= 5
-                        elif tier_gap >= 3: score -= 15
-                    
-                    job_dict = dict(job)
-                    job_dict['match_score'] = score
-                    scored_jobs.append(job_dict)
+        user_profile = UserProfile.query.filter_by(user_id=user_id).first()
+        if not user_profile or not user_profile.has_completed_onboarding:
+            self.logger.warning(f"User {user_id} profile incomplete. Cannot generate recommendations.")
+            return {"message": "Please complete your profile to receive recommendations.", "jobs": []}
 
-                ranked_jobs = sorted(scored_jobs, key=lambda x: x['match_score'], reverse=True)
-                
-                self.logger.info(f"Successfully scored and ranked {len(ranked_jobs)} jobs for user_id: {user_id}.")
-                return ranked_jobs[:limit]
+        # Fetch all JobAnalysis records for this user, eager loading related Job and Company
+        # We need to load Job, Company and JobOpportunity for each JobAnalysis
+        analyses = db.session.query(JobAnalysis).options(
+            joinedload(JobAnalysis.job).joinedload(Job.company),
+            joinedload(JobAnalysis.job).joinedload(Job.opportunities)
+        ).filter(JobAnalysis.user_id == user_id).all()
 
-        except Exception as e:
-            self.logger.error(f"Error generating recommendations for user_id {user_id}: {e}")
-            return []
+        recommended_jobs = []
+        for analysis in analyses:
+            score, reasons = self.calculate_match_score(analysis, user_profile)
+            
+            # Get one active opportunity URL if available for the frontend display
+            display_url = None
+            if analysis.job and analysis.job.opportunities:
+                active_opportunities = [o for o in analysis.job.opportunities if o.is_active]
+                if active_opportunities:
+                    display_url = active_opportunities[0].url # Just pick the first active one
+
+            recommended_jobs.append({
+                "job_id": analysis.job_id,
+                "job_title": analysis.job.job_title if analysis.job else "N/A",
+                "company_id": analysis.job.company_id if analysis.job else None,
+                "company_name": analysis.job.company.name if analysis.job and analysis.job.company else "N/A",
+                "match_score": score,
+                "ai_grade": analysis.matrix_rating,
+                "reasons": reasons,
+                "summary": analysis.summary,
+                "job_url": display_url # Providing one URL for frontend
+            })
+
+        # Sort recommendations by match_score (descending)
+        recommended_jobs.sort(key=lambda x: x['match_score'], reverse=True)
+
+        return {"message": "Recommendations generated successfully.", "jobs": recommended_jobs[:limit]}

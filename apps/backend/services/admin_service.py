@@ -1,121 +1,125 @@
-from datetime import datetime, timezone, timedelta
+# Path: apps/backend/services/admin_service.py
+from flask import current_app
+from ..app import db # NEW: Import db
 from ..config import config
-from ..database import get_db
+from ..models import Job, JobOpportunity, TrackedJob, JobAnalysis, Company, User # Import all models
 from .job_service import JobService # We need the URL validity checker
+from .company_service import CompanyService # NEW: Import CompanyService
+from datetime import datetime, timedelta
+import pytz
+import re # for URL patterns
+import hashlib # For job_description_hash computation
 
 class AdminService:
-    def __init__(self, logger):
+    def __init__(self, logger=None):
+        self.logger = logger or current_app.logger
+        self.job_service = JobService(self.logger)
+        self.company_service = CompanyService(self.logger)
+
+    # Note: DB reset moved to admin route for direct endpoint access and safety
+
+    # Method to run URL validity checks (previously in app.py)
+    def check_job_url_validity(self):
         """
-        Initializes the Admin Service.
-        Args:
-            logger: The Flask app's logger instance.
+        Checks the validity of job URLs and updates their status.
+        - Marks URLs as expired if unreachable or older than 60 days.
+        - Identifies and marks legacy malformed URLs.
+        This operates on JobOpportunity records now.
         """
-        self.logger = logger
-        # The AdminService needs to check URL validity, so it uses an instance of JobService.
-        self.job_service = JobService(logger)
+        self.logger.info("Starting job URL validity check.")
+        
+        # Step 1: Mark unreachable or malformed URLs
+        opportunities_to_check = JobOpportunity.query.filter(
+            JobOpportunity.is_active == True,
+            # Only check opportunities that haven't been checked recently (e.g., last 7 days)
+            db.or_(
+                JobOpportunity.last_checked_at == None,
+                JobOpportunity.last_checked_at < datetime.now(pytz.utc) - timedelta(days=7)
+            )
+        ).limit(100).all() # Process in batches
 
-    def check_and_expire_job_postings(self):
+        checked_count = 0
+        marked_unreachable_count = 0
+        marked_legacy_malformed_count = 0
+
+        # Regex for common malformed placeholders from old system
+        MALFORMED_URL_PATTERNS = [
+            re.compile(r'https?://[a-zA-Z0-9.-]+\.com/job-not-found'),
+            re.compile(r'https?://[a-zA-Z0-9.-]+\.com/temp-url'),
+            re.compile(r'https?://[a-zA-Z0-9.-]+\.com/placeholder-url')
+        ]
+
+        for opportunity in opportunities_to_check:
+            is_malformed_legacy = any(pattern.match(opportunity.url) for pattern in MALFORMED_URL_PATTERNS)
+            
+            if is_malformed_legacy:
+                opportunity.is_active = False
+                opportunity.last_checked_at = datetime.now(pytz.utc)
+                # You might want a specific status_reason for the opportunity if needed
+                marked_legacy_malformed_count += 1
+                self.logger.info(f"Marked legacy malformed URL: {opportunity.url}")
+            else:
+                try:
+                    # Perform a HEAD request to check reachability without downloading full content
+                    response = requests.head(opportunity.url, timeout=5)
+                    if response.status_code >= 400: # Client error or server error
+                        opportunity.is_active = False
+                        marked_unreachable_count += 1
+                        self.logger.info(f"Marked unreachable URL (status {response.status_code}): {opportunity.url}")
+                    else:
+                        opportunity.is_active = True # Ensure it's active if reachable
+                except requests.exceptions.RequestException as e:
+                    opportunity.is_active = False
+                    marked_unreachable_count += 1
+                    self.logger.info(f"Marked unreachable URL (exception {e.__class__.__name__}): {opportunity.url}")
+                except Exception as e:
+                    self.logger.error(f"Unexpected error checking URL {opportunity.url}: {e}", exc_info=True)
+                    opportunity.is_active = False # Mark as inactive on unexpected error too
+
+            opportunity.last_checked_at = datetime.now(pytz.utc)
+            db.session.add(opportunity) # Mark for update
+            checked_count += 1
+        
+        try:
+            db.session.commit()
+            self.logger.info(f"URL validity check complete. Checked {checked_count} opportunities. Marked {marked_unreachable_count} unreachable, {marked_legacy_malformed_count} legacy malformed.")
+        except Exception as e:
+            db.session.rollback()
+            self.logger.error(f"Error during URL validity check commit: {e}", exc_info=True)
+
+    # Method to check for stale tracked applications
+    def check_stale_applications(self):
         """
-        Checks job postings for validity and age, updating their status accordingly.
-        This is intended to be run as a scheduled task.
-        Returns a summary of the operation.
+        Checks for tracked jobs that are considered stale (no activity for X days)
+        and marks them as 'EXPIRED' with a 'Stale - No action in X days' reason.
+        This operates on TrackedJob records.
         """
-        db = get_db()
-        with db.cursor() as cur:
-            twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
-            sixty_days_ago = datetime.now(timezone.utc) - timedelta(days=config.JOB_POSTING_MAX_AGE_DAYS)
+        self.logger.info("Starting stale application check.")
+        stale_threshold_days = 30 # Configurable threshold
 
-            # Select jobs that need checking based on several criteria
-            cur.execute("""
-                SELECT id, job_url, status, found_at, last_checked_at
-                FROM jobs
-                WHERE status = 'Active' AND (
-                    last_checked_at IS NULL OR last_checked_at < %s OR found_at < %s
-                )
-                LIMIT 1000;
-            """, (twenty_four_hours_ago, sixty_days_ago))
-            jobs_to_check = cur.fetchall()
+        stale_applications = TrackedJob.query.filter(
+            # Exclude already terminal states
+            TrackedJob.status.in_(['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS']),
+            TrackedJob.updated_at < datetime.now(pytz.utc) - timedelta(days=stale_threshold_days),
+            db.or_(
+                TrackedJob.next_action_at == None, # No next action planned
+                TrackedJob.next_action_at < datetime.now(pytz.utc) # Next action date is in the past
+            )
+        ).limit(100).all() # Process in batches
 
-            self.logger.info(f"Found {len(jobs_to_check)} job postings to check for expiration.")
-            
-            updated_count = 0
-            for job in jobs_to_check:
-                new_status = job['status']
-                
-                # 1. Check for age first
-                if job['found_at'] and job['found_at'] < sixty_days_ago:
-                    new_status = 'Expired - Time Based'
-                    self.logger.info(f"Job ID {job['id']} is >{config.JOB_POSTING_MAX_AGE_DAYS} days old. Marking as '{new_status}'.")
-                
-                # 2. If not expired by age, check URL validity
-                elif not self.job_service.check_url_validity(job['job_url']):
-                    new_status = 'Expired - Unreachable'
-                    self.logger.info(f"Job ID {job['id']} URL '{job['job_url']}' is unreachable. Marking as '{new_status}'.")
-                
-                # 3. If status changed, update the record
-                if new_status != job['status']:
-                    cur.execute(
-                        "UPDATE jobs SET status = %s, last_checked_at = %s WHERE id = %s;",
-                        (new_status, datetime.now(timezone.utc), job['id'])
-                    )
-                    updated_count += 1
-                else: # Even if status is the same, update the check time
-                    cur.execute(
-                        "UPDATE jobs SET last_checked_at = %s WHERE id = %s;",
-                        (datetime.now(timezone.utc), job['id'])
-                    )
-
-            db.commit()
-            self.logger.info(f"Job expiration check complete. Checked: {len(jobs_to_check)}, Updated: {updated_count}")
-            return {
-                "jobs_checked": len(jobs_to_check),
-                "jobs_status_updated": updated_count,
-            }
-
-    def check_and_expire_tracked_jobs(self):
-        """
-        Checks for tracked jobs that have been inactive for too long and marks them as expired.
-        This is intended to be run as a scheduled task.
-        Returns a summary of the operation.
-        """
-        db = get_db()
-        with db.cursor() as cur:
-            thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=config.TRACKED_JOB_STALE_DAYS)
-            
-            # *** THE FIX IS HERE: The list of terminal states now uses the new ENUM values. ***
-            terminal_states = ('EXPIRED', 'REJECTED', 'OFFER_ACCEPTED', 'WITHDRAWN')
-            
-            cur.execute(f"""
-                SELECT id, user_id
-                FROM tracked_jobs
-                WHERE status NOT IN %s
-                  AND updated_at < %s
-                LIMIT 1000;
-            """, (terminal_states, thirty_days_ago))
-            
-            jobs_to_expire = cur.fetchall()
-
-            self.logger.info(f"Found {len(jobs_to_expire)} tracked jobs to mark as expired due to inactivity.")
-            
-            if not jobs_to_expire:
-                return {"tracked_jobs_checked": 0, "tracked_jobs_marked_expired": 0}
-
-            # Perform a bulk update for efficiency
-            job_ids_to_expire = [job['id'] for job in jobs_to_expire]
-            new_status = 'EXPIRED'
-            new_reason = f'Stale - No action in {config.TRACKED_JOB_STALE_DAYS} days'
-            
-            cur.execute("""
-                UPDATE tracked_jobs
-                SET status = %s, status_reason = %s, updated_at = %s
-                WHERE id = ANY(%s);
-            """, (new_status, new_reason, datetime.now(timezone.utc), job_ids_to_expire))
-            
-            expired_count = cur.rowcount
-            db.commit()
-            
-            self.logger.info(f"Tracked job expiration check complete. Marked Expired: {expired_count}")
-            return {
-                "tracked_jobs_checked": len(jobs_to_expire),
-                "tracked_jobs_marked_expired": expired_count
-            }
+        marked_stale_count = 0
+        for app in stale_applications:
+            app.status = 'EXPIRED' # Set to ENUM member
+            app.status_reason = f"Stale - No action in {stale_threshold_days} days"
+            app.resolved_at = datetime.now(pytz.utc)
+            app.updated_at = datetime.now(pytz.utc)
+            db.session.add(app)
+            marked_stale_count += 1
+            self.logger.info(f"Marked stale tracked job ID: {app.id}")
+        
+        try:
+            db.session.commit()
+            self.logger.info(f"Stale application check complete. Marked {marked_stale_count} applications as stale.")
+        except Exception as e:
+            db.session.rollback()
+            self.logger.error(f"Error during stale application check commit: {e}", exc_info=True)

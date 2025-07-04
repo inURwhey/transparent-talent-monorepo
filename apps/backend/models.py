@@ -3,7 +3,7 @@ from .app import db # Corrected import for db from the main app factory
 from datetime import datetime
 import pytz
 from sqlalchemy.dialects.postgresql import JSONB # NEW IMPORT for JSONB type
-from sqlalchemy import text # For db.text in unique constraint
+from sqlalchemy import text, Index # NEW IMPORT for Index for partial unique constraint (and text for postgresql_where)
 
 # Helper for timezone-aware default timestamps
 def get_utc_now():
@@ -283,9 +283,11 @@ class ResumeSubmission(db.Model):
     source = db.Column(db.String(50))
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
+    # CORRECTED: Using db.Index instead of db.UniqueConstraint for partial unique index
+    # This creates a unique index on user_id ONLY where is_active is TRUE, ensuring only one active resume per user.
     __table_args__ = (
-        db.UniqueConstraint('user_id', 'is_active', name='_user_active_resume_uc',
-                            postgresql_where=text('is_active IS TRUE')),
+        Index('_user_active_resume_idx', 'user_id', unique=True,
+              postgresql_where=text('is_active IS TRUE')),
     )
 
     user = db.relationship('User', backref=db.backref('resume_submissions', lazy=True))

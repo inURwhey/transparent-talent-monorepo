@@ -1,121 +1,145 @@
 # Path: apps/backend/services/company_service.py
-import google.generativeai as genai
+import requests
 import json
 import re
 from flask import current_app
-from ..config import config
-from ..database import get_db
+from sqlalchemy.exc import IntegrityError
+from datetime import datetime
+import pytz
 
-# This version helps track which version of our prompt/logic generated the data.
-COMPANY_RESEARCH_PROTOCOL_VERSION = "1.0"
+from ..app import db
+from ..models import Company
+from ..config import config
 
 class CompanyService:
-    def __init__(self):
-        # Configure the Gemini client if the key is available
-        if not hasattr(config, 'GEMINI_API_KEY') or not config.GEMINI_API_KEY:
-            raise ValueError("GEMINI_API_KEY is not configured.")
-        genai.configure(api_key=config.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    def __init__(self, logger=None):
+        self.logger = logger or current_app.logger
 
-    def research_and_update_company_profile(self, company_id):
-        db = get_db()
-        with db.cursor() as cursor:
-            # 1. Get company name
-            cursor.execute("SELECT name FROM companies WHERE id = %s", (company_id,))
-            company = cursor.fetchone()
-            if not company:
-                return {"success": False, "message": "Company not found", "status_code": 404}
-            
-            company_name = company.get('name')
-            current_app.logger.info(f"Initiating AI research for company: {company_name} (ID: {company_id})")
+    def _call_gemini_api(self, prompt, model_name="gemini-pro"):
+        api_key = config.GEMINI_API_KEY
+        if not api_key:
+            self.logger.error("Gemini API key is not configured.")
+            return None
 
-            # 2. Call Gemini API
-            prompt = self._build_prompt(company_name)
-            try:
-                response = self.model.generate_content(prompt)
-                # Extract JSON from the response text, handling markdown code blocks
-                json_data = self._extract_json(response.text)
-                if not json_data:
-                    current_app.logger.error(f"Failed to extract JSON from Gemini response for {company_name}")
-                    return {"success": False, "message": "AI response was not valid JSON.", "status_code": 500}
+        headers = {
+            "Content-Type": "application/json"
+        }
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
 
-            except Exception as e:
-                current_app.logger.error(f"Gemini API call failed for {company_name}: {e}")
-                return {"success": False, "message": f"Gemini API call failed: {e}", "status_code": 502}
+        try:
+            response = requests.post(url, headers=headers, json={"contents": [{"parts": [{"text": prompt}]}]})
+            response.raise_for_status()
+            data = response.json()
+            # Extract text from the response structure
+            text_content = data.get('candidates', [])[0].get('content', {}).get('parts', [])[0].get('text', '')
+            return text_content
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Error calling Gemini API for company research: {e}")
+            self.logger.error(f"Gemini API Response: {getattr(e, 'response', 'No response attribute')}")
+            return None
 
-            # 3. UPSERT (INSERT or UPDATE) the data
-            try:
-                cursor.execute(
-                    """
-                    INSERT INTO company_profiles (
-                        company_id, industry, employee_count_range, publicly_stated_mission,
-                        primary_business_model, researched_at, ai_model_version
-                    ) VALUES (%s, %s, %s, %s, %s, NOW(), %s)
-                    ON CONFLICT (company_id) DO UPDATE SET
-                        industry = EXCLUDED.industry,
-                        employee_count_range = EXCLUDED.employee_count_range,
-                        publicly_stated_mission = EXCLUDED.publicly_stated_mission,
-                        primary_business_model = EXCLUDED.primary_business_model,
-                        researched_at = NOW(),
-                        ai_model_version = EXCLUDED.ai_model_version,
-                        updated_at = NOW()
-                    RETURNING id;
-                    """,
-                    (
-                        company_id,
-                        json_data.get('industry'),
-                        json_data.get('employee_count_range'),
-                        json_data.get('publicly_stated_mission'),
-                        json_data.get('primary_business_model'),
-                        COMPANY_RESEARCH_PROTOCOL_VERSION
-                    )
-                )
-                profile_id = cursor.fetchone()['id']
-                db.commit()
-                current_app.logger.info(f"Successfully saved company profile for {company_name}. Profile ID: {profile_id}")
-                return {"success": True, "message": "Company profile updated successfully.", "profile_id": profile_id, "status_code": 200}
+    def _parse_company_ai_response(self, ai_response):
+        """Parses and validates the JSON output from company AI research."""
+        try:
+            match = re.search(r"```json\n(.+?)\n```", ai_response, re.DOTALL)
+            if match:
+                json_string = match.group(1)
+            else:
+                json_string = ai_response
 
-            except Exception as e:
-                db.rollback()
-                current_app.logger.error(f"Database error while saving company profile for {company_name}: {e}")
-                return {"success": False, "message": f"Database error: {e}", "status_code": 500}
+            parsed_data = json.loads(json_string)
 
-    def _build_prompt(self, company_name):
-        return f"""
-        Act as an expert business analyst. Research the company named "{company_name}".
-        Based on publicly available information, provide a concise summary in JSON format.
+            # Basic validation and cleaning
+            parsed_data['name'] = parsed_data.get('name', 'Unknown Company').strip()
+            # Ensure size is parsed as int range or None
+            parsed_data['company_size_min'] = int(parsed_data['company_size_min']) if parsed_data.get('company_size_min') else None
+            parsed_data['company_size_max'] = int(parsed_data['company_size_max']) if parsed_data.get('company_size_max') else None
 
-        The JSON object must contain these exact keys and nothing else:
-        - "industry": The primary industry of the company (e.g., "Enterprise Software", "Healthcare Technology", "E-commerce").
-        - "employee_count_range": The estimated current number of employees as a range (e.g., "1-50", "51-200", "201-500", "501-1000", "1001-5000", "5001+").
-        - "publicly_stated_mission": The company's official mission or vision statement, summarized in one or two sentences.
-        - "primary_business_model": The company's core business model (e.g., "B2B SaaS", "D2C E-commerce", "Advertising", "Marketplace").
+            return parsed_data
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to decode JSON from company AI response: {e}. Raw response: {ai_response}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error processing company AI response: {e}. Raw response: {ai_response}")
+            return None
 
-        If you cannot find a specific piece of information, use a value of null for that key.
-        Do not include any introductory text or explanations outside of the JSON object.
-
-        Example output:
-        ```json
-        {{
-          "industry": "Artificial Intelligence",
-          "employee_count_range": "501-1000",
-          "publicly_stated_mission": "To ensure that artificial general intelligence benefits all of humanity.",
-          "primary_business_model": "Research and development with API access licensing."
-        }}
-        ```
-
-        JSON data:
+    def research_and_update_company_profile(self, company_id: int):
         """
+        Performs AI-driven research to enrich a company's profile.
+        If company does not exist, it will not create it (expects pre-existing company).
+        """
+        company = Company.query.filter_by(id=company_id).first()
+        if not company:
+            self.logger.warning(f"Company ID {company_id} not found for research. Skipping.")
+            return None
 
-    def _extract_json(self, text):
-        # Use regex to find JSON within markdown code blocks (```json ... ```) or standalone
-        match = re.search(r'```json\s*(\{.*?\})\s*```|(\{.*?\})', text, re.DOTALL)
-        if match:
-            # Prioritize the content of the json block if it exists
-            json_str = match.group(1) if match.group(1) else match.group(2)
-            try:
-                return json.loads(json_str)
-            except json.JSONDecodeError as e:
-                current_app.logger.error(f"JSON decode error: {e}\\nRaw text was: {json_str}")
+        # Check if company already has sufficient data (avoid re-researching complete profiles)
+        # You can define what "sufficient" means (e.g., has industry, description, etc.)
+        if company.industry and company.description and company.mission:
+            self.logger.info(f"Company {company.name} (ID: {company.id}) already has sufficient profile data. Skipping research.")
+            return company
+
+        self.logger.info(f"Starting AI research for company: {company.name} (ID: {company.id})")
+
+        prompt = f"""
+        Research the following company and provide a structured JSON output with key information.
+        If a piece of information cannot be found, use null.
+        Company Name: {company.name}
+        {f"Company Website (if known): {company.website_url}" if company.website_url else ""}
+
+        Output a JSON object with the following structure:
+        - name (string, exact company name)
+        - industry (string, e.g., "Software Development", "Financial Services")
+        - description (string, a brief overview of what the company does)
+        - mission (string, the company's stated mission or core purpose)
+        - business_model (string, how the company generates revenue)
+        - company_size_min (integer, minimum employee count, nullable)
+        - - company_size_max (integer, maximum employee count, nullable)
+        - headquarters (string, city, state, country)
+        - founded_year (integer, nullable)
+        - website_url (string, official website, nullable)
+
+        Strictly conform to the JSON structure.
+        """
+        
+        ai_response = self._call_gemini_api(prompt, model_name="gemini-pro")
+
+        if ai_response:
+            parsed_data = self._parse_company_ai_response(ai_response)
+            if parsed_data:
+                # Update existing company record with new data, only if better/new
+                company.name = parsed_data.get('name', company.name) # Update name if AI has a better version
+                company.industry = parsed_data.get('industry', company.industry)
+                company.description = parsed_data.get('description', company.description)
+                company.mission = parsed_data.get('mission', company.mission)
+                company.business_model = parsed_data.get('business_model', company.business_model)
+                company.company_size_min = parsed_data.get('company_size_min', company.company_size_min)
+                company.company_size_max = parsed_data.get('company_size_max', company.company_size_max)
+                company.headquarters = parsed_data.get('headquarters', company.headquarters)
+                company.founded_year = parsed_data.get('founded_year', company.founded_year)
+                company.website_url = parsed_data.get('website_url', company.website_url)
+                company.updated_at = datetime.now(pytz.utc)
+
+                try:
+                    db.session.commit()
+                    db.session.refresh(company)
+                    self.logger.info(f"Successfully updated company profile for {company.name} (ID: {company.id}).")
+                    return company
+                except Exception as e:
+                    db.session.rollback()
+                    self.logger.error(f"Error saving updated company profile for {company.name} (ID: {company.id}): {e}", exc_info=True)
+                    return None
+            else:
+                self.logger.error(f"AI company research for {company.name} (ID: {company.id}) failed to parse response.")
                 return None
-        return None
+        else:
+            self.logger.warning(f"AI company research for {company.name} (ID: {company.id}) received empty response.")
+            return None
+
+    def get_company(self, company_id: int):
+        """Retrieves a single company by its ID."""
+        return Company.query.filter_by(id=company_id).first()
+
+    def get_company_by_name(self, company_name: str):
+        """Retrieves a single company by its name (case-insensitive)."""
+        return Company.query.filter(db.func.lower(Company.name) == company_name.lower()).first()

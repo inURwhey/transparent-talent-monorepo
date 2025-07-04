@@ -2,77 +2,66 @@
 from flask import Blueprint, request, jsonify, g, current_app
 from ..auth import token_required
 from ..services.profile_service import ProfileService
-from psycopg2 import errors # Import the errors module
+from ..app import db # NEW: Import db for commit after onboarding status change
+from ..models import UserProfile # NEW: Import UserProfile for direct ORM access
 
-profile_bp = Blueprint('profile_bp', __name__)
+profile_bp = Blueprint('profile', __name__)
 
-ONBOARDING_REQUIRED_FIELDS = [
-    'work_style_preference',
-    'conflict_resolution_style',
-    'communication_preference',
-    'change_tolerance',
-    'short_term_career_goal',
-    'desired_title'
-]
+@profile_bp.before_app_request
+def before_request():
+    if request.path.startswith('/api/profile'):
+        current_app.logger.debug(f"Profile Blueprint: Request to {request.path}")
 
 @profile_bp.route('/profile', methods=['GET'])
 @token_required
-def get_user_profile():
-    user_id = g.current_user['id']
+def get_profile():
     profile_service = ProfileService(current_app.logger)
+    user_id = g.current_user.id
+    
     try:
-        profile = profile_service.get_profile(user_id)
-        return jsonify(profile), 200
+        profile_data = profile_service.get_profile(user_id)
+        return jsonify(profile_data), 200
     except Exception as e:
-        current_app.logger.error(f"Error in get_user_profile route: {e}")
-        return jsonify({"error": "An internal server error occurred."}), 500
+        current_app.logger.error(f"Error getting profile for user {user_id}: {e}")
+        return jsonify({"message": "Error fetching profile."}), 500
 
 @profile_bp.route('/profile', methods=['PUT'])
 @token_required
-def update_user_profile():
-    user_id = g.current_user['id']
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "No update data provided"}), 400
-
+def update_profile():
     profile_service = ProfileService(current_app.logger)
+    user_id = g.current_user.id
+    data = request.json
+
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
 
     try:
         updated_profile = profile_service.update_profile(user_id, data)
+        
+        # Check for onboarding completion after profile update
+        # This logic ensures `has_completed_onboarding` is set to True
+        # and re-analysis is triggered. It explicitly commits via db.session.commit()
+        # because the profile_service.update_profile might have already committed
+        # and we need to ensure this follow-up update is also persisted.
+        if not updated_profile.get('has_completed_onboarding', False):
+            if profile_service.has_completed_required_profile_fields(user_id):
+                profile_orm = UserProfile.query.filter_by(user_id=user_id).first()
+                if profile_orm:
+                    profile_orm.has_completed_onboarding = True
+                    db.session.commit() # Commit this specific change
+                    # Ensure the returned dict reflects this change
+                    updated_profile['has_completed_onboarding'] = True
+                    current_app.logger.info(f"User {user_id} has completed onboarding.")
+                    # Trigger re-analysis for tracked jobs (can be async)
+                    from ..services.job_service import JobService # Import here to avoid circular
+                    JobService(current_app.logger).trigger_reanalysis_for_user(user_id)
+                else:
+                    current_app.logger.warning(f"Profile for user {user_id} unexpectedly missing during onboarding status check.")
 
-        # After every profile update, check if onboarding is now complete.
-        profile_service.check_and_trigger_onboarding_completion(user_id, ONBOARDING_REQUIRED_FIELDS)
 
-        if updated_profile is None:
-             # This indicates no valid fields were provided for update, based on current ProfileService logic
-             return jsonify({"message": "No valid profile fields to update"}), 200
-
-        # Return the latest state of the profile after the update and potential re-analysis trigger.
-        # The updated_profile already contains the mapped values for the frontend
-        return jsonify(updated_profile), 200 # Directly return updated_profile as it's already formatted
-    except errors.InvalidTextRepresentation as e:
-        # Catch PostgreSQL specific error for invalid ENUM input
-        current_app.logger.error(f"Invalid ENUM value provided for user {user_id}: {e}")
-        return jsonify({"error": f"Invalid data for one or more fields. Detail: {e.pgerror}"}), 400
+        return jsonify(updated_profile), 200
     except Exception as e:
-        current_app.logger.error(f"Error in update_user_profile route for user_id {user_id}: {e}")
-        return jsonify({"error": "An internal server error occurred."}), 500
-
-# Placeholder for onboarding route for now, will be fleshed out in next steps
-@profile_bp.route('/onboarding/parse-resume', methods=['POST'])
-@token_required
-def parse_resume():
-    # Example usage of resume parsing logic
-    # from ..services.onboarding_service import OnboardingService # Assuming this exists
-    # onboarding_service = OnboardingService(current_app.logger)
-    # raw_resume_text = request.json.get('resume_text', '')
-    # user_id = g.current_user['id']
-    # if not raw_resume_text:
-    #     return jsonify({"error": "Resume text is required"}), 400
-    # try:
-    #     onboarding_service.parse_resume_and_update_profile(user_id, raw_resume_text)
-    #     return jsonify({"message": "Resume parsed and profile updated successfully."}), 200
-    # except Exception as e:
-    #     current_app.logger.error(f"Error parsing resume: {e}")
-    #     return jsonify({"error": "Failed to parse resume."}), 500
-    return jsonify({"message": "Resume parsing endpoint placeholder."}), 200
+        current_app.logger.error(f"Error updating profile for user {user_id}: {e}", exc_info=True)
+        # Ensure rollback if any error occurs in this route's logic after service call
+        db.session.rollback()
+        return jsonify({"message": "Error updating profile."}), 500

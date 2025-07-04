@@ -1,26 +1,24 @@
 # Path: apps/backend/routes/companies.py
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, current_app
 from ..auth import token_required
-from ..database import get_db
-import json
+from ..services.company_service import CompanyService # NEW: Import CompanyService
+from ..models import Company # NEW: Import Company model
 
-companies_bp = Blueprint('companies_bp', __name__)
+companies_bp = Blueprint('companies', __name__)
 
 @companies_bp.route('/companies/<int:company_id>/profile', methods=['GET'])
 @token_required
 def get_company_profile(company_id):
     """
-    Fetches the AI-generated profile for a specific company.
+    Retrieves a company's profile.
     """
-    db = get_db()
-    with db.cursor() as cursor:
-        cursor.execute("SELECT * FROM company_profiles WHERE company_id = %s", (company_id,))
-        profile = cursor.fetchone()
-
-        if profile:
-            # The 'profile' object is a dict-like object. We can convert it to a real dict
-            # and then serialize it with a default handler for datetime objects.
-            profile_dict = dict(profile)
-            return json.dumps(profile_dict, default=str), 200, {'Content-Type': 'application/json'}
-        else:
-            return jsonify({"error": "Company profile not found"}), 404
+    company_service = CompanyService(current_app.logger)
+    
+    try:
+        company_profile = company_service.get_company(company_id)
+        if company_profile:
+            return jsonify(company_profile.to_dict()), 200
+        return jsonify({"message": "Company profile not found."}), 404
+    except Exception as e:
+        current_app.logger.error(f"Error fetching company profile for company_id {company_id}: {e}", exc_info=True)
+        return jsonify({"message": "Error fetching company profile."}), 500
