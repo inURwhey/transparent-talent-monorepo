@@ -51,6 +51,15 @@ export const getColumns = ({
   allTableData
 }: GetColumnsProps): ColumnDef<TrackedJob>[] => [
   {
+    id: "select",
+    header: ({ table }) => (<Checkbox checked={table.getIsAllPageRowsSelected()} onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)} />),
+    cell: ({ row }) => (<Checkbox checked={row.getIsSelected()} onCheckedChange={(value) => row.toggleSelected(!!value)} />),
+    enableSorting: false,
+    enableHiding: false,
+    minSize: 30,
+    maxSize: 30,
+  },
+  {
     id: "expander",
     header: () => null,
     cell: ({ row }) => (
@@ -63,20 +72,31 @@ export const getColumns = ({
         <ChevronRight className={`h-4 w-4 transition-transform ${row.getIsExpanded() ? 'rotate-90' : ''}`} />
       </Button>
     ),
-  },
-  {
-    id: "select",
-    header: ({ table }) => (<Checkbox checked={table.getIsAllPageRowsSelected()} onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)} />),
-    cell: ({ row }) => (<Checkbox checked={row.getIsSelected()} onCheckedChange={(value) => row.toggleSelected(!!value)} />),
-    enableSorting: false,
-    enableHiding: false,
-    // Removed explicit size to let it auto-size or be influenced by other columns
+    minSize: 30,
+    maxSize: 30,
   },
   {
     accessorKey: "job_title",
     header: "Job",
     cell: ({ row }) => (<div className="font-medium">{row.original.job_title}<div className="text-sm text-muted-foreground">{row.original.company_name}</div></div>),
-    // Removed explicit size to let it auto-size or be influenced by other columns
+    minSize: 200, // Allow job title to be at least this wide
+    // Removed 'grow' and no 'maxSize' to allow it to fill available space
+  },
+  {
+    accessorKey: "ai_grade",
+    header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>AI Grade<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
+    cell: ({ row }) => {
+      const analysis = row.original.ai_analysis;
+      if (!analysis || !analysis.matrix_rating) { return <UnlockAIGradeCTA />; }
+      return <div className="text-center font-medium">{analysis.matrix_rating}</div>
+    },
+    sortingFn: (rowA, rowB) => {
+      const gradeA = rowA.original.ai_analysis?.matrix_rating || 'Z';
+      const gradeB = rowB.original.ai_analysis?.matrix_rating || 'Z';
+      return gradeA.localeCompare(gradeB);
+    },
+    minSize: 80,
+    maxSize: 100,
   },
   {
     accessorKey: "status",
@@ -109,22 +129,8 @@ export const getColumns = ({
         </Select>
       );
     },
-    // Removed explicit size to let it auto-size or be influenced by other columns
-  },
-  {
-    accessorKey: "ai_grade",
-    header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>AI Grade<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
-    cell: ({ row }) => {
-      const analysis = row.original.ai_analysis;
-      if (!analysis || !analysis.matrix_rating) { return <UnlockAIGradeCTA />; }
-      return <div className="text-center font-medium">{analysis.matrix_rating}</div>
-    },
-    sortingFn: (rowA, rowB) => {
-      const gradeA = rowA.original.ai_analysis?.matrix_rating || 'Z';
-      const gradeB = rowB.original.ai_analysis?.matrix_rating || 'Z';
-      return gradeA.localeCompare(gradeB);
-    }
-    // Removed explicit size
+    minSize: 120,
+    maxSize: 180,
   },
   {
     accessorKey: "is_excited",
@@ -147,13 +153,15 @@ export const getColumns = ({
     },
     enableSorting: true,
     enableHiding: true,
-    // Removed explicit size
+    minSize: 80,
+    maxSize: 100,
   },
   {
     accessorKey: "created_at",
     header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Date Saved<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
     cell: ({ row }) => (new Date(row.original.created_at).toLocaleDateString()),
-    // Removed explicit size
+    minSize: 120,
+    maxSize: 150,
   },
   {
     accessorKey: "applied_at",
@@ -163,7 +171,8 @@ export const getColumns = ({
       if (!appliedAt) { return <div className="text-center">-</div>; }
       return new Date(appliedAt).toLocaleDateString();
     },
-    // Removed explicit size
+    minSize: 120,
+    maxSize: 150,
   },
   {
     accessorKey: "next_action_at",
@@ -205,7 +214,6 @@ export const getColumns = ({
                 setOpen(false);
               }}
               initialFocus
-              // Using `disabled` prop to prevent selection of past dates more robustly
               disabled={(date) => date < today} 
             />
             {dateValue && (
@@ -226,7 +234,8 @@ export const getColumns = ({
         </Popover>
       );
     },
-    // Removed explicit size. Let it grow as needed.
+    minSize: 150,
+    maxSize: 200,
   },
   {
     accessorKey: "next_action_notes",
@@ -255,7 +264,8 @@ export const getColumns = ({
         />
       );
     },
-    // Removed explicit size. Let it grow as needed.
+    minSize: 180, // Minimum size for notes
+    // No maxSize to allow it to take up remaining space
   },
   {
     id: "actions",
@@ -274,6 +284,7 @@ export const getColumns = ({
         </DropdownMenu>
       )
     },
-    // Removed explicit size
+    minSize: 50,
+    maxSize: 50,
   },
 ];

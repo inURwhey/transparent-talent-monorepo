@@ -60,10 +60,7 @@ export function DataTable<TData extends TrackedJob, TValue>({
   const [rowSelection, setRowSelection] = React.useState({})
   const [expanded, setExpanded] = React.useState({})
 
-  // Log to see if data prop is changing
-  React.useEffect(() => {
-    console.log("[DataTable] Data prop received/updated:", data);
-  }, [data]);
+  // Removed: console.log("[DataTable] Data prop received/updated:", data);
 
   const table = useReactTable({
     data,
@@ -96,8 +93,8 @@ export function DataTable<TData extends TrackedJob, TValue>({
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
-          id="job-title-filter" // Added id
-          name="job_title_filter" // Added name
+          id="job-title-filter"
+          name="job_title_filter"
           placeholder="Filter jobs by title..."
           value={(table.getColumn("job_title")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
