@@ -1,5 +1,5 @@
 # Path: apps/backend/routes/admin.py
-from flask import Blueprint, jsonify, current_app, request
+from flask import Blueprint, jsonify, g, current_app, request
 from ..auth import token_required, admin_required
 from ..app import db
 from ..models import User, Company, Job, JobOpportunity, TrackedJob, JobAnalysis
@@ -8,10 +8,32 @@ from ..services.company_service import CompanyService
 import requests
 from ..config import config
 
-admin_bp = Blueprint('admin', __name__)
+admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
-# CORRECTED: Decorator order swapped. @token_required must run before @admin_required.
-@admin_bp.route('/admin/list-models', methods=['GET'])
+# This is the new endpoint to fix the "Jobs For You" data regression
+@admin_bp.route('/trigger-reanalysis/user/<int:user_id>', methods=['POST'])
+@token_required
+@admin_required
+def trigger_user_reanalysis(user_id):
+    """
+    Manually triggers a full re-analysis of all tracked jobs for a specific user.
+    This is useful for backfilling data after AI protocol changes.
+    """
+    logger = current_app.logger
+    logger.info(f"Admin user {g.current_user.id} triggering re-analysis for user {user_id}.")
+
+    try:
+        job_service = JobService(logger)
+        job_service.trigger_reanalysis_for_user(user_id)
+        
+        logger.info(f"Successfully queued re-analysis for user {user_id}.")
+        return jsonify({"message": f"Successfully triggered re-analysis for user {user_id}."}), 200
+    except Exception as e:
+        logger.error(f"Failed to trigger re-analysis for user {user_id}: {e}", exc_info=True)
+        return jsonify({"message": "An unexpected error occurred."}), 500
+
+
+@admin_bp.route('/list-models', methods=['GET'])
 @token_required
 @admin_required
 def list_models():
@@ -29,12 +51,10 @@ def list_models():
             return jsonify({ "error": "Failed to list models", "status_code": e.response.status_code, "response": e.response.text }), 500
         return jsonify({"error": str(e)}), 500
 
-# CORRECTED: Decorator order swapped.
-@admin_bp.route('/admin/db-reset', methods=['POST'])
+@admin_bp.route('/db-reset', methods=['POST'])
 @token_required
 @admin_required
 def db_reset():
-    # ... function body is unchanged ...
     data = request.json
     tables_to_reset = data.get('tables', [])
     if not tables_to_reset: return jsonify({"message": "No tables specified for reset."}), 400
@@ -45,6 +65,7 @@ def db_reset():
             model = table_model_map.get(table_name)
             if model:
                 num_deleted = db.session.query(model).delete()
+                # Use db.session.execute with text() for raw SQL
                 db.session.execute(db.text(f"ALTER SEQUENCE {table_name}_id_seq RESTART WITH 1;"))
                 reset_messages.append(f"Table '{table_name}' reset. Deleted {num_deleted} rows.")
             else:
@@ -56,14 +77,15 @@ def db_reset():
         current_app.logger.error(f"Error during database reset: {e}", exc_info=True)
         return jsonify({"message": "Failed to reset database.", "error": str(e)}), 500
 
-# CORRECTED: Decorator order swapped.
-@admin_bp.route('/admin/reprocess-malformed-job-data', methods=['POST'])
+@admin_bp.route('/reprocess-malformed-job-data', methods=['POST'])
 @token_required
 @admin_required
 def reprocess_malformed_job_data():
-    # ... function body is unchanged ...
     job_service = JobService(current_app.logger)
     reprocessed_count = 0; failed_count = 0
+    # Assuming user_id=None is handled gracefully in create_or_get_canonical_job
+    # for system-level reprocessing. Let's use g.current_user.id for attribution.
+    admin_user_id = g.current_user.id
     jobs_to_reprocess = Job.query.filter(db.or_(Job.job_title.ilike('%job not found at url%'), Job.job_description_hash == None, Job.salary_min == None)).limit(100).all()
     for job in jobs_to_reprocess:
         opportunity = db.session.query(JobOpportunity).filter_by(job_id=job.id).first()
@@ -71,7 +93,7 @@ def reprocess_malformed_job_data():
             failed_count += 1
             continue
         try:
-            re_processed_canonical_job, _ = job_service.create_or_get_canonical_job(url=opportunity.url, user_id=None, commit=True)
+            re_processed_canonical_job, _ = job_service.create_or_get_canonical_job(url=opportunity.url, user_id=admin_user_id, commit=True)
             if re_processed_canonical_job: reprocessed_count += 1
             else: failed_count += 1
         except Exception as e:
@@ -80,12 +102,10 @@ def reprocess_malformed_job_data():
             current_app.logger.error(f"Error re-processing job ID: {job.id}: {e}", exc_info=True)
     return jsonify({"message": "Job data re-processing initiated.", "reprocessed_count": reprocessed_count, "failed_count": failed_count}), 200
 
-# CORRECTED: Decorator order swapped.
-@admin_bp.route('/admin/reprocess-incomplete-company-profiles', methods=['POST'])
+@admin_bp.route('/reprocess-incomplete-company-profiles', methods=['POST'])
 @token_required
 @admin_required
 def reprocess_incomplete_company_profiles():
-    # ... function body is unchanged ...
     company_service = CompanyService(current_app.logger)
     reprocessed_count = 0; failed_count = 0
     companies_to_reprocess = Company.query.filter(db.or_(Company.industry == None, Company.description == None, Company.mission == None)).limit(50).all()

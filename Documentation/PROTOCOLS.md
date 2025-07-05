@@ -9,6 +9,18 @@
 
 ## Developer Workflow & Quality Assurance
 
+### Dependency-Aware Modification Protocol v1.0
+*Objective:* To prevent cascading bugs by ensuring modifications are made with full knowledge of their immediate upstream and downstream dependencies. This protocol bridges the gap between a single-file change and a major architectural refactor.
+*   **Trigger:** When a file requested for modification either calls, or is called by, other services, routes, or models within the application.
+*   **Workflow:**
+    1.  **Acknowledge & Pause:** The AI will pause before generating code for the primary file. It will state: *"Before proceeding with the modification of `[File A]`, I must assess its direct dependencies to ensure system-wide consistency."*
+    2.  **Identify & State Connections:** The AI will explicitly map the connections. For example:
+        *   *"`profile_service.py` directly imports and relies on Enum definitions from `models.py`."*
+        *   *"`jobs.py` (route) creates an instance of `job_service.py` and calls its methods."*
+        *   *"`job_service.py` calls methods within `profile_service.py`."*
+    3.  **Request Ground Truth for Impact Radius:** The AI will generate a list of all files in the immediate impact radius and request their contents. *"To prevent data contract violations or import errors, please provide the full, current source code for the following files: `[File B]`, `[File C]`, `[File D]`."*
+    4.  **Proceed with Holistic Change:** Once the context is provided, the AI will generate the necessary changes for the *primary file* and, if necessary, suggest corresponding adjustments to the other files within the impact radius to maintain consistency.
+
 // Commented out while preview environment is broken.
 /* ### Git Branching & Preview Protocol v1.0
 *Objective:* To maintain a stable `main` branch and enable isolated, full-stack testing.
@@ -58,6 +70,17 @@
 
 ## Ground Truth & Interaction Protocols
 
+### Gemini API Interaction Protocol v1.0
+*   **Prime Directive:** Do not trust internal knowledge of the Gemini API. Its behavior can be inconsistent across versions and undocumented.
+*   **Workflow:**
+    1.  **Isolate & Verify:** Before debugging application code, **always** verify the intended API call works using an external tool like Postman. Use the `/api/admin/list-models` endpoint to get a list of available models.
+    2.  **Establish Ground Truth:** The successful external request (including endpoint URL, headers, and body structure) becomes the ground truth for implementation.
+    3.  **Replicate Exactly:** The application code must replicate the proven request structure exactly.
+    4.  **Prioritize Stable Models:** Default to stable, versioned model names (e.g., `gemini-1.5-pro`) over aliases (e.g., `gemini-1.5-pro-latest`), as aliases have shown to be unreliable with certain API versions.
+*   **Known Working Configuration (as of 2025-07-04):**
+    *   **Endpoint:** `https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent`
+    *   **Authentication:** `x-goog-api-key: {api_key}` in the request header.
+
 ### Database Interaction Protocol v1.1
 *   **Prime Directive:** **Never** assume a database table's structure.
 *   **Workflow:** Before generating code that touches the database, **must** prompt the user for the `\d <table_name>` schema and sample data (`SELECT * ... LIMIT 10`). All generated code will strictly adhere to the provided schema.
@@ -90,6 +113,6 @@
 ### Architectural Change Impact Protocol v1.0
 *Objective:* To prevent cascading failures after a major architectural change (e.g., ORM migration, auth system swap).
 1.  **Identify Impact Radius:** Before beginning work, identify all code files and services that directly or indirectly depend on the system being changed.
-2.  **Create Systemic Test Plan:** Create a test plan that explicitly includes verification steps for *every single file* within the impact radius identified in step 1.
+2.  **Create SystemicTest Plan:** Create a test plan that explicitly includes verification steps for *every single file* within the impact radius identified in step 1.
 3.  **Proactive Refactoring:** During implementation, if a file in the impact radius is only partially updated, proactively update the *entire file* to be consistent with the new architecture, even if it is outside the immediate scope of the task. Do not leave latent bugs.
 4.  **Verify End-to-End:** After code changes are complete, testing must include a full, end-to-end user flow that touches all affected components (e.g., user signup -> profile completion -> job submission -> admin view).
