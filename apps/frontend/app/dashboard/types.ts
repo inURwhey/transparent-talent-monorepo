@@ -52,7 +52,6 @@ export interface TrackedJob {
     ai_grade: string | null;
 }
 
-// CORRECTED: Restored all fields to the Profile interface to match its usage.
 export interface Profile {
   id: number;
   user_id: number;
@@ -80,6 +79,9 @@ export interface Profile {
   education: string | null;
   work_experience: string | null;
   personality_16_personalities: string | null;
+  // CORRECTED: Added the new optional fields
+  disc_assessment?: string | null;
+  clifton_strengths?: string | null;
   other_personal_attributes: string | null;
   has_completed_onboarding: boolean;
 }

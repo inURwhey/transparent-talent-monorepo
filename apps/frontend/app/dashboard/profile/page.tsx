@@ -24,11 +24,10 @@ const ONBOARDING_REQUIRED_FIELDS: (keyof Profile)[] = [
     'desired_job_titles'
 ];
 
-// CORRECTED: Mappings now match the backend display strings exactly.
 const companySizeOptions = [
     { value: 'No Preference', label: 'No Preference' },
     { value: 'Startup (1-50 employees)', label: 'Startup (1-50 employees)' },
-    { value: 'Small Business (1-50 employees)', label: 'Small Business (1-50 employees)' }, // Note: Startup and Small Business might be the same in the backend enum, ensure consistency
+    { value: 'Small Business (1-50 employees)', label: 'Small Business (1-50 employees)' },
     { value: 'Medium Business (51-250 employees)', label: 'Medium Business (51-250 employees)' },
     { value: 'Large Enterprise (250+ employees)', label: 'Large Enterprise (250+ employees)' },
 ];
@@ -157,7 +156,6 @@ export default function UserProfilePage() {
             if (!response.ok) throw new Error((await response.json()).message || 'Failed to save profile.');
             const updatedProfile: Profile = await response.json();
             setProfile(updatedProfile);
-            // CORRECTED: Changed success message and removed redirect
             setSuccessMessage("Profile updated successfully!");
         } catch (err: any) {
             console.error("Error updating profile:", err);
@@ -297,9 +295,9 @@ export default function UserProfilePage() {
                         <Collapsible open={openSections.personality} onOpenChange={() => toggleSection('personality')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Personality & Self-Assessment{openSections.personality ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                             <CollapsibleContent className="p-4 pt-0 space-y-4">
                                 <div><Label htmlFor="personality_16_personalities">16 Personalities (e.g., INTJ)</Label><Input id="personality_16_personalities" type="text" value={profile.personality_16_personalities || ''} onChange={(e) => handleChange('personality_16_personalities', e.target.value)} /></div>
-                                {/* NEW: Added DISC and CliftonStrengths fields */}
-                                <div><Label htmlFor="disc_assessment">DISC Assessment</Label><Input id="disc_assessment" type="text" value={(profile as any).disc_assessment || ''} onChange={(e) => handleChange('disc_assessment', e.target.value)} placeholder="e.g., D, I/D, etc." /></div>
-                                <div><Label htmlFor="clifton_strengths">Top 5 CliftonStrengths</Label><Textarea id="clifton_strengths" value={(profile as any).clifton_strengths || ''} onChange={(e) => handleChange('clifton_strengths', e.target.value)} rows={2} placeholder="e.g., Achiever, Learner, Strategic, etc." /></div>
+                                {/* CORRECTED: Removed `(profile as any)` */}
+                                <div><Label htmlFor="disc_assessment">DISC Assessment</Label><Input id="disc_assessment" type="text" value={profile.disc_assessment || ''} onChange={(e) => handleChange('disc_assessment', e.target.value)} placeholder="e.g., D, I/D, etc." /></div>
+                                <div><Label htmlFor="clifton_strengths">Top 5 CliftonStrengths</Label><Textarea id="clifton_strengths" value={profile.clifton_strengths || ''} onChange={(e) => handleChange('clifton_strengths', e.target.value)} rows={2} placeholder="e.g., Achiever, Learner, Strategic, etc." /></div>
                                 <div><Label htmlFor="other_personal_attributes">Other Personal Attributes</Label><Textarea id="other_personal_attributes" value={profile.other_personal_attributes || ''} onChange={(e) => handleChange('other_personal_attributes', e.target.value)} rows={3} /></div>
                             </CollapsibleContent>
                         </Collapsible>
@@ -310,7 +308,6 @@ export default function UserProfilePage() {
                                 <Link href="/dashboard" passHref><Button variant="outline">Back to Dashboard</Button></Link>
                                 <Button type="submit" disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">{isSaving ? 'Saving...' : 'Save Profile'}</Button>
                             </div>
-                            {/* CORRECTED: Moved messages to be below the save button */}
                             <div className="h-6 mt-2 text-right">
                                 {error && <div className="text-red-600" role="alert">{error}</div>}
                                 {successMessage && <div className="text-green-600" role="alert">{successMessage}</div>}
