@@ -2,8 +2,8 @@
 from flask import Blueprint, request, jsonify, g, current_app
 from ..auth import token_required
 from ..services.profile_service import ProfileService
-from ..app import db # NEW: Import db for commit after onboarding status change
-from ..models import UserProfile # NEW: Import UserProfile for direct ORM access
+from ..app import db
+from ..models import UserProfile
 
 profile_bp = Blueprint('profile', __name__)
 
@@ -36,32 +36,31 @@ def update_profile():
         return jsonify({"message": "No data provided"}), 400
 
     try:
+        # First, update the profile with the new data.
         updated_profile = profile_service.update_profile(user_id, data)
         
-        # Check for onboarding completion after profile update
-        # This logic ensures `has_completed_onboarding` is set to True
-        # and re-analysis is triggered. It explicitly commits via db.session.commit()
-        # because the profile_service.update_profile might have already committed
-        # and we need to ensure this follow-up update is also persisted.
-        if not updated_profile.get('has_completed_onboarding', False):
-            if profile_service.has_completed_required_profile_fields(user_id):
+        # CORRECTED LOGIC: After any update, check if the profile is complete.
+        # If it is, this is the trigger to re-analyze jobs. This now works for
+        # both the initial profile completion and all subsequent updates.
+        if profile_service.has_completed_required_profile_fields(user_id):
+            
+            # Action 1: Trigger re-analysis for the user.
+            current_app.logger.info(f"Profile updated for onboarded user {user_id}. Triggering re-analysis.")
+            from ..services.job_service import JobService # Import here to avoid circular dependencies
+            JobService(current_app.logger).trigger_reanalysis_for_user(user_id)
+
+            # Action 2: Ensure the `has_completed_onboarding` flag is set to True.
+            # This is an idempotent check; it's safe to run even if the flag is already True.
+            if not updated_profile.get('has_completed_onboarding', False):
                 profile_orm = UserProfile.query.filter_by(user_id=user_id).first()
                 if profile_orm:
                     profile_orm.has_completed_onboarding = True
-                    db.session.commit() # Commit this specific change
-                    # Ensure the returned dict reflects this change
+                    db.session.commit()
                     updated_profile['has_completed_onboarding'] = True
-                    current_app.logger.info(f"User {user_id} has completed onboarding.")
-                    # Trigger re-analysis for tracked jobs (can be async)
-                    from ..services.job_service import JobService # Import here to avoid circular
-                    JobService(current_app.logger).trigger_reanalysis_for_user(user_id)
-                else:
-                    current_app.logger.warning(f"Profile for user {user_id} unexpectedly missing during onboarding status check.")
-
+                    current_app.logger.info(f"User {user_id}'s 'has_completed_onboarding' flag set to True.")
 
         return jsonify(updated_profile), 200
     except Exception as e:
         current_app.logger.error(f"Error updating profile for user {user_id}: {e}", exc_info=True)
-        # Ensure rollback if any error occurs in this route's logic after service call
         db.session.rollback()
         return jsonify({"message": "Error updating profile."}), 500
