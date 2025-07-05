@@ -32,7 +32,6 @@ import { type TrackedJob, type UpdatePayload } from '../types'
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 
-// CORRECTED: The interface now only needs the generic update function and the remove function.
 interface GetColumnsProps {
   handleUpdateJobField: (trackedJobId: number, field: keyof UpdatePayload, value: any) => Promise<void>;
   handleRemoveJob: (trackedJobId: number) => void;
@@ -87,7 +86,6 @@ export const getColumns = ({
       return (
         <Select
           value={status}
-          // CORRECTED: Using the generic handleUpdateJobField function
           onValueChange={(newValue) => handleUpdateJobField(row.original.id, 'status', newValue)}
         >
           <SelectTrigger id={`status-select-${row.original.id}`} className="w-[140px] bg-gray-50">
@@ -110,15 +108,7 @@ export const getColumns = ({
   {
     accessorKey: "is_excited",
     header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Excited?<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
-    cell: ({ row }) => ( 
-        <div className="text-center">
-            <Checkbox 
-                checked={row.original.is_excited} 
-                // CORRECTED: Using the generic handleUpdateJobField function
-                onCheckedChange={(checked: boolean) => handleUpdateJobField(row.original.id, 'is_excited', checked)}
-            />
-        </div>
-    ),
+    cell: ({ row }) => ( <div className="text-center"><Checkbox checked={row.original.is_excited} onCheckedChange={(checked: boolean) => handleUpdateJobField(row.original.id, 'is_excited', checked)}/></div>),
   },
   {
     accessorKey: "created_at",
@@ -145,7 +135,7 @@ export const getColumns = ({
                 <PopoverTrigger asChild>
                     <Button
                         variant={"outline"}
-                        className={cn("w-[140px] justify-start text-left font-normal", !date && "text-muted-foreground")}
+                        className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
                     >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {date ? format(date, "PPP") : <span>Pick a date</span>}

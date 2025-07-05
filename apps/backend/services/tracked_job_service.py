@@ -14,14 +14,11 @@ class TrackedJobService:
     def get_tracked_jobs(self, user_id: int, status_filter: str = None, search_query: str = None,
                          page: int = 1, limit: int = 10, job_id_filter: int = None):
         query = db.session.query(TrackedJob).filter(TrackedJob.user_id == user_id)
-
         query = query.join(TrackedJob.job_opportunity).join(JobOpportunity.job).outerjoin(Job.company)
-        
         query = query.outerjoin(
             JobAnalysis,
             (JobAnalysis.job_id == Job.id) & (JobAnalysis.user_id == user_id)
         )
-
         query = query.options(
             contains_eager(TrackedJob.job_opportunity)
                 .contains_eager(JobOpportunity.job)
@@ -52,7 +49,6 @@ class TrackedJobService:
             )
         
         query = query.order_by(TrackedJob.updated_at.desc(), TrackedJob.id.desc())
-
         total_count = query.count() if not job_id_filter else 1
         offset = (page - 1) * limit
         tracked_jobs = query.offset(offset).limit(limit).all()
@@ -75,12 +71,7 @@ class TrackedJobService:
                 item['job_opportunity'] = tj.job_opportunity.to_dict()
             results.append(item)
 
-        return {
-            "jobs": results,
-            "total_count": total_count,
-            "page": page,
-            "limit": limit
-        }
+        return {"jobs": results, "total_count": total_count, "page": page, "limit": limit}
 
     def update_tracked_job(self, user_id: int, tracked_job_id: int, payload: dict):
         tracked_job = db.session.query(TrackedJob).filter_by(id=tracked_job_id, user_id=user_id).first()
@@ -90,13 +81,14 @@ class TrackedJobService:
 
         for field, value in payload.items():
             self.logger.info(f"Updating tracked_job {tracked_job_id}, field: {field}, value: {value}")
-
             if hasattr(tracked_job, field):
                 if field == 'status':
                     old_status = tracked_job.status.value if tracked_job.status else None
                     new_status_str = value
                     if old_status != 'APPLIED' and new_status_str == 'APPLIED' and not tracked_job.applied_at:
                         tracked_job.applied_at = datetime.now(pytz.utc)
+                    elif old_status == 'APPLIED' and new_status_str != 'APPLIED':
+                        tracked_job.applied_at = None
                 
                 setattr(tracked_job, field, value)
             else:
@@ -108,12 +100,9 @@ class TrackedJobService:
             db.session.commit()
             db.session.refresh(tracked_job)
             full_job_data = self.get_tracked_jobs(user_id, job_id_filter=tracked_job_id)
-            if full_job_data['jobs']:
-                 return full_job_data['jobs'][0]
-            return tracked_job.to_dict()
+            return full_job_data['jobs'][0] if full_job_data.get('jobs') else None
         except Exception as e:
             db.session.rollback()
-            self.logger.error(f"Error updating tracked job {tracked_job_id}: {e}")
             raise e
 
     def remove_tracked_job(self, user_id: int, tracked_job_id: int):
