@@ -12,7 +12,7 @@ class ProfileService:
     def __init__(self, logger=None):
         self.logger = logger or current_app.logger
         self.allowed_fields = [
-            'full_name', 'email', # Fields from the User model
+            'full_name', 'email',
             'phone_number', 'linkedin_url', 'github_url', 'portfolio_url', 'location',
             'latitude', 'longitude', 'current_role', 'desired_job_titles',
             'desired_salary_min', 'desired_salary_max', 'target_industries',
@@ -28,47 +28,42 @@ class ProfileService:
             'communication_preference', 'change_tolerance', 'preferred_work_style'
         ]
         self.user_model_fields = ['full_name']
-        self.profile_model_fields = [f for f in self.allowed_fields if f not in self.user_model_fields]
+        self.profile_model_fields = [f for f in self.allowed_fields if f not in self.user_model_fields and f != 'email']
 
 
     def _get_or_create_profile(self, user_id):
-        profile = UserProfile.query.options(joinedload(UserProfile.user)).filter_by(user_id=user_id).first()
+        # Simplified query to prevent memory issues
+        profile = UserProfile.query.filter_by(user_id=user_id).first()
         if not profile:
             self.logger.info(f"No profile for user {user_id}, creating default.")
             profile = UserProfile(user_id=user_id)
             db.session.add(profile)
             try:
                 db.session.commit()
-                # After commit, eager load the user relationship
-                profile = UserProfile.query.options(joinedload(UserProfile.user)).filter_by(user_id=user_id).first()
             except IntegrityError:
                 db.session.rollback()
                 self.logger.warning(f"Race condition creating profile for user {user_id}, fetching existing.")
-                profile = UserProfile.query.options(joinedload(UserProfile.user)).filter_by(user_id=user_id).first()
+                profile = UserProfile.query.filter_by(user_id=user_id).first()
         return profile
 
     def get_profile(self, user_id: int):
         profile = self._get_or_create_profile(user_id)
+        user = User.query.get(user_id) # Separate, efficient query for the user
         profile_dict = profile.to_dict()
-        # Add user fields to the response dictionary
-        if profile.user:
-            profile_dict['full_name'] = profile.user.full_name
-            # The login email from Clerk is on the user table, the contact email is on the profile
-            profile_dict['login_email'] = profile.user.email 
+        if user:
+            profile_dict['full_name'] = user.full_name
+            profile_dict['login_email'] = user.email 
         return profile_dict
 
     def update_profile(self, user_id: int, data: dict):
         profile = self._get_or_create_profile(user_id)
-        if not profile.user:
-            self.logger.error(f"UserProfile {profile.id} is missing its associated User object.")
-            # Handle this case, maybe by fetching the user separately
-            profile.user = User.query.get(user_id)
-            if not profile.user:
-                raise Exception(f"Could not find User with ID {user_id}")
+        user = User.query.get(user_id)
+        if not user:
+            raise Exception(f"Could not find User with ID {user_id} to update.")
         
         for key, value in data.items():
             if key in self.user_model_fields:
-                setattr(profile.user, key, value)
+                setattr(user, key, value)
             elif key in self.profile_model_fields:
                 if key in self.enum_fields:
                     setattr(profile, key, value)
@@ -86,13 +81,14 @@ class ProfileService:
                     setattr(profile, key, value if value not in [None, ''] else None)
         
         profile.updated_at = datetime.now(pytz.utc)
-        profile.user.updated_at = datetime.now(pytz.utc)
+        user.updated_at = datetime.now(pytz.utc)
 
         try:
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            raise e
+            self.logger.error(f"Error updating profile for user {user_id}: {e}", exc_info=True)
+            raise
 
         return self.get_profile(user_id)
 
@@ -100,6 +96,7 @@ class ProfileService:
         profile = self._get_or_create_profile(user_id)
         update_data = {}
         for key, value in ai_data.items():
+            # Use getattr to avoid errors if the key doesn't exist on the profile model
             if key in self.allowed_fields and getattr(profile, key, 'NOT_FOUND') is None:
                 update_data[key] = value
         if update_data:
@@ -107,10 +104,7 @@ class ProfileService:
         return self.get_profile(user_id)
 
     def get_profile_for_analysis(self, user_id: int):
-        profile = self._get_or_create_profile(user_id)
-        profile_dict = profile.to_dict()
-        if profile.user:
-            profile_dict['full_name'] = profile.user.full_name
+        profile_dict = self.get_profile(user_id)
         profile_dict.pop('id', None)
         profile_dict.pop('user_id', None)
         return profile_dict

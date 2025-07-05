@@ -33,46 +33,36 @@ class JobService:
         if not api_key:
             self.logger.error("Gemini API key is not configured.")
             return None
-
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
-        
-        headers = { 
-            "Content-Type": "application/json",
-            "x-goog-api-key": api_key
-        }
+        headers = { "Content-Type": "application/json", "x-goog-api-key": api_key }
         payload = { "contents": [{"parts": [{"text": prompt}]}] }
-
         try:
             self.logger.info(f"Calling Gemini with model {model_name} on endpoint {url}")
             response = requests.post(url, headers=headers, json=payload, timeout=90)
             response.raise_for_status()
             data = response.json()
-            
             candidates = data.get('candidates', [])
             if not candidates:
                 self.logger.error("Gemini API returned no candidates.", extra={'full_response': data})
                 return None
-            
             content = candidates[0].get('content', {})
             parts = content.get('parts', [])
             if not parts:
                 self.logger.error("Gemini API returned no parts in content.", extra={'full_response': data})
                 return None
-
             text_content = parts[0].get('text', '')
             if not text_content:
                 self.logger.error("Gemini API returned empty text response.", extra={'full_response': data})
                 return None
-            
             return text_content
         except requests.exceptions.RequestException as e:
-            self.logger.error(f"Error calling Gemini API: {e}", exc_info=True)
             if e.response is not None:
-                self.logger.error(f"Gemini API Response Status: {e.response.status_code}")
-                self.logger.error(f"Gemini API Response Body: {e.response.text}")
+                self.logger.error(f"Gemini API Error: {e.response.status_code} - {e.response.text}")
+            else:
+                self.logger.error(f"Gemini API Error: {e}")
             return None
         except Exception as e:
-            self.logger.error(f"Error in Gemini API call or response parsing: {e}", exc_info=True)
+            self.logger.error(f"Error in Gemini API call: {e}", exc_info=True)
             return None
 
     def _extract_text_from_html(self, html_content):
@@ -84,29 +74,22 @@ class JobService:
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         return '\n'.join(chunk for chunk in chunks if chunk)
 
-    def _lightweight_scrape(self, url):
+    def _get_full_job_description(self, url):
         try:
             response = requests.get(url, timeout=10)
             response.raise_for_status()
-            html_content = response.text
-            soup = BeautifulSoup(html_content, 'html.parser')
-            title = soup.find('title').get_text(strip=True) if soup.find('title') else 'Unknown Title'
-            company_name = 'Unknown Company'
-            meta_og_site_name = soup.find('meta', property='og:site_name')
-            if meta_og_site_name and meta_og_site_name.get('content'):
-                company_name = meta_og_site_name.get('content')
-            description = self._extract_text_from_html(html_content)
-            return {"title": title[:255], "company_name": company_name[:255], "description": description}
+            return self._extract_text_from_html(response.text)
         except requests.exceptions.RequestException as e:
-            self.logger.error(f"Error during lightweight scrape of {url}: {e}")
+            self.logger.error(f"Error scraping full job description from {url}: {e}")
             return None
 
     def _parse_ai_response(self, ai_response_text):
+        if not ai_response_text: return None
         try:
             match = re.search(r"```json\s*([\s\S]*?)\s*```", ai_response_text)
-            json_string = match.group(1) if match else ai_response_text
-            json_string = json_string.strip()
-            json_string = re.sub(r",\s*(\n\s*[\}\]])", r"\1", json_string)
+            json_string = match.group(1).strip() if match else ai_response_text.strip()
+            # This regex removes trailing commas before a closing bracket or brace
+            json_string = re.sub(r",\s*([\}\]])", r"\1", json_string)
             return json.loads(json_string)
         except Exception as e:
             self.logger.error(f"Failed to parse AI response: {e}. Raw: {ai_response_text[:500]}")
@@ -148,54 +131,50 @@ class JobService:
         
         Strictly conform to the JSON structure. Your response MUST be valid JSON wrapped in ```json ... ```.
         """
-        self.logger.info("Sending job posting to Gemini for analysis.")
         ai_response = self._call_gemini_api(prompt, model_name=GEMINI_PRO_MODEL)
-        return self._parse_ai_response(ai_response) if ai_response else None
+        return self._parse_ai_response(ai_response)
 
     def create_or_get_canonical_job(self, url: str, user_id: int, commit: bool = True):
         existing_opportunity = JobOpportunity.query.options(joinedload(JobOpportunity.job)).filter_by(url=url).first()
         if existing_opportunity and existing_opportunity.job:
-            self.logger.info(f"Found existing opportunity for URL {url} linked to job {existing_opportunity.job.id}")
             return existing_opportunity.job, existing_opportunity
 
-        scraped_data = self._lightweight_scrape(url)
-        if not scraped_data: return None, None
-        
-        job_title, company_name, job_description = scraped_data.get('title'), scraped_data.get('company_name'), scraped_data.get('description')
-        if not all([company_name, job_title, job_description]): return None, None
+        job_description = self._get_full_job_description(url)
+        if not job_description:
+            self.logger.error(f"Failed to get any job description text from URL: {url}")
+            return None, None
+
+        initial_analysis = self.analyze_job_posting(job_description, {}, {})
+        if not initial_analysis or not initial_analysis.get('company_name') or not initial_analysis.get('job_title'):
+            self.logger.error(f"Initial AI analysis failed to extract company/title from URL: {url}")
+            return None, None
+            
+        company_name = initial_analysis.get('company_name')
+        job_title = initial_analysis.get('job_title')
 
         company = Company.query.filter(db.func.lower(Company.name) == company_name.lower()).first()
-        is_new_company = False
         if not company:
             self.logger.info(f"Creating new company: {company_name}")
             company = Company(name=company_name)
             db.session.add(company)
-            if commit: 
+            if commit:
                 try:
                     db.session.commit()
-                    is_new_company = True
+                    self.logger.info(f"New company created (ID: {company.id}). Triggering profile enrichment.")
+                    self.company_service.research_and_update_company_profile(company.id)
                 except IntegrityError:
                     db.session.rollback()
                     company = Company.query.filter(db.func.lower(Company.name) == company_name.lower()).first()
-        
-        if is_new_company and company:
-            self.logger.info(f"New company created (ID: {company.id}). Triggering profile enrichment.")
-            self.company_service.research_and_update_company_profile(company.id)
-            # The result is not waited upon, allowing the request to complete faster.
 
         job_desc_hash = hashlib.sha256(job_description.encode('utf-8')).hexdigest()
         canonical_job = Job.query.filter_by(job_description_hash=job_desc_hash, company_id=company.id).first()
 
         if not canonical_job:
             self.logger.info(f"No canonical job found for hash. Creating new job for '{job_title}' at '{company_name}'.")
-            
-            ai_analysis_data = self.analyze_job_posting(job_description, {}, company.to_dict() if company else {})
-            if not ai_analysis_data: ai_analysis_data = {}
-
             canonical_job = Job(
-                company_id=company.id if company else None,
-                company_name=ai_analysis_data.get('company_name', company_name),
-                job_title=ai_analysis_data.get('job_title', job_title),
+                company_id=company.id,
+                company_name=company_name,
+                job_title=job_title,
                 status='Active',
                 job_description_hash=job_desc_hash,
                 notes=job_description
@@ -205,7 +184,8 @@ class JobService:
             
             if self.profile_service.has_completed_required_profile_fields(user_id):
                 user_profile_data = self.profile_service.get_profile_for_analysis(user_id)
-                user_specific_ai_data = self.analyze_job_posting(job_description, user_profile_data, company.to_dict() if company else {})
+                company_profile_data = company.to_dict() if company else {}
+                user_specific_ai_data = self.analyze_job_posting(job_description, user_profile_data, company_profile_data)
                 if user_specific_ai_data:
                     self.create_or_update_job_analysis(user_id, canonical_job.id, user_specific_ai_data, commit=commit)
 
@@ -213,10 +193,10 @@ class JobService:
         if not new_opportunity:
             new_opportunity = JobOpportunity(job_id=canonical_job.id, url=url)
             db.session.add(new_opportunity)
-            if commit: db.session.commit()
         elif new_opportunity.job_id != canonical_job.id:
             new_opportunity.job_id = canonical_job.id
-            if commit: db.session.commit()
+        
+        if commit: db.session.commit()
 
         return canonical_job, new_opportunity
 
@@ -237,7 +217,8 @@ class JobService:
         analysis.analysis_protocol_version = config.ANALYSIS_PROTOCOL_VERSION
         
         if commit:
-            try: db.session.commit()
+            try:
+                db.session.commit()
             except Exception as e:
                 db.session.rollback()
                 raise e
@@ -245,7 +226,9 @@ class JobService:
 
     def trigger_reanalysis_for_user(self, user_id: int):
         user_profile_data = self.profile_service.get_profile_for_analysis(user_id)
-        if not user_profile_data: return
+        if not user_profile_data:
+            self.logger.warning(f"Skipping re-analysis for user {user_id}: no profile data.")
+            return
 
         jobs_to_reanalyze = db.session.query(Job).join(JobOpportunity).join(TrackedJob).filter(TrackedJob.user_id == user_id).distinct().all()
         
@@ -253,6 +236,7 @@ class JobService:
         for job in jobs_to_reanalyze:
             company_data = job.company.to_dict() if job.company else {}
             if job.notes:
+                self.logger.info(f"Re-analyzing job {job.id} for user {user_id}")
                 ai_analysis_data = self.analyze_job_posting(job.notes, user_profile_data, company_data)
                 if ai_analysis_data:
                     self.create_or_update_job_analysis(user_id, job.id, ai_analysis_data)
