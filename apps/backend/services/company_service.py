@@ -11,56 +11,78 @@ from ..app import db
 from ..models import Company
 from ..config import config
 
+GEMINI_PRO_MODEL = "gemini-1.5-pro"
+
 class CompanyService:
     def __init__(self, logger=None):
         self.logger = logger or current_app.logger
 
-    def _call_gemini_api(self, prompt, model_name="gemini-pro"):
+    def _call_gemini_api(self, prompt, model_name=GEMINI_PRO_MODEL):
         api_key = config.GEMINI_API_KEY
         if not api_key:
             self.logger.error("Gemini API key is not configured.")
             return None
 
-        headers = {
-            "Content-Type": "application/json"
+        # CORRECTED: Using the robust v1beta endpoint and header-based auth
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+        headers = { 
+            "Content-Type": "application/json",
+            "x-goog-api-key": api_key
         }
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        payload = { "contents": [{"parts": [{"text": prompt}]}] }
 
         try:
-            response = requests.post(url, headers=headers, json={"contents": [{"parts": [{"text": prompt}]}]})
+            self.logger.info(f"Calling Gemini for company research with model {model_name}")
+            response = requests.post(url, headers=headers, json=payload, timeout=90)
             response.raise_for_status()
             data = response.json()
-            # Extract text from the response structure
-            text_content = data.get('candidates', [])[0].get('content', {}).get('parts', [])[0].get('text', '')
+            
+            candidates = data.get('candidates', [])
+            if not candidates:
+                self.logger.error("Company research: Gemini API returned no candidates.", extra={'full_response': data})
+                return None
+            
+            content = candidates[0].get('content', {})
+            parts = content.get('parts', [])
+            if not parts:
+                self.logger.error("Company research: Gemini API returned no parts in content.", extra={'full_response': data})
+                return None
+
+            text_content = parts[0].get('text', '')
+            if not text_content:
+                self.logger.error("Company research: Gemini API returned empty text response.", extra={'full_response': data})
+                return None
+            
             return text_content
         except requests.exceptions.RequestException as e:
-            self.logger.error(f"Error calling Gemini API for company research: {e}")
-            self.logger.error(f"Gemini API Response: {getattr(e, 'response', 'No response attribute')}")
+            if e.response is not None:
+                self.logger.error(f"Company research Gemini API Error: {e.response.status_code} - {e.response.text}")
+            else:
+                self.logger.error(f"Company research Gemini API Error: {e}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error in company research Gemini API call: {e}", exc_info=True)
             return None
 
     def _parse_company_ai_response(self, ai_response):
         """Parses and validates the JSON output from company AI research."""
+        if not ai_response: return None
         try:
-            match = re.search(r"```json\n(.+?)\n```", ai_response, re.DOTALL)
-            if match:
-                json_string = match.group(1)
-            else:
-                json_string = ai_response
-
+            # CORRECTED: Using the more robust regex from job_service.py
+            match = re.search(r"```json\s*([\s\S]*?)\s*```", ai_response, re.DOTALL)
+            json_string = match.group(1).strip() if match else ai_response.strip()
+            json_string = re.sub(r",\s*([\}\]])", r"\1", json_string)
+            
             parsed_data = json.loads(json_string)
 
             # Basic validation and cleaning
             parsed_data['name'] = parsed_data.get('name', 'Unknown Company').strip()
-            # Ensure size is parsed as int range or None
             parsed_data['company_size_min'] = int(parsed_data['company_size_min']) if parsed_data.get('company_size_min') else None
             parsed_data['company_size_max'] = int(parsed_data['company_size_max']) if parsed_data.get('company_size_max') else None
 
             return parsed_data
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Failed to decode JSON from company AI response: {e}. Raw response: {ai_response}")
-            return None
         except Exception as e:
-            self.logger.error(f"Error processing company AI response: {e}. Raw response: {ai_response}")
+            self.logger.error(f"Error processing company AI response: {e}. Raw response: {ai_response[:500]}")
             return None
 
     def research_and_update_company_profile(self, company_id: int):
@@ -73,8 +95,6 @@ class CompanyService:
             self.logger.warning(f"Company ID {company_id} not found for research. Skipping.")
             return None
 
-        # Check if company already has sufficient data (avoid re-researching complete profiles)
-        # You can define what "sufficient" means (e.g., has industry, description, etc.)
         if company.industry and company.description and company.mission:
             self.logger.info(f"Company {company.name} (ID: {company.id}) already has sufficient profile data. Skipping research.")
             return company
@@ -94,21 +114,20 @@ class CompanyService:
         - mission (string, the company's stated mission or core purpose)
         - business_model (string, how the company generates revenue)
         - company_size_min (integer, minimum employee count, nullable)
-        - - company_size_max (integer, maximum employee count, nullable)
+        - company_size_max (integer, maximum employee count, nullable)
         - headquarters (string, city, state, country)
         - founded_year (integer, nullable)
         - website_url (string, official website, nullable)
 
-        Strictly conform to the JSON structure.
+        Strictly conform to the JSON structure and wrap the entire response in ```json ... ```.
         """
         
-        ai_response = self._call_gemini_api(prompt, model_name="gemini-pro")
+        ai_response = self._call_gemini_api(prompt, model_name=GEMINI_PRO_MODEL)
 
         if ai_response:
             parsed_data = self._parse_company_ai_response(ai_response)
             if parsed_data:
-                # Update existing company record with new data, only if better/new
-                company.name = parsed_data.get('name', company.name) # Update name if AI has a better version
+                company.name = parsed_data.get('name', company.name)
                 company.industry = parsed_data.get('industry', company.industry)
                 company.description = parsed_data.get('description', company.description)
                 company.mission = parsed_data.get('mission', company.mission)
@@ -122,12 +141,11 @@ class CompanyService:
 
                 try:
                     db.session.commit()
-                    db.session.refresh(company)
                     self.logger.info(f"Successfully updated company profile for {company.name} (ID: {company.id}).")
                     return company
                 except Exception as e:
                     db.session.rollback()
-                    self.logger.error(f"Error saving updated company profile for {company.name} (ID: {company.id}): {e}", exc_info=True)
+                    self.logger.error(f"Error saving updated company profile for {company.name}: {e}", exc_info=True)
                     return None
             else:
                 self.logger.error(f"AI company research for {company.name} (ID: {company.id}) failed to parse response.")
@@ -137,9 +155,7 @@ class CompanyService:
             return None
 
     def get_company(self, company_id: int):
-        """Retrieves a single company by its ID."""
         return Company.query.filter_by(id=company_id).first()
 
     def get_company_by_name(self, company_name: str):
-        """Retrieves a single company by its name (case-insensitive)."""
         return Company.query.filter(db.func.lower(Company.name) == company_name.lower()).first()
