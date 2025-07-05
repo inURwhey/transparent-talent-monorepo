@@ -1,7 +1,7 @@
 // Path: apps/frontend/app/dashboard/components/JobTracker.tsx
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { PaginationState } from '@tanstack/react-table';
 
 import { DataTable } from '../data-table';
@@ -15,9 +15,10 @@ interface JobTrackerProps {
     isLoading: boolean;
     error: string | null;
     totalCount: number;
+    // This is the generic update function passed from the main page
     handleUpdateJobField: (trackedJobId: number, field: keyof UpdatePayload, value: any) => Promise<void>;
     actions: {
-        updateTrackedJob: (trackedJobId: number, payload: UpdatePayload) => Promise<void>;
+        // We only need remove and fetchCompanyProfile from the actions object now
         removeTrackedJob: (trackedJobId: number) => Promise<void>;
         fetchCompanyProfile: (companyId: number) => Promise<CompanyProfile | null>;
     };
@@ -30,38 +31,23 @@ export default function JobTracker({
     isLoading,
     error,
     actions,
-    handleUpdateJobField,
+    handleUpdateJobField, // This is the key prop we will use
 }: JobTrackerProps) {
     
     const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
     const [filterStatus, setFilterStatus] = useState<'all' | 'active_pipeline' | 'closed_pipeline' | 'active_posting' | 'expired_posting'>('all');
 
-    const handleStatusChange = useCallback(async (trackedJobId: number, newStatus: string) => {
-        const currentJob = trackedJobs.find(job => job.id === trackedJobId);
-        if (!currentJob) return;
+    // This specific handler is no longer needed because handleUpdateJobField is passed directly
+    // const handleStatusChange = ...
 
-        const payload: UpdatePayload = { status: newStatus };
-        const now = new Date().toISOString();
+    // This specific handler is also no longer needed
+    // const handleToggleExcited = ...
 
-        if (newStatus === 'APPLIED' && !currentJob.applied_at) payload.applied_at = now;
-        if (newStatus === 'SAVED' && currentJob.applied_at) payload.applied_at = null;
-        if (newStatus === 'INTERVIEWING' && !currentJob.first_interview_at) payload.first_interview_at = now;
-        if (newStatus === 'OFFER_NEGOTIATIONS' && !currentJob.offer_received_at) payload.offer_received_at = now;
-        
-        const isTerminal = !ACTIVE_PIPELINE_STATUSES.includes(newStatus);
-        if (isTerminal && !currentJob.resolved_at) payload.resolved_at = now;
-        if (!isTerminal && currentJob.resolved_at) payload.resolved_at = null;
-        
-        await actions.updateTrackedJob(trackedJobId, payload);
-    }, [actions, trackedJobs]);
-
-    const handleToggleExcited = useCallback(async (trackedJobId: number, isExcited: boolean) => {
-        await actions.updateTrackedJob(trackedJobId, { is_excited: isExcited });
-    }, [actions]);
-
-    const handleRemoveJob = useCallback(async (trackedJobId: number) => {
-        if (window.confirm("Are you sure?")) await actions.removeTrackedJob(trackedJobId);
-    }, [actions]);
+    const handleRemoveJob = async (trackedJobId: number) => {
+        if (window.confirm("Are you sure you want to remove this job from your tracker?")) {
+            await actions.removeTrackedJob(trackedJobId);
+        }
+    };
 
     const filteredTrackedJobs = useMemo(() => {
         switch (filterStatus) {
@@ -81,14 +67,13 @@ export default function JobTracker({
         return filteredTrackedJobs.slice(start, end);
     }, [filteredTrackedJobs, pagination]);
 
+    // CORRECTED: Pass only the props that getColumns actually needs.
     const columns = useMemo(
         () => getColumns({
-            handleStatusChange,
+            handleUpdateJobField,
             handleRemoveJob,
-            handleToggleExcited,
-            handleUpdateJobField
         }),
-        [handleStatusChange, handleRemoveJob, handleToggleExcited, handleUpdateJobField]
+        [handleUpdateJobField, handleRemoveJob]
     );
     
     if (isLoading) return <div className="text-center p-8">Loading your tracked jobs...</div>;

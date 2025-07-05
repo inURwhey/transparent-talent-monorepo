@@ -2,7 +2,6 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-// CORRECTED: Added ChevronRight to the import list
 import { ArrowUpDown, MoreHorizontal, Calendar as CalendarIcon, Trash2, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -21,15 +20,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
-import React from "react";
-import { type TrackedJob, type UpdatePayload } from '../types';
+import React from "react"
+import { type TrackedJob, type UpdatePayload } from '../types'
+import { cn } from "@/lib/utils"
+import { format } from "date-fns"
 
+// CORRECTED: The interface now only needs the generic update function and the remove function.
 interface GetColumnsProps {
-  handleStatusChange: (trackedJobId: number, newStatus: string) => void;
-  handleRemoveJob: (trackedJobId: number) => void;
-  handleToggleExcited: (trackedJobId: number, isExcited: boolean) => void;
   handleUpdateJobField: (trackedJobId: number, field: keyof UpdatePayload, value: any) => Promise<void>;
+  handleRemoveJob: (trackedJobId: number) => void;
 }
 
 const SUCCESS_STATUSES = ['OFFER_ACCEPTED'];
@@ -38,21 +44,21 @@ const NEUTRAL_TERMINAL_STATUSES = ['WITHDRAWN'];
 const ACTIVE_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEWING', 'OFFER_NEGOTIATIONS'];
 
 export const getColumns = ({
-  handleStatusChange,
-  handleRemoveJob,
-  handleToggleExcited,
   handleUpdateJobField,
+  handleRemoveJob,
 }: GetColumnsProps): ColumnDef<TrackedJob>[] => [
   {
     id: "select",
-    header: ({ table }) => (<Checkbox checked={table.getIsAllPageRowsSelected()} onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)} />),
-    cell: ({ row }) => (<Checkbox checked={row.getIsSelected()} onCheckedChange={(value) => row.toggleSelected(!!value)} />),
+    header: ({ table }) => (<Checkbox checked={table.getIsAllPageRowsSelected()} onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)} aria-label="Select all" />),
+    cell: ({ row }) => (<Checkbox checked={row.getIsSelected()} onCheckedChange={(value) => row.toggleSelected(!!value)} aria-label="Select row" />),
+    enableSorting: false,
+    enableHiding: false,
   },
   {
     id: "expander",
     header: () => null,
     cell: ({ row }) => (
-      <Button variant="ghost" size="sm" onClick={() => row.toggleExpanded()}>
+      <Button variant="ghost" size="icon" onClick={() => row.toggleExpanded()}>
         <ChevronRight className={`h-4 w-4 transition-transform ${row.getIsExpanded() ? 'rotate-90' : ''}`} />
       </Button>
     ),
@@ -65,7 +71,7 @@ export const getColumns = ({
   {
     accessorKey: "ai_grade",
     header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>AI Grade<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
-    cell: ({ row }) => row.original.ai_grade ? <div className="text-center font-medium">{row.original.ai_grade}</div> : <div className="text-gray-400 italic">N/A</div>,
+    cell: ({ row }) => row.original.ai_grade ? <div className="text-center font-medium">{row.original.ai_grade}</div> : <div className="text-center text-gray-400 italic">N/A</div>,
   },
   {
     accessorKey: "status",
@@ -77,23 +83,25 @@ export const getColumns = ({
       else if (NEGATIVE_TERMINAL_STATUSES.includes(status)) { textColor = "text-red-600 font-semibold"; }
       else if (NEUTRAL_TERMINAL_STATUSES.includes(status)) { textColor = "text-gray-600"; }
       else if (ACTIVE_STATUSES.includes(status)) { textColor = "text-blue-600"; }
+      
       return (
         <Select
           value={status}
-          onValueChange={(newValue) => handleStatusChange(row.original.id, newValue)}
+          // CORRECTED: Using the generic handleUpdateJobField function
+          onValueChange={(newValue) => handleUpdateJobField(row.original.id, 'status', newValue)}
         >
-          <SelectTrigger id={`status-select-${row.original.id}`} className="w-auto bg-gray-50">
+          <SelectTrigger id={`status-select-${row.original.id}`} className="w-[140px] bg-gray-50">
             <SelectValue className={textColor} placeholder="Select Status" />
           </SelectTrigger>
           <SelectContent>
-             <SelectItem value="SAVED" className={ACTIVE_STATUSES.includes('SAVED') ? "text-blue-600" : ""}>Saved</SelectItem>
-            <SelectItem value="APPLIED" className={ACTIVE_STATUSES.includes('APPLIED') ? "text-blue-600" : ""}>Applied</SelectItem>
-            <SelectItem value="INTERVIEWING" className={ACTIVE_STATUSES.includes('INTERVIEWING') ? "text-blue-600" : ""}>Interviewing</SelectItem>
-            <SelectItem value="OFFER_NEGOTIATIONS" className={ACTIVE_STATUSES.includes('OFFER_NEGOTIATIONS') ? "text-blue-600" : ""}>Offer</SelectItem>
-            <SelectItem value="REJECTED" className={NEGATIVE_TERMINAL_STATUSES.includes('REJECTED') ? "text-red-600" : ""}>Rejected</SelectItem>
-            <SelectItem value="EXPIRED" className={NEGATIVE_TERMINAL_STATUSES.includes('EXPIRED') ? "text-red-600" : ""}>Expired</SelectItem>
-            <SelectItem value="WITHDRAWN" className={NEUTRAL_TERMINAL_STATUSES.includes('WITHDRAWN') ? "text-gray-600" : ""}>Withdrawn</SelectItem>
-            <SelectItem value="OFFER_ACCEPTED" className={SUCCESS_STATUSES.includes('OFFER_ACCEPTED') ? "text-green-600" : ""}>Accepted</SelectItem>
+            <SelectItem value="SAVED" className="text-blue-600">Saved</SelectItem>
+            <SelectItem value="APPLIED" className="text-blue-600">Applied</SelectItem>
+            <SelectItem value="INTERVIEWING" className="text-blue-600">Interviewing</SelectItem>
+            <SelectItem value="OFFER_NEGOTIATIONS" className="text-blue-600">Offer</SelectItem>
+            <SelectItem value="REJECTED" className="text-red-600">Rejected</SelectItem>
+            <SelectItem value="EXPIRED" className="text-red-600">Expired</SelectItem>
+            <SelectItem value="WITHDRAWN" className="text-gray-600">Withdrawn</SelectItem>
+            <SelectItem value="OFFER_ACCEPTED" className="text-green-600">Accepted</SelectItem>
           </SelectContent>
         </Select>
       );
@@ -102,11 +110,14 @@ export const getColumns = ({
   {
     accessorKey: "is_excited",
     header: ({ column }) => (<Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Excited?<ArrowUpDown className="ml-2 h-4 w-4" /></Button>),
-    cell: ({ row }) => (
-        <Checkbox
-          checked={row.original.is_excited}
-          onCheckedChange={(checked: boolean) => handleToggleExcited(row.original.id, checked)}
-        />
+    cell: ({ row }) => ( 
+        <div className="text-center">
+            <Checkbox 
+                checked={row.original.is_excited} 
+                // CORRECTED: Using the generic handleUpdateJobField function
+                onCheckedChange={(checked: boolean) => handleUpdateJobField(row.original.id, 'is_excited', checked)}
+            />
+        </div>
     ),
   },
   {
@@ -115,13 +126,69 @@ export const getColumns = ({
     cell: ({ row }) => (new Date(row.original.created_at).toLocaleDateString()),
   },
   {
+    accessorKey: 'applied_at',
+    header: 'Date Applied',
+    cell: ({ row }) => (row.original.applied_at ? new Date(row.original.applied_at).toLocaleDateString() : 'N/A'),
+  },
+  {
+    accessorKey: 'next_action_at',
+    header: 'Next Action Date',
+    cell: ({ row }) => {
+        const [date, setDate] = React.useState<Date | undefined>(
+            row.original.next_action_at ? new Date(row.original.next_action_at) : undefined
+        );
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        return (
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant={"outline"}
+                        className={cn("w-[140px] justify-start text-left font-normal", !date && "text-muted-foreground")}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={(newDate) => {
+                            setDate(newDate);
+                            handleUpdateJobField(row.original.id, 'next_action_at', newDate ? newDate.toISOString() : null);
+                        }}
+                        disabled={(date) => date < today }
+                        initialFocus
+                    />
+                     <div className="p-2 border-t border-border">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-center"
+                            onClick={() => {
+                                setDate(undefined);
+                                handleUpdateJobField(row.original.id, 'next_action_at', null);
+                            }}
+                        >
+                            Clear Date
+                        </Button>
+                    </div>
+                </PopoverContent>
+            </Popover>
+        );
+    },
+  },
+  {
     accessorKey: "next_action_notes",
-    header: "Next Action",
+    header: "Next Action Notes",
     cell: ({ row }) => (
       <Textarea
         defaultValue={row.original.next_action_notes ?? ""}
         onBlur={(e) => handleUpdateJobField(row.original.id, 'next_action_notes', e.target.value)}
         placeholder="Next action..."
+        className="w-[200px]"
       />
     ),
   },
@@ -134,10 +201,10 @@ export const getColumns = ({
           <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => window.open(job.job_opportunity.url, '_blank')}>View Post</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => window.open(job.job_opportunity.url, '_blank')}>View Original Post</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600" onClick={() => handleRemoveJob(job.id)}>
-              <Trash2 className="mr-2 h-4 w-4" /> Remove
+            <DropdownMenuItem className="text-red-600 focus:text-red-500" onClick={() => handleRemoveJob(job.id)}>
+              <Trash2 className="mr-2 h-4 w-4" /> Remove from Tracker
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

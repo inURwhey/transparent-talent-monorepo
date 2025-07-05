@@ -24,48 +24,49 @@ const ONBOARDING_REQUIRED_FIELDS: (keyof Profile)[] = [
     'desired_job_titles'
 ];
 
+// CORRECTED: `value` now matches the backend ENUM, `label` is human-readable.
 const companySizeOptions = [
-    { value: 'No Preference', label: 'No Preference' },
-    { value: 'Startup (1-50 employees)', label: 'Startup (1-50 employees)' },
-    { value: 'Small Business (1-50 employees)', label: 'Small Business (1-50 employees)' },
-    { value: 'Medium Business (51-250 employees)', label: 'Medium Business (51-250 employees)' },
-    { value: 'Large Enterprise (250+ employees)', label: 'Large Enterprise (250+ employees)' },
+    { value: 'NO_PREFERENCE', label: 'No Preference' },
+    { value: 'STARTUP', label: 'Startup (1-50 employees)' },
+    { value: 'SMALL_BUSINESS', label: 'Small Business (1-50 employees)' },
+    { value: 'MEDIUM_BUSINESS', label: 'Medium Business (51-250 employees)' },
+    { value: 'LARGE_ENTERPRISE', label: 'Large Enterprise (250+ employees)' },
 ];
 
 const workStyleOptions = [
-    { value: 'No Preference', label: 'No Preference' },
-    { value: 'Structured (Clear processes, predictable)', label: 'Structured (Clear processes, predictable)' },
-    { value: 'Autonomous (Independent, self-directed)', label: 'Autonomous (Independent, self-directed)' },
-    { value: 'Collaborative (Team-oriented, frequent interaction)', label: 'Collaborative (Team-oriented, frequent interaction)' },
-    { value: 'Hybrid (Mix of structure and autonomy)', label: 'Hybrid (Mix of structure and autonomy)' },
+    { value: 'NO_PREFERENCE', label: 'I am open to any work style.' },
+    { value: 'STRUCTURED', label: 'I prefer a structured environment with clear processes and predictable day-to-day tasks.' },
+    { value: 'AUTONOMOUS', label: 'I prefer to work autonomously where I can be independent and self-directed.' },
+    { value: 'COLLABORATIVE', label: 'I prefer a collaborative atmosphere that is team-oriented with frequent interaction.' },
+    { value: 'HYBRID', label: 'I prefer a hybrid work style that offers a mix of structure and autonomy.' },
 ];
 
 const conflictResolutionOptions = [
-    { value: 'No Preference', label: 'No Preference' },
-    { value: 'Direct (Face-to-face, immediate)', label: 'Direct (Face-to-face, immediate)' },
-    { value: 'Mediated (Involving a third party)', label: 'Mediated (Involving a third party)' },
-    { value: 'Avoidant (Prefer to de-escalate or avoid)', label: 'Avoidant (Prefer to de-escalate or avoid)' },
+    { value: 'NO_PREFERENCE', label: 'I am comfortable with any approach to conflict resolution.' },
+    { value: 'DIRECT', label: 'I prefer to address conflict directly through face-to-face or immediate conversations.' },
+    { value: 'MEDIATED', label: 'I prefer a mediated approach to conflict that involves a neutral third party.' },
+    { value: 'AVOIDANT', label: 'I prefer to de-escalate or avoid conflict when possible.' },
 ];
 
 const communicationPreferenceOptions = [
-    { value: 'No Preference', label: 'No Preference' },
-    { value: 'Written (Email, documentation)', label: 'Written (Email, documentation)' },
-    { value: 'Verbal (Meetings, calls)', label: 'Verbal (Meetings, calls)' },
-    { value: 'Visual (Diagrams, presentations)', label: 'Visual (Diagrams, presentations)' },
+    { value: 'NO_PREFERENCE', label: 'I am adaptable to any communication style.' },
+    { value: 'WRITTEN', label: 'I prefer written communication, such as email and detailed documentation.' },
+    { value: 'VERBAL', label: 'I prefer verbal communication, like meetings and phone calls.' },
+    { value: 'VISUAL', label: 'I prefer visual communication methods, including diagrams and presentations.' },
 ];
 
 const changeToleranceOptions = [
-    { value: 'No Preference', label: 'No Preference' },
-    { value: 'High (Thrive in fast-paced, evolving environments)', label: 'High (Thrive in fast-paced, evolving environments)' },
-    { value: 'Medium (Adaptable but prefer some stability)', label: 'Medium (Adaptable but prefer some stability)' },
-    { value: 'Low (Prefer stability and established routines)', label: 'Low (Prefer stability and established routines)' },
+    { value: 'NO_PREFERENCE', label: 'I am open to various levels of change.' },
+    { value: 'HIGH', label: 'I prefer a high-change environment and thrive in fast-paced, evolving workplaces.' },
+    { value: 'MEDIUM', label: 'I prefer a medium level of change where I can adapt but also have some stability.' },
+    { value: 'LOW', label: 'I prefer a low-change environment with stability and established routines.' },
 ];
 
 const preferredWorkLocationOptions = [
-    { value: 'No Preference', label: 'No Preference' },
-    { value: 'On-site', label: 'On-site' },
-    { value: 'Hybrid', label: 'Hybrid' },
-    { value: 'Remote', label: 'Remote' },
+    { value: 'NO_PREFERENCE', label: 'No Preference' },
+    { value: 'ON_SITE', label: 'On-site' },
+    { value: 'HYBRID', label: 'Hybrid' },
+    { value: 'REMOTE', label: 'Remote' },
 ];
 
 
@@ -130,13 +131,14 @@ export default function UserProfilePage() {
 
             if (id === 'desired_salary_min' || id === 'desired_salary_max') {
                 actualValue = parseFormattedNumber(value);
-            } else if (value === 'null' || value === '') {
+            } else if (value === 'null' || value === '' || value === 'NO_PREFERENCE') {
+                // Treat "NO_PREFERENCE" from dropdowns as null for saving, but the component will handle display
                 actualValue = null;
             }
 
             let updatedProfile = { ...prev, [id]: actualValue };
 
-            if (id === 'preferred_work_style' && actualValue !== 'Hybrid') {
+            if (id === 'preferred_work_style' && actualValue !== 'HYBRID') {
                 updatedProfile.is_remote_preferred = false;
             }
             return updatedProfile;
@@ -270,19 +272,19 @@ export default function UserProfilePage() {
                          <Collapsible open={openSections.workEnv} onOpenChange={() => toggleSection('workEnv')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Work Environment & Requirements{openSections.workEnv ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                             <CollapsibleContent className="p-4 pt-0 space-y-4">
                                 <div><Label htmlFor="preferred_work_style_select">Preferred Work Location</Label>
-                                    <Select value={profile.preferred_work_style || ''} onValueChange={(v) => handleChange('preferred_work_style', v)}>
+                                    <Select value={profile.preferred_work_style || 'NO_PREFERENCE'} onValueChange={(v) => handleChange('preferred_work_style', v)}>
                                         <SelectTrigger id="preferred_work_style_select"><SelectValue placeholder="Select a preference..." /></SelectTrigger>
                                         <SelectContent>{preferredWorkLocationOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
-                                {profile.preferred_work_style === 'Hybrid' && (
+                                {profile.preferred_work_style === 'HYBRID' && (
                                     <div className="flex items-center space-x-2 pl-1 pt-2">
                                         <Checkbox id="is_remote_preferred" checked={!!profile.is_remote_preferred} onCheckedChange={(checked) => handleCheckboxChange('is_remote_preferred', !!checked)} />
                                         <Label htmlFor="is_remote_preferred" className="font-normal">I have a strong preference for the remote part of Hybrid.</Label>
                                     </div>
                                 )}
                                 <div><Label htmlFor="preferred_company_size">Preferred Company Size</Label>
-                                    <Select value={profile.preferred_company_size ?? ''} onValueChange={(value) => handleChange('preferred_company_size', value)}>
+                                    <Select value={profile.preferred_company_size ?? 'NO_PREFERENCE'} onValueChange={(value) => handleChange('preferred_company_size', value)}>
                                         <SelectTrigger><SelectValue placeholder="No Preference" /></SelectTrigger>
                                         <SelectContent>{companySizeOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                                     </Select>
@@ -295,7 +297,6 @@ export default function UserProfilePage() {
                         <Collapsible open={openSections.personality} onOpenChange={() => toggleSection('personality')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Personality & Self-Assessment{openSections.personality ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                             <CollapsibleContent className="p-4 pt-0 space-y-4">
                                 <div><Label htmlFor="personality_16_personalities">16 Personalities (e.g., INTJ)</Label><Input id="personality_16_personalities" type="text" value={profile.personality_16_personalities || ''} onChange={(e) => handleChange('personality_16_personalities', e.target.value)} /></div>
-                                {/* CORRECTED: Removed `(profile as any)` */}
                                 <div><Label htmlFor="disc_assessment">DISC Assessment</Label><Input id="disc_assessment" type="text" value={profile.disc_assessment || ''} onChange={(e) => handleChange('disc_assessment', e.target.value)} placeholder="e.g., D, I/D, etc." /></div>
                                 <div><Label htmlFor="clifton_strengths">Top 5 CliftonStrengths</Label><Textarea id="clifton_strengths" value={profile.clifton_strengths || ''} onChange={(e) => handleChange('clifton_strengths', e.target.value)} rows={2} placeholder="e.g., Achiever, Learner, Strategic, etc." /></div>
                                 <div><Label htmlFor="other_personal_attributes">Other Personal Attributes</Label><Textarea id="other_personal_attributes" value={profile.other_personal_attributes || ''} onChange={(e) => handleChange('other_personal_attributes', e.target.value)} rows={3} /></div>
