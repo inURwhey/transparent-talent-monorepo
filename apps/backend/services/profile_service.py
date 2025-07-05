@@ -74,6 +74,7 @@ class ProfileService:
             'conflict_resolution_style', 'communication_preference', 'change_tolerance',
             'preferred_work_style', 'is_remote_preferred',
             'skills', 'education', 'work_experience', 'personality_16_personalities',
+            'disc_assessment', 'clifton_strengths', # ADD THESE TWO
             'other_personal_attributes', 'has_completed_onboarding'
         ]
         self.enum_field_mappings = {

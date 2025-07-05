@@ -15,25 +15,18 @@ import { Button } from '@/components/ui/button';
 import { type Profile, type UpdatePayload } from './types';
 
 export default function UserDashboard() {
-  const { data: recommendedJobs, isLoading: isLoadingRecs, error: recsError, refetch: refetchRecommendations } = useJobRecommendationsApi();
-  const { trackedJobs, totalCount, isLoading: isLoadingTrackedJobs, error: trackedJobsError, actions: trackedJobsActions } = useTrackedJobsApi();
-  
   const { isLoaded: isUserLoaded, user } = useUser();
   const { getToken } = useAuth();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const [profile, setProfile] = useState<Profile | null>(null);
+  
+  // CRITICAL FIX: Pass the profile state into the recommendations hook.
+  const { data: recommendedJobs, isLoading: isLoadingRecs, error: recsError, refetch: refetchRecommendations } = useJobRecommendationsApi(profile);
+  const { trackedJobs, totalCount, isLoading: isLoadingTrackedJobs, error: trackedJobsError, actions: trackedJobsActions } = useTrackedJobsApi();
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
-
-  // --- DIAGNOSTIC LOGGING ---
-  console.log("--- DASHBOARD RENDER ---");
-  console.log("Value of trackedJobs:", trackedJobs);
-  console.log("Is trackedJobs an array?", Array.isArray(trackedJobs));
-  console.log("Value of recommendedJobs:", recommendedJobs);
-  console.log("Is recommendedJobs an array?", Array.isArray(recommendedJobs));
-  console.log("------------------------");
-  // --- END DIAGNOSTIC LOGGING ---
 
   const handleUpdateJobField = useCallback(async (trackedJobId: number, field: keyof UpdatePayload, value: any) => {
     try {
@@ -79,12 +72,9 @@ export default function UserDashboard() {
   const dashboardError = recsError || trackedJobsError;
   if (dashboardError) return <div className="min-h-screen flex items-center justify-center text-red-600">Error loading dashboard: {String(dashboardError)}</div>;
   
-  // --- DIAGNOSTIC CHECK ---
   if (!Array.isArray(trackedJobs) || !Array.isArray(recommendedJobs)) {
-    console.error("CRITICAL RENDER BLOCK: A data variable is not an array right before rendering.");
     return <div className="min-h-screen flex items-center justify-center text-red-600">A critical data error occurred. Check the console for details.</div>;
   }
-  // --- END DIAGNOSTIC CHECK ---
 
   return (
     <main className="min-h-screen bg-gray-50 p-8 font-sans">

@@ -15,47 +15,51 @@ import { ChevronDown, ChevronUp, MapPin, XCircle } from 'lucide-react';
 import { type Profile } from '@/app/dashboard/types';
 import { ResumeUploadForm } from '../components/ResumeUploadForm';
 
-// CORRECTED: Updated the list of required fields to match the new Profile type
 const ONBOARDING_REQUIRED_FIELDS: (keyof Profile)[] = [
     'work_style_preference',
     'conflict_resolution_style',
     'communication_preference',
     'change_tolerance',
-    'career_goals', // Was 'short_term_career_goal'
-    'desired_job_titles' // Was 'desired_title'
+    'career_goals',
+    'desired_job_titles'
 ];
 
+// CORRECTED: Mappings now match the backend display strings exactly.
 const companySizeOptions = [
     { value: 'No Preference', label: 'No Preference' },
     { value: 'Startup (1-50 employees)', label: 'Startup (1-50 employees)' },
-    { value: 'Small (51-200 employees)', label: 'Small (51-200 employees)' },
-    { value: 'Medium (201-1000 employees)', label: 'Medium (201-1000 employees)' },
-    { value: 'Large (1001-10000 employees)', label: 'Large (1001-10000 employees)' },
-    { value: 'Enterprise (10000+ employees)', label: 'Enterprise (10000+ employees)' },
+    { value: 'Small Business (1-50 employees)', label: 'Small Business (1-50 employees)' }, // Note: Startup and Small Business might be the same in the backend enum, ensure consistency
+    { value: 'Medium Business (51-250 employees)', label: 'Medium Business (51-250 employees)' },
+    { value: 'Large Enterprise (250+ employees)', label: 'Large Enterprise (250+ employees)' },
 ];
 
 const workStyleOptions = [
     { value: 'No Preference', label: 'No Preference' },
-    { value: 'An ambiguous environment where I can create my own structure.', label: 'An ambiguous environment where I can create my own structure.' },
-    { value: 'A structured environment with clearly defined tasks.', label: 'A structured environment with clearly defined tasks.' },
+    { value: 'Structured (Clear processes, predictable)', label: 'Structured (Clear processes, predictable)' },
+    { value: 'Autonomous (Independent, self-directed)', label: 'Autonomous (Independent, self-directed)' },
+    { value: 'Collaborative (Team-oriented, frequent interaction)', label: 'Collaborative (Team-oriented, frequent interaction)' },
+    { value: 'Hybrid (Mix of structure and autonomy)', label: 'Hybrid (Mix of structure and autonomy)' },
 ];
 
 const conflictResolutionOptions = [
     { value: 'No Preference', label: 'No Preference' },
-    { value: 'Have a direct, open debate to resolve the issue quickly.', label: 'Have a direct, open debate to resolve the issue quickly.' },
-    { value: 'Build consensus with stakeholders before presenting a solution.', label: 'Build consensus with stakeholders before presenting a solution.' },
+    { value: 'Direct (Face-to-face, immediate)', label: 'Direct (Face-to-face, immediate)' },
+    { value: 'Mediated (Involving a third party)', label: 'Mediated (Involving a third party)' },
+    { value: 'Avoidant (Prefer to de-escalate or avoid)', label: 'Avoidant (Prefer to de-escalate or avoid)' },
 ];
 
 const communicationPreferenceOptions = [
     { value: 'No Preference', label: 'No Preference' },
-    { value: 'Detailed written documentation (e.g., docs, wikis, Notion).', label: 'Detailed written documentation (e.g., docs, wikis, Notion).' },
-    { value: 'Real-time synchronous meetings (e.g., Zoom, Slack huddles).', label: 'Real-time synchronous meetings (e.g., Zoom, Slack huddles).' },
+    { value: 'Written (Email, documentation)', label: 'Written (Email, documentation)' },
+    { value: 'Verbal (Meetings, calls)', label: 'Verbal (Meetings, calls)' },
+    { value: 'Visual (Diagrams, presentations)', label: 'Visual (Diagrams, presentations)' },
 ];
 
 const changeToleranceOptions = [
     { value: 'No Preference', label: 'No Preference' },
-    { value: 'Priorities are stable and I can focus on a long-term roadmap.', label: 'Priorities are stable and I can focus on a long-term roadmap.' },
-    { value: 'The team is nimble and priorities pivot often based on new data.', label: 'The team is nimble and priorities pivot often based on new data.' },
+    { value: 'High (Thrive in fast-paced, evolving environments)', label: 'High (Thrive in fast-paced, evolving environments)' },
+    { value: 'Medium (Adaptable but prefer some stability)', label: 'Medium (Adaptable but prefer some stability)' },
+    { value: 'Low (Prefer stability and established routines)', label: 'Low (Prefer stability and established routines)' },
 ];
 
 const preferredWorkLocationOptions = [
@@ -150,13 +154,11 @@ export default function UserProfilePage() {
         setSuccessMessage(null);
         try {
             const response = await authedFetch(`${apiBaseUrl}/api/profile`, { method: 'PUT', body: JSON.stringify(payload) });
-            if (!response.ok) throw new Error((await response.json()).error || 'Failed to save profile.');
+            if (!response.ok) throw new Error((await response.json()).message || 'Failed to save profile.');
             const updatedProfile: Profile = await response.json();
             setProfile(updatedProfile);
-            setSuccessMessage("Profile updated successfully! Redirecting to dashboard...");
-            setTimeout(() => {
-                window.location.assign('/dashboard');
-            }, 1500);
+            // CORRECTED: Changed success message and removed redirect
+            setSuccessMessage("Profile updated successfully!");
         } catch (err: any) {
             console.error("Error updating profile:", err);
             setError(err.message);
@@ -174,7 +176,6 @@ export default function UserProfilePage() {
         updateProfileData(payload);
     }, [profile, updateProfileData]);
     
-    // CORRECTED: The payload for updateProfileData needs to match the Profile type
     const handleGetLocation = useCallback(() => {
         if (!navigator.geolocation) return setError("Geolocation is not supported by your browser.");
         setIsLocationLoading(true);
@@ -296,17 +297,23 @@ export default function UserProfilePage() {
                         <Collapsible open={openSections.personality} onOpenChange={() => toggleSection('personality')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Personality & Self-Assessment{openSections.personality ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                             <CollapsibleContent className="p-4 pt-0 space-y-4">
                                 <div><Label htmlFor="personality_16_personalities">16 Personalities (e.g., INTJ)</Label><Input id="personality_16_personalities" type="text" value={profile.personality_16_personalities || ''} onChange={(e) => handleChange('personality_16_personalities', e.target.value)} /></div>
+                                {/* NEW: Added DISC and CliftonStrengths fields */}
+                                <div><Label htmlFor="disc_assessment">DISC Assessment</Label><Input id="disc_assessment" type="text" value={(profile as any).disc_assessment || ''} onChange={(e) => handleChange('disc_assessment', e.target.value)} placeholder="e.g., D, I/D, etc." /></div>
+                                <div><Label htmlFor="clifton_strengths">Top 5 CliftonStrengths</Label><Textarea id="clifton_strengths" value={(profile as any).clifton_strengths || ''} onChange={(e) => handleChange('clifton_strengths', e.target.value)} rows={2} placeholder="e.g., Achiever, Learner, Strategic, etc." /></div>
                                 <div><Label htmlFor="other_personal_attributes">Other Personal Attributes</Label><Textarea id="other_personal_attributes" value={profile.other_personal_attributes || ''} onChange={(e) => handleChange('other_personal_attributes', e.target.value)} rows={3} /></div>
                             </CollapsibleContent>
                         </Collapsible>
 
                         {/* Save/Nav Buttons */}
-                        <div className="pt-4 space-y-4">
-                             {error && <div className="bg-red-100 border-l-4 border-red-400 text-red-700 p-4" role="alert"><strong className="font-bold">Error! </strong>{error}</div>}
-                             {successMessage && <div className="bg-green-100 border-l-4 border-green-400 text-green-700 p-4" role="alert"><strong className="font-bold">Success! </strong>{successMessage}</div>}
+                        <div className="pt-4 space-y-2">
                             <div className="flex items-center justify-end space-x-4">
                                 <Link href="/dashboard" passHref><Button variant="outline">Back to Dashboard</Button></Link>
                                 <Button type="submit" disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-700">{isSaving ? 'Saving...' : 'Save Profile'}</Button>
+                            </div>
+                            {/* CORRECTED: Moved messages to be below the save button */}
+                            <div className="h-6 mt-2 text-right">
+                                {error && <div className="text-red-600" role="alert">{error}</div>}
+                                {successMessage && <div className="text-green-600" role="alert">{successMessage}</div>}
                             </div>
                         </div>
                     </form>
