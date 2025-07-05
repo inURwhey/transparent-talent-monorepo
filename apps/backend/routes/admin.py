@@ -8,7 +8,8 @@ from ..services.company_service import CompanyService
 import requests
 from ..config import config
 
-admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
+# CORRECTED: The url_prefix should not contain '/api' as it's added during registration in app.py
+admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 # This is the new endpoint to fix the "Jobs For You" data regression
 @admin_bp.route('/trigger-reanalysis/user/<int:user_id>', methods=['POST'])
