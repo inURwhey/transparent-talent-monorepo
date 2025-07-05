@@ -24,7 +24,7 @@ const ONBOARDING_REQUIRED_FIELDS: (keyof Profile)[] = [
     'desired_job_titles'
 ];
 
-// CORRECTED: `value` now matches the backend ENUM, `label` is human-readable.
+// Using your preferred labels and the correct ENUM values
 const companySizeOptions = [
     { value: 'NO_PREFERENCE', label: 'No Preference' },
     { value: 'STARTUP', label: 'Startup (1-50 employees)' },
@@ -131,8 +131,7 @@ export default function UserProfilePage() {
 
             if (id === 'desired_salary_min' || id === 'desired_salary_max') {
                 actualValue = parseFormattedNumber(value);
-            } else if (value === 'null' || value === '' || value === 'NO_PREFERENCE') {
-                // Treat "NO_PREFERENCE" from dropdowns as null for saving, but the component will handle display
+            } else if (value === 'null' || value === '') {
                 actualValue = null;
             }
 
@@ -214,30 +213,29 @@ export default function UserProfilePage() {
                         </div>
                     )}
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Work Style Preferences Section */}
                         <Collapsible open={openSections.workStyle} onOpenChange={() => toggleSection('workStyle')} className="border rounded-md shadow-sm">
                             <CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Work Style & Preferences{openSections.workStyle ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                             <CollapsibleContent className="p-4 pt-2 space-y-4">
-                                <div><Label htmlFor="work_style_preference">I do my best work in...{isRequired('work_style_preference') && <span className="text-red-500 ml-1">*</span>}</Label>
-                                    <Select name="work_style_preference" value={profile.work_style_preference ?? ''} onValueChange={(v) => handleChange('work_style_preference',v)}>
+                                <div><Label htmlFor="work_style_preference">I do my best work when...{isRequired('work_style_preference') && <span className="text-red-500 ml-1">*</span>}</Label>
+                                    <Select name="work_style_preference" value={profile.work_style_preference ?? 'NO_PREFERENCE'} onValueChange={(v) => handleChange('work_style_preference',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select a work style..." /></SelectTrigger>
                                         <SelectContent>{workStyleOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div><Label htmlFor="conflict_resolution_style">When I disagree with a colleague, I prefer to...{isRequired('conflict_resolution_style') && <span className="text-red-500 ml-1">*</span>}</Label>
-                                    <Select name="conflict_resolution_style" value={profile.conflict_resolution_style ?? ''} onValueChange={(v) => handleChange('conflict_resolution_style',v)}>
+                                    <Select name="conflict_resolution_style" value={profile.conflict_resolution_style ?? 'NO_PREFERENCE'} onValueChange={(v) => handleChange('conflict_resolution_style',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select a conflict style..." /></SelectTrigger>
                                         <SelectContent>{conflictResolutionOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div><Label htmlFor="communication_preference">I communicate most effectively through...{isRequired('communication_preference') && <span className="text-red-500 ml-1">*</span>}</Label>
-                                    <Select name="communication_preference" value={profile.communication_preference ?? ''} onValueChange={(v) => handleChange('communication_preference',v)}>
+                                    <Select name="communication_preference" value={profile.communication_preference ?? 'NO_PREFERENCE'} onValueChange={(v) => handleChange('communication_preference',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select a communication style..." /></SelectTrigger>
                                         <SelectContent>{communicationPreferenceOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div><Label htmlFor="change_tolerance">I am most productive when...{isRequired('change_tolerance') && <span className="text-red-500 ml-1">*</span>}</Label>
-                                    <Select name="change_tolerance" value={profile.change_tolerance ?? ''} onValueChange={(v) => handleChange('change_tolerance',v)}>
+                                    <Select name="change_tolerance" value={profile.change_tolerance ?? 'NO_PREFERENCE'} onValueChange={(v) => handleChange('change_tolerance',v)}>
                                         <SelectTrigger><SelectValue placeholder="Select your preference for change..." /></SelectTrigger>
                                         <SelectContent>{changeToleranceOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                                     </Select>
@@ -245,7 +243,6 @@ export default function UserProfilePage() {
                             </CollapsibleContent>
                         </Collapsible>
 
-                        {/* Contact & Basic Information Section */}
                         <Collapsible open={openSections.personalInfo} onOpenChange={() => toggleSection('personalInfo')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Contact & Basic Information{openSections.personalInfo ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                             <CollapsibleContent className="p-4 pt-0 space-y-4">
                                 <div><Label htmlFor="full_name">Full Name</Label><Input id="full_name" type="text" value={profile.full_name || ''} onChange={(e) => handleChange('full_name', e.target.value)} /></div>
@@ -257,7 +254,6 @@ export default function UserProfilePage() {
                             </CollapsibleContent>
                         </Collapsible>
 
-                        {/* Career Aspirations Section */}
                         <Collapsible open={openSections.careerGoals} onOpenChange={() => toggleSection('careerGoals')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Career Aspirations{openSections.careerGoals ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                             <CollapsibleContent className="p-4 pt-0 space-y-4">
                                 <div><Label htmlFor="career_goals">Career Goals{isRequired('career_goals') && <span className="text-red-500 ml-1">*</span>}</Label><Textarea id="career_goals" value={profile.career_goals || ''} onChange={(e) => handleChange('career_goals', e.target.value)} rows={3} /></div>
@@ -268,7 +264,6 @@ export default function UserProfilePage() {
                             </CollapsibleContent>
                         </Collapsible>
                         
-                        {/* Work Environment & Requirements Section */}
                          <Collapsible open={openSections.workEnv} onOpenChange={() => toggleSection('workEnv')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Work Environment & Requirements{openSections.workEnv ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                             <CollapsibleContent className="p-4 pt-0 space-y-4">
                                 <div><Label htmlFor="preferred_work_style_select">Preferred Work Location</Label>
@@ -293,7 +288,6 @@ export default function UserProfilePage() {
                             </CollapsibleContent>
                         </Collapsible>
 
-                        {/* Personality Section */}
                         <Collapsible open={openSections.personality} onOpenChange={() => toggleSection('personality')} className="border rounded-md shadow-sm"><CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-semibold text-lg">Personality & Self-Assessment{openSections.personality ? <ChevronUp/> : <ChevronDown/>}</CollapsibleTrigger>
                             <CollapsibleContent className="p-4 pt-0 space-y-4">
                                 <div><Label htmlFor="personality_16_personalities">16 Personalities (e.g., INTJ)</Label><Input id="personality_16_personalities" type="text" value={profile.personality_16_personalities || ''} onChange={(e) => handleChange('personality_16_personalities', e.target.value)} /></div>
@@ -303,7 +297,6 @@ export default function UserProfilePage() {
                             </CollapsibleContent>
                         </Collapsible>
 
-                        {/* Save/Nav Buttons */}
                         <div className="pt-4 space-y-2">
                             <div className="flex items-center justify-end space-x-4">
                                 <Link href="/dashboard" passHref><Button variant="outline">Back to Dashboard</Button></Link>
